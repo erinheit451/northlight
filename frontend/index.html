@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Northlight – Benchmark MVP</title>
+<style>
+  :root { --fg:#111; --muted:#666; --line:#e5e5e5; --ok:#ffb020; --good:#2ea043; --bad:#d93f0b; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; max-width: 960px; color: var(--fg); }
+  h1 { margin: 0 0 12px; }
+  h3 { margin: 0 0 8px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
+  label { display:block; margin: 8px 0 6px; font-weight: 600; }
+  input, select { width: 100%; padding: 8px; border:1px solid var(--line); border-radius:8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  button { padding: 10px 14px; border-radius: 8px; border: 1px solid #333; cursor: pointer; background:#fff; }
+  .small { color:var(--muted); font-size:12px; }
+
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); margin-right:6px;}
+  .pill.good { background:#ecfdf3; border-color:#bbf7d0; color:#065f46;}
+  .pill.ok   { background:#fffbeb; border-color:#fde68a; color:#92400e;}
+  .pill.bad  { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
+
+  .tag { display:inline-block; padding:2px 6px; border-radius:6px; border:1px solid var(--line); font-size:12px; }
+  .tag.green    { background:#ecfdf3; border-color:#bbf7d0; color:#065f46;}
+  .tag.amber    { background:#fff7ed; border-color:#fed7aa; color:#9a3412;}
+  .tag.red      { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
+  .tag.average  { background:#f0f9ff; border-color:#bae6fd; color:#075985;}
+  .tag.unknown  { background:#f3f4f6; border-color:#e5e7eb; color:#374151;}
+  .tag.above_avg{ background:#eefce8; border-color:#cdecc7; color:#22543d;}
+  .tag.below_avg{ background:#fff7ed; border-color:#fed7aa; color:#9a3412;}
+  .tag.context  { background:#f3f4f6; border-color:#e5e7eb; color:#374151;}
+
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+
+  /* Gauge */
+  .gauge { margin: 10px 0 18px; }
+  .g-head { display:flex; align-items:center; justify-content:space-between; }
+  .g-head .metric { font-weight:600; }
+  .g-track { position:relative; height:12px; background:#f3f3f3; border-radius:6px; margin:8px 0 4px; }
+  .g-fill  { position:absolute; top:0; left:0; height:12px; border-radius:6px; }
+  .g-mark  { position:absolute; top:-3px; width:10px; height:18px; background:#111; border-radius:2px; transform:translateX(-50%); }
+  .g-tick  { position:absolute; top:-6px; width:1px; height:24px; background:#ddd; }
+  .g-label { position:absolute; top:18px; font-size:10px; color:#888; transform:translateX(-50%); }
+  .g-foot  { display:flex; justify-content:space-between; font-size:11px; color:#666; }
+
+  .g-green { background:#d1fae5; }
+  .g-amber { background:#fde68a; }
+  .g-red   { background:#fecaca; }
+</style>
+</head>
+<body>
+  <h1>Benchmark MVP</h1>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="category">Category</label>
+        <select id="category"></select>
+      </div>
+      <div>
+        <label for="subcategory">Subcategory</label>
+        <select id="subcategory"></select>
+      </div>
+    </div>
+
+    <div class="row3">
+      <div>
+        <label for="website">Website (optional)</label>
+        <input id="website" placeholder="example.com" />
+      </div>
+      <div>
+        <label for="goal_cpl">Goal CPL</label>
+        <input id="goal_cpl" type="number" step="0.01" />
+      </div>
+      <div>
+        <label for="budget">Budget (period)</label>
+        <input id="budget" type="number" step="0.01" />
+      </div>
+    </div>
+
+    <div class="row3">
+      <div>
+        <label for="clicks">Clicks</label>
+        <input id="clicks" type="number" step="1" />
+      </div>
+      <div>
+        <label for="leads">Leads</label>
+        <input id="leads" type="number" step="1" />
+      </div>
+      <div>
+        <label for="impressions">Impressions (optional)</label>
+        <input id="impressions" type="number" step="1" />
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label><input id="dash_enabled" type="checkbox" /> Dash AI call/SMS enabled</label>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button id="runBtn">Run Benchmark</button>
+    </div>
+  </div>
+
+  <div id="results" class="card" style="display:none;">
+    <h3>Results</h3>
+
+    <!-- Status & Market chips -->
+    <div class="chips" id="chipsRow"></div>
+
+    <!-- Goal Analysis -->
+    <div class="card" style="margin:10px 0; background:#fafafa;">
+      <div class="small" id="goalProb"></div>
+      <div class="small" id="goalRange"></div>
+      <div class="small" id="goalNote"></div>
+      <div style="margin-top:8px;">
+        <button id="adoptBtn" style="display:none;">Use recommended goal</button>
+        <span id="goalRec" class="pill ok" style="display:none;"></span>
+      </div>
+    </div>
+
+    <!-- Benchmarks -->
+    <div class="card" style="margin:10px 0;">
+      <h3 style="margin:0 0 8px;">Benchmarks vs Peers</h3>
+      <div class="small" id="currentCplNote" style="margin-bottom:8px;"></div>
+
+      <!-- CPL -->
+      <div id="g-cpl" class="gauge">
+        <div class="g-head"><span class="metric">CPL</span><span id="g-cpl-band" class="tag unknown">—</span></div>
+        <div class="g-track" id="g-cpl-track"></div>
+        <div class="g-foot"><span>worse</span><span>better</span></div>
+        <div class="small" id="g-cpl-note"></div>
+      </div>
+
+      <!-- CPC -->
+      <div id="g-cpc" class="gauge">
+        <div class="g-head"><span class="metric">CPC</span><span id="g-cpc-band" class="tag unknown">—</span></div>
+        <div class="g-track" id="g-cpc-track"></div>
+        <div class="g-foot"><span>pricier</span><span>cheaper</span></div>
+        <div class="small" id="g-cpc-note"></div>
+      </div>
+
+      <!-- CR -->
+      <div id="g-cr" class="gauge">
+        <div class="g-head"><span class="metric">CR</span><span id="g-cr-band" class="tag unknown">—</span></div>
+        <div class="g-track" id="g-cr-track"></div>
+        <div class="g-foot"><span>lower</span><span>higher</span></div>
+        <div class="small" id="g-cr-note"></div>
+      </div>
+    </div>
+
+    <div class="card" id="scaleCard" style="display:none;">
+      <strong>Scaling preview</strong>
+      <div class="small" id="scaleNote"></div>
+      <div id="scaleRows" class="small" style="margin-top:6px;"></div>
+    </div>
+
+    <div>
+      <div><strong>Diagnosis</strong></div>
+      <div id="diagPrimary" style="margin:6px 0;"></div>
+      <div id="diagTags" class="small"></div>
+
+      <div style="height:12px;"></div>
+
+      <div><strong>Targets</strong></div>
+      <div id="targetsBlock" class="small"></div>
+    </div>
+
+    <div style="margin:12px 0;">
+      <button id="exportBtn">Export PPTX</button>
+    </div>
+
+    <div style="height:12px;"></div>
+    <h4>Raw</h4>
+    <pre id="raw"></pre>
+  </div>
+
+<script>
+const API = "http://127.0.0.1:8008";
+let lastPayload = null;
+
+// ---------- UI helpers ----------
+function fmtPct(v)  { return (v == null) ? "—" : (v*100).toFixed(0) + "%"; }
+function fmtPct1(v) { return (v == null) ? "—" : (v*100).toFixed(1) + "%"; }
+function fmtMoney(v){ return (v == null) ? "—" : "$" + Number(v).toFixed(2); }
+function pill(text, cls) { return `<span class="pill ${cls}">${text}</span>`; }
+function tag(text, cls){ return `<span class="tag ${cls}">${text}</span>`; }
+
+function bandLabel(band) {
+  if (band === "green") return "strong";
+  if (band === "amber") return "average";
+  if (band === "red")   return "weak";
+  if (band === "above_avg") return "above avg";
+  if (band === "below_avg") return "below avg";
+  if (band === "context")   return "context";
+  return "unknown";
+}
+
+function goalStatusPill(status, marketBand, celebration){
+  if (celebration === "exceeded_aggressive")   return pill("🎉 Exceeded aggressive target","good");
+  if (celebration === "exceeded_unrealistic")  return pill("🚀 Exceeded unrealistic target","good");
+  if (status === "achieved")                   return pill("✅ Goal achieved","good");
+  if (status === "on_track")                   return pill("Goal: On track","ok");
+  if (status === "behind") {
+    if (marketBand === "aggressive" || marketBand === "unrealistic") return pill("Goal: Needs adjustment","ok");
+    return pill("Goal: Behind","bad");
+  }
+  return pill("Goal: —","ok");
+}
+
+function marketBandPill(band){
+  if (band === "acceptable") return pill("Market difficulty: Acceptable","good");
+  if (band === "aggressive") return pill("Market difficulty: Aggressive","ok");
+  if (band === "unrealistic")return pill("Market difficulty: Unrealistic","bad");
+  return pill("Market difficulty: —","ok");
+}
+
+function buildGauge(trackEl, percentile, bandCls) {
+  trackEl.innerHTML = "";
+  // 10%, 25%, 50%, 75%, 90%
+  const ticks = [
+    {p:0.10, label:"10%"},
+    {p:0.25, label:"25%"},
+    {p:0.50, label:"50%"},
+    {p:0.75, label:"75%"},
+    {p:0.90, label:"90%"},
+  ];
+  ticks.forEach(t => {
+    const tick = document.createElement("div");
+    tick.className = "g-tick";
+    tick.style.left = (t.p * 100) + "%";
+    trackEl.appendChild(tick);
+    const lab = document.createElement("div");
+    lab.className = "g-label";
+    lab.style.left = (t.p * 100) + "%";
+    lab.textContent = t.label;
+    trackEl.appendChild(lab);
+  });
+  const p = (percentile == null) ? 0 : Math.max(0, Math.min(1, percentile));
+  const fill = document.createElement("div");
+  fill.className = "g-fill " + (bandCls || "");
+  fill.style.width = (p*100) + "%";
+  trackEl.appendChild(fill);
+  const mk = document.createElement("div");
+  mk.className = "g-mark";
+  mk.style.left = (p*100) + "%";
+  trackEl.appendChild(mk);
+}
+
+// ---------- Data ----------
+async function fetchMeta() {
+  const res = await fetch(`${API}/benchmarks/meta`);
+  const meta = await res.json();
+  const catSel = document.getElementById("category");
+  const subSel = document.getElementById("subcategory");
+  const cats = [...new Set(meta.map(x => x.category))].sort();
+  catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+  function buildSubcats(cat) {
+    const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
+    subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+  }
+  buildSubcats(catSel.value);
+  catSel.addEventListener("change", e => buildSubcats(e.target.value));
+}
+
+async function runDiag() {
+  const payload = {
+    website: document.getElementById("website").value || null,
+    category: document.getElementById("category").value,
+    subcategory: document.getElementById("subcategory").value,
+    budget: parseFloat(document.getElementById("budget").value),
+    clicks: parseFloat(document.getElementById("clicks").value),
+    leads: parseFloat(document.getElementById("leads").value),
+    goal_cpl: document.getElementById("goal_cpl").value ? parseFloat(document.getElementById("goal_cpl").value) : null,
+    impressions: document.getElementById("impressions").value ? parseFloat(document.getElementById("impressions").value) : null,
+    dash_enabled: document.getElementById("dash_enabled").checked
+  };
+  lastPayload = payload;
+
+  const res = await fetch(`${API}/diagnose`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    alert(`Error ${res.status}: ${t}`);
+    return;
+  }
+  const data = await res.json();
+  renderResults(data);
+}
+
+function renderResults(d) {
+  document.getElementById("results").style.display = "block";
+
+  // Chips
+  const chips = [];
+  chips.push(goalStatusPill(d.overall?.goal_status, d.goal_analysis?.market_band, d.overall?.celebration));
+  chips.push(marketBandPill(d.goal_analysis?.market_band || d.goal_realism?.band));
+  document.getElementById("chipsRow").innerHTML = chips.join("");
+
+  // Goal analysis text
+  const prob = d.goal_analysis?.prob_leq_goal;
+  const userGoal = d.input?.goal_cpl;
+  document.getElementById("goalProb").textContent =
+    (prob != null && userGoal != null)
+      ? `≈${fmtPct(prob)} of campaigns achieve CPL ≤ ${fmtMoney(userGoal)} in this category.`
+      : "";
+  const rng = d.goal_analysis?.realistic_range || {};
+  document.getElementById("goalRange").textContent =
+    (rng.low != null && rng.high != null) ? `Typical range: ${fmtMoney(rng.low)} – ${fmtMoney(rng.high)}` : "";
+  document.getElementById("goalNote").textContent = d.goal_analysis?.note || "";
+
+  const rec = d.goal_analysis?.recommended_cpl;
+  const canAdopt = d.goal_analysis?.can_autoadopt && rec != null;
+  const recEl = document.getElementById("goalRec");
+  const adoptBtn = document.getElementById("adoptBtn");
+  if (canAdopt) {
+    recEl.style.display = "inline-block";
+    recEl.textContent = `Recommended target: ${fmtMoney(rec)}`;
+    adoptBtn.style.display = "inline-block";
+  } else {
+    recEl.style.display = "none";
+    adoptBtn.style.display = "none";
+  }
+
+  // Current CPL statement
+  document.getElementById("currentCplNote").textContent = d.overall?.current_cpl_statement || "";
+
+  // Benchmarks / Gauges
+  const bm = d.benchmarks || {};
+
+  // CPL
+  const cpl = bm.cpl || {};
+  document.getElementById("g-cpl-band").innerHTML = tag(bandLabel(cpl.band || "unknown"), cpl.band || "unknown");
+  buildGauge(
+    document.getElementById("g-cpl-track"),
+    (typeof cpl.display_percentile === "number" ? cpl.display_percentile : null),
+    "g-" + (cpl.band || "unknown")
+  );
+  document.getElementById("g-cpl-note").textContent =
+    (typeof cpl.display_percentile === "number" && cpl.value != null)
+      ? `Top ${fmtPct(cpl.display_percentile)} performance at ${fmtMoney(cpl.value)} vs median ${fmtMoney(cpl.median)}.`
+      : "";
+
+  // CPC
+  const cpc = bm.cpc || {};
+  document.getElementById("g-cpc-band").innerHTML = tag(bandLabel(cpc.band || "unknown"), cpc.band || "unknown");
+  buildGauge(
+    document.getElementById("g-cpc-track"),
+    (typeof cpc.display_percentile === "number" ? cpc.display_percentile : null),
+    "g-" + (cpc.band || "unknown")
+  );
+  document.getElementById("g-cpc-note").textContent =
+    (typeof cpc.display_percentile === "number" && cpc.value != null)
+      ? `Top ${fmtPct(cpc.display_percentile)} performance at ${fmtMoney(cpc.value)} vs median ${fmtMoney(cpc.median)}.`
+      : "";
+
+  // CR
+  const cr = bm.cr || {};
+  document.getElementById("g-cr-band").innerHTML = tag(bandLabel(cr.band || "unknown"), cr.band || "unknown");
+
+  // Prefer display_percentile; fallback to raw percentile
+  let crP = (typeof cr.display_percentile === "number")
+    ? cr.display_percentile
+    : (typeof cr.percentile === "number" ? cr.percentile : null);
+
+  // Safety valve: if CR < median but percentile > 0.5, nudge below 50% so UI direction matches reality
+  if (crP != null && cr.median != null && cr.value != null && cr.value < cr.median && crP > 0.5) {
+    const ratio = cr.value / cr.median;            // <1 means worse than median
+    crP = Math.max(0, Math.min(0.49, 0.5 * ratio)); // push left proportionally
+  }
+
+  buildGauge(document.getElementById("g-cr-track"), crP, "g-" + (cr.band || "unknown"));
+
+  const crMedTxt = (cr.median != null) ? ` (median ${fmtPct1(cr.median)})` : "";
+  document.getElementById("g-cr-note").textContent =
+    (crP != null && cr.value != null)
+      ? `Top ${fmtPct(crP)} performance at ${fmtPct1(cr.value)}${crMedTxt}.`
+      : "";
+
+  // Scaling preview
+  const sp = d.advice?.scaling_preview || null;
+  const scaleCard = document.getElementById("scaleCard");
+  if (sp && Array.isArray(sp.scenarios) && sp.scenarios.length) {
+    scaleCard.style.display = "block";
+    const rows = (sp.scenarios || []).map(scn => {
+      const head = `${scn.budget_increase} → ${fmtMoney(scn.new_budget)}`;
+      const variants = (scn.lead_projections || []).map(v => `${v.scenario}: ~${v.leads}`).join("  |  ");
+      return `${head}  →  ${variants}`;
+    });
+    document.getElementById("scaleRows").innerHTML = rows.join("<br/>");
+    document.getElementById("scaleNote").textContent = sp.disclaimer || "Indicative projections.";
+  } else {
+    scaleCard.style.display = "none";
+  }
+
+  // Diagnosis
+  const primary = d.diagnosis?.primary;
+  const reason  = d.diagnosis?.reason;
+  const why     = d.diagnosis?.why;
+  let text = "";
+  let cls  = "ok";
+  if (primary === "scale") { text = "Recommendation: Scale budget / add products"; cls = "good"; }
+  else if (primary === "cr") { text = "Improve Conversion Rate first (LP/offer/flow)"; cls = "bad"; }
+  else if (primary === "cpc") { text = "Reduce Media Cost first (keywords/bids/negatives)"; cls = "ok"; }
+  else {
+    if (d.overall?.goal_status === "achieved")       { text = "Recommendation: Scale budget / add products"; cls = "good"; }
+    else if (d.overall?.goal_status === "on_track")  { text = "On track: monitor; no immediate lever change required"; cls = "ok"; }
+    else                                              { text = "No primary bottleneck selected"; cls = "ok"; }
+  }
+  document.getElementById("diagPrimary").innerHTML =
+    `<span class="pill ${cls}">${text}</span>` + (why ? ` <span class="small">(${why})</span>` : (reason ? ` <span class="small">(${reason})</span>` : ""));
+
+  const tags = (d.diagnosis?.tags || []).map(t => `<span class="pill ok">${t.replaceAll("_"," ")}</span>`).join(" ");
+  document.getElementById("diagTags").innerHTML = tags;
+
+  // Targets
+  const status = d.overall?.goal_status;
+  const t = d.targets || {};
+  if (status === "achieved") {
+    document.getElementById("targetsBlock").textContent = "Goal already achieved at current performance.";
+  } else if (status === "on_track") {
+    document.getElementById("targetsBlock").textContent = "On track; monitor trend. No immediate numeric targets.";
+  } else {
+    const tgt = [];
+    if (t.cr_needed != null)  tgt.push(`CR needed: ${fmtPct1(t.cr_needed)}`);
+    if (t.cpc_needed != null) tgt.push(`CPC needed: ${fmtMoney(t.cpc_needed)}`);
+    document.getElementById("targetsBlock").innerHTML = (tgt.length ? tgt.join(" \u00A0•\u00A0 ") : "—");
+  }
+
+  // Raw
+  document.getElementById("raw").textContent = JSON.stringify(d, null, 2);
+}
+
+async function exportPPTX() {
+  if (!lastPayload) { alert("Run a benchmark first."); return; }
+  const res = await fetch(`${API}/export/pptx`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(lastPayload)
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    alert(`Export failed ${res.status}: ${t}`);
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const cat = lastPayload.category.replace(/\s+/g,"_");
+  const sub = lastPayload.subcategory.replace(/\s+/g,"_");
+  a.href = url;
+  a.download = `benchmark_${cat}_${sub}.pptx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("runBtn").addEventListener("click", runDiag);
+document.getElementById("exportBtn").addEventListener("click", exportPPTX);
+document.getElementById("adoptBtn").addEventListener("click", () => {
+  const recTxt = document.getElementById("goalRec").textContent || "";
+  const m = recTxt.match(/\$([\d\.]+)/);
+  if (!m) return;
+  const val = parseFloat(m[1]);
+  document.getElementById("goal_cpl").value = String(val);
+  runDiag();
+});
+
+fetchMeta();
+</script>
+</body>
+</html>

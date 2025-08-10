@@ -1,0 +1,720 @@
+Country,Currency,Category,Sub Category,Vertical,Budget Median,Cost Per Call Median,Cost Per Lead Median,Cost Per Click Median,CTR Median,Strength
+USA,USD,Animals & Pets,Animal Health & Medicine,Specialty Services,1500,14.88,14.88,3,0.1093,Moderate
+USA,USD,Animals & Pets,Animal Shelters,Specialty Services,1500,33.78,32.79,1.25,0.0564,Moderate
+USA,USD,Animals & Pets,Breeding Services,Specialty Services,1800,192.48,80.64,2.18,0.1283,Weak
+USA,USD,Animals & Pets,Dog & Cat Food and Supplies,Specialty Services,2500,76.71,62.8,2.92,0.1076,Moderate
+USA,USD,Animals & Pets,Funeral Services / Cemeteries,Specialty Services,1125,10.8,10.8,2.97,0.0702,Weak
+USA,USD,Animals & Pets,"Horses, Horse Supplies & Equestrian Services",Specialty Services,2400,52.98,50.4,2.94,0.101,Weak
+USA,USD,Animals & Pets,Kennels & Pet Boarding,Specialty Services,1500,27.94,24.78,4.14,0.0714,Strong
+USA,USD,Animals & Pets,Pet Adoption,Specialty Services,1500,,,1.88,0.131,Poor
+USA,USD,Animals & Pets,Pet Grooming,Specialty Services,1000,25.53,21.76,3.29,0.0564,Moderate
+USA,USD,Animals & Pets,Pet Sitting & Walking,Specialty Services,1514.29,223.63,125.21,5.99,0.0356,Weak
+USA,USD,Animals & Pets,Pet Training,Specialty Services,1350,126.47,94.63,8.76,0.0496,Moderate
+USA,USD,Animals & Pets,Pets for Sale,Specialty Services,1000,212.72,103.54,2.16,0.0482,Poor
+USA,USD,Animals & Pets,Veterinarians,Specialty Services,1500,20.29,21.12,4.14,0.0698,Strong
+USA,USD,Animals & Pets,Waste Removal Services,Home Services,1000,242.26,148.41,14.88,0.0783,Poor
+USA,USD,Animals & Pets,z - Other (Specify Keywords Below),Specialty Services,1200,64.72,47.47,5.1,0.0584,Moderate
+USA,USD,Apparel / Fashion & Jewelry,Athletic Shoes & Apparel,Specialty Services,1650,38.09,35.52,3.25,0.0797,Moderate
+USA,USD,Apparel / Fashion & Jewelry,Men's Clothing,Specialty Services,800,206.44,134.29,6.3,0.0491,Moderate
+USA,USD,Apparel / Fashion & Jewelry,Men's Shoes (excl. Athletic),Specialty Services,1500,202.35,194.42,4.57,0.0571,Weak
+USA,USD,Apparel / Fashion & Jewelry,Sunglasses,Specialty Services,750,217.02,217.02,5.75,0.0429,Poor
+USA,USD,Apparel / Fashion & Jewelry,Uniforms & Workwear,Specialty Services,1500,115.58,113.3,5.53,0.091,Poor
+USA,USD,Apparel / Fashion & Jewelry,Women's Accessories,Specialty Services,300,,,7.69,0.0682,Poor
+USA,USD,Apparel / Fashion & Jewelry,Swimwear,Specialty Services,2000,,601.85,5.47,0.0533,Poor
+USA,USD,Apparel / Fashion & Jewelry,Women's Clothing,Specialty Services,850,174.16,141.17,4.95,0.0714,Weak
+USA,USD,Apparel / Fashion & Jewelry,Women's Shoes (excl. Athletic),Specialty Services,1500,194.42,172.43,3.97,0.0608,Weak
+USA,USD,Apparel / Fashion & Jewelry,Costumes,Specialty Services,1000,68.03,18.54,2.16,0.0505,Poor
+USA,USD,Apparel / Fashion & Jewelry,T-Shirts,Specialty Services,2000,278.66,383.75,2.61,0.1317,Weak
+USA,USD,Apparel / Fashion & Jewelry,Auctions & Shows,Specialty Services,2100,,727.78,3.03,0.1162,Poor
+USA,USD,Apparel / Fashion & Jewelry,Furs,Specialty Services,1812,29.37,24.53,2.48,0.1212,Poor
+USA,USD,Apparel / Fashion & Jewelry,Jewelry,Specialty Services,1800,114.43,94.63,4.01,0.0703,Strong
+USA,USD,Apparel / Fashion & Jewelry,Diamonds & Gemstones,Specialty Services,3500,179.47,152.93,5.47,0.0693,Moderate
+USA,USD,Apparel / Fashion & Jewelry,Watches,Specialty Services,2350,257.24,196.37,5.26,0.0606,Moderate
+USA,USD,Apparel / Fashion & Jewelry,Tailors & Alterations,Specialty Services,1500,181.27,152.93,8.76,0.0485,Weak
+USA,USD,Apparel / Fashion & Jewelry,z - Other (Specify Keywords Below),Specialty Services,1784,146.94,95.58,4.01,0.0679,Moderate
+USA,USD,Arts & Entertainment,Adult,Specialty Services,2000,765.09,66.69,5.21,0.0785,Moderate
+USA,USD,Arts & Entertainment,Amusement Parks,Specialty Services,2070.5,26.31,19.69,0.83,0.2086,Strong
+USA,USD,Arts & Entertainment,Art & Museums,Specialty Services,1500,89.12,31.19,1.82,0.1096,Moderate
+USA,USD,Arts & Entertainment,Bars & Clubs,Specialty Services,825.51,93.69,64.72,1.92,0.1288,Weak
+USA,USD,Arts & Entertainment,Casinos & Gambling,Specialty Services,1000,39.25,46.53,1.93,0.1296,Moderate
+USA,USD,Arts & Entertainment,Comedy,Specialty Services,1500,273.14,19.3,4.18,0.1359,Weak
+USA,USD,Arts & Entertainment,Dance,Specialty Services,650,98.49,79.04,3.1,0.0418,Weak
+USA,USD,Arts & Entertainment,Festivals & Special Events,Specialty Services,650,62.18,59.15,1.4,0.0824,Strong
+USA,USD,Arts & Entertainment,"Music (CDs, Albums, etc.)",Specialty Services,1500,399.41,311.06,2.48,0.0987,Poor
+USA,USD,Arts & Entertainment,Music (Concerts),Specialty Services,2125,12.3,9.12,0.38,0.3062,Moderate
+USA,USD,Arts & Entertainment,Theatre & Fine Arts,Specialty Services,1500,37.71,29.08,1.55,0.1604,Strong
+USA,USD,Arts & Entertainment,Tickets & Ticket Services,Specialty Services,11000,428.38,287.15,2.39,0.1685,Moderate
+USA,USD,Arts & Entertainment,Video Games,Specialty Services,500,83.93,24.29,2.86,0.0931,Weak
+USA,USD,Arts & Entertainment,Production Services & Equipment,Specialty Services,750,132.95,114.43,8.08,0.0339,Weak
+USA,USD,Arts & Entertainment,Talent & Artist Services,Specialty Services,3000,,252.14,8.67,0.0475,Poor
+USA,USD,Arts & Entertainment,Zoos,Specialty Services,7500,112.17,14.88,1.23,0.1359,Weak
+USA,USD,Arts & Entertainment,Musical Instruments,Specialty Services,1000,108.85,88.23,6.23,0.0488,Weak
+USA,USD,Arts & Entertainment,z - Other (Specify Keywords Below),Specialty Services,1715.5,100.48,27.39,1.48,0.1,Strong
+USA,USD,Attorneys & Legal Services,Accidents & Personal Injury Law,Professional Services,3250,249.64,221.41,6.82,0.0803,Strong
+USA,USD,Attorneys & Legal Services,Malpractice Law -- Medical,Professional Services,7500,685.4,340.36,9.68,0.0634,Weak
+USA,USD,Attorneys & Legal Services,Criminal Law,Professional Services,2180,177.68,137,10.91,0.0542,Strong
+USA,USD,Attorneys & Legal Services,Bankruptcy Law,Professional Services,1800,135.64,108.85,12.68,0.0646,Moderate
+USA,USD,Attorneys & Legal Services,Business & Corporate Law,Professional Services,1440,122.73,79.84,7.32,0.0729,Moderate
+USA,USD,Attorneys & Legal Services,Civil Rights Law,Professional Services,2000,232.76,223.63,7.03,0.0495,Poor
+USA,USD,Attorneys & Legal Services,Elder Law,Professional Services,1200,116.75,95.58,7.85,0.0565,Moderate
+USA,USD,Attorneys & Legal Services,Labor & Employment Law,Professional Services,2500,91.84,54.6,4.9,0.0675,Moderate
+USA,USD,Attorneys & Legal Services,Estate & Probate Law (incl. Wills),Professional Services,1386,115.58,81.45,7.85,0.0628,Strong
+USA,USD,Attorneys & Legal Services,Family Law (incl. Divorce),Professional Services,1500,169.02,129.02,8.41,0.0525,Strong
+USA,USD,Attorneys & Legal Services,Immigration Law,Professional Services,3000,85.63,75.94,5.53,0.0522,Moderate
+USA,USD,Attorneys & Legal Services,Intellectual Property Law,Professional Services,1000,145.47,111.05,10.8,0.0345,Weak
+USA,USD,Attorneys & Legal Services,Real Estate Law,Professional Services,750,90.92,69.41,5.58,0.0368,Moderate
+USA,USD,Attorneys & Legal Services,Tax Law,Professional Services,2500,204.38,167.34,9.39,0.0587,Moderate
+USA,USD,Attorneys & Legal Services,Litigation,Professional Services,9700,376.15,333.62,8.08,0.0639,Weak
+USA,USD,Attorneys & Legal Services,General Practice Law,Professional Services,1425,148.41,129.02,8.94,0.0616,Moderate
+USA,USD,Attorneys & Legal Services,Administrative Law,Professional Services,12500,314.19,90.02,7.32,0.0353,Weak
+USA,USD,Attorneys & Legal Services,Admiralty & Maritime Law,Professional Services,3000,3261.69,2591.52,27.11,0.0667,Moderate
+USA,USD,Attorneys & Legal Services,Construction Law,Professional Services,10000,432.68,320.54,5.64,0.0728,Weak
+USA,USD,Attorneys & Legal Services,Debtor & Creditor Law,Professional Services,1000,66.69,46.06,5.64,0.0655,Weak
+USA,USD,Attorneys & Legal Services,Finance & Securities Law,Professional Services,3111,,,9.21,0.053,Poor
+USA,USD,Attorneys & Legal Services,Insurance Law,Professional Services,1000,90.02,83.93,4.57,0.059,Weak
+USA,USD,Attorneys & Legal Services,Military Law,Professional Services,9300,88.23,56.26,7.85,0.0603,Poor
+USA,USD,Attorneys & Legal Services,Transportation Law,Professional Services,5000,482.99,482.99,59.15,0.0273,Poor
+USA,USD,Attorneys & Legal Services,Legal Clinics,Professional Services,1500,437.03,437.03,3.56,0.0275,Poor
+USA,USD,Attorneys & Legal Services,Bail Bonds,Professional Services,1200,181.27,181.27,11.59,0.0556,Poor
+USA,USD,Attorneys & Legal Services,Process Serving Services,Professional Services,850,,,2.1,0.1232,Poor
+USA,USD,Attorneys & Legal Services,z - Other (Specify Keywords Below),Professional Services,3000,157.59,127.74,5.47,0.0656,Moderate
+USA,USD,Automotive -- For Sale,ATVs,Automotive,1400,50.4,47.47,1.8,0.0938,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (General - New),Automotive,1200,46.99,30.88,2.51,0.0723,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (General - Used),Automotive,1500,83.1,56.83,1.8,0.0878,Strong
+USA,USD,Automotive -- For Sale,Boats,Automotive,1500,84.77,84.77,2.39,0.0637,Moderate
+USA,USD,Automotive -- For Sale,Cars & Trucks for Sale (Private-Party),Automotive,4551,204.38,83.1,11.94,0.0477,Weak
+USA,USD,Automotive -- For Sale,Electric (Alternative Energy) Vehicles,Automotive,1400,314.19,290.03,2.48,0.056,Poor
+USA,USD,Automotive -- For Sale,Mobile Homes & RVs,Automotive,800,47.94,40.45,2.12,0.08,Strong
+USA,USD,Automotive -- For Sale,Motorcycle Dealer (New),Automotive,2000,24.29,23.34,1.75,0.1136,Strong
+USA,USD,Automotive -- For Sale,Motorcycle Dealer (Used),Automotive,1781.25,29.96,23.57,1.58,0.0857,Moderate
+USA,USD,Automotive -- For Sale,Motorcycle(s) for Sale,Automotive,1500,24.05,19.89,1.36,0.1131,Moderate
+USA,USD,Automotive -- For Sale,Trailers,Automotive,2500,70.11,65.37,2.1,0.0828,Moderate
+USA,USD,Automotive -- For Sale,Vehicles (Commercial/Other),Automotive,1350,106.7,84.77,5.58,0.0621,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (AM General),Automotive,500,160.77,126.47,2.48,0.0538,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Aston Martin),Automotive,1250,32.79,77.48,2.46,0.0518,Weak
+USA,USD,Automotive -- For Sale,Automobile Dealer (Audi),Automotive,1250,46.06,49.4,9.78,0.1089,Weak
+USA,USD,Automotive -- For Sale,Automobile Dealer (Buick),Automotive,1500,46.99,34.12,1.77,0.0958,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Cadillac),Automotive,1500,87.36,31.5,2.34,0.0785,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Chevrolet),Automotive,1500,51.94,26.31,2.18,0.0867,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Chrysler),Automotive,1000,32.79,31.19,3.56,0.0922,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Dodge),Automotive,1000,42.95,29.67,2.23,0.0762,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Ford),Automotive,1500,66.02,62.8,2.61,0.0849,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (GMC),Automotive,1200,50.91,40.45,1.97,0.0863,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Honda),Automotive,1000,29.37,24.78,1.86,0.0959,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Hyundai),Automotive,1000,41.26,30.27,2.32,0.0908,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Jaguar),Automotive,400,23.81,17.46,3.1,0.0867,Weak
+USA,USD,Automotive -- For Sale,Automobile Dealer (Jeep),Automotive,2000,83.1,57.97,2.86,0.0724,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Kia),Automotive,1000,,518.01,5.1,0.0179,Poor
+USA,USD,Automotive -- For Sale,Automobile Dealer (Land Rover),Automotive,1000,36.23,30.27,2.8,0.0827,Weak
+USA,USD,Automotive -- For Sale,Automobile Dealer (Lexus),Automotive,2500,99.48,29.96,1.48,0.0529,Poor
+USA,USD,Automotive -- For Sale,Automobile Dealer (Lincoln),Automotive,1200,79.04,29.67,1.99,0.1038,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Mazda),Automotive,1500,156.02,156.02,3.49,0.0731,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Mercedes-Benz),Automotive,1500,42.52,40.04,1.9,0.0705,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Mercury),Automotive,700,90.92,93.69,5.37,0.1043,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Mitsubishi),Automotive,1000,37.34,32.14,1.52,0.0713,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Nissan),Automotive,2000,47.47,32.46,4.44,0.0879,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Porsche),Automotive,1000,69.41,59.15,1.45,0.104,Weak
+USA,USD,Automotive -- For Sale,Automobile Dealer (Subaru),Automotive,10500,64.07,42.95,3.82,0.1222,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Toyota),Automotive,3250,101.49,91.84,2.94,0.0815,Strong
+USA,USD,Automotive -- For Sale,Automobile Dealer (Volkswagen),Automotive,1750,98.49,65.37,5.05,0.0781,Moderate
+USA,USD,Automotive -- For Sale,Automobile Dealer (Volvo),Automotive,1750,86.49,149.9,6.36,0.1064,Moderate
+USA,USD,Automotive -- For Sale,z - Other (Specify Keywords Below),Automotive,1500,34.47,22.65,1.49,0.0909,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Air Bags,Automotive,750,18.17,17.81,3.9,0.0825,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts","Air Conditioning, Heating & Radiator Repair",Automotive,1000,42.52,34.81,3.63,0.0583,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Aircraft Parts & Supplies,Automotive,1000,7.92,7.54,2.59,0.2257,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Aircraft Services & Maintenance,Automotive,1000,7.92,7.54,2.59,0.2257,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Alarms & Security Systems,Automotive,1000,13.07,12.94,3.49,0.1575,Weak
+USA,USD,"Automotive -- Repair, Service & Parts","Alignment, Frame & Axle",Automotive,842,23.81,21.54,4.01,0.0665,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Alternators & Starters Service and Repair,Automotive,1000,29.96,24.53,4.22,0.0581,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Antique & Classic Auto Restoration,Automotive,1300,29.67,19.89,1.73,0.0939,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Appraisers,Automotive,1000,7.92,7.54,2.59,0.2257,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Auto Make & Model Specialists,Automotive,1500,33.78,30.27,5.99,0.0452,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Auto Parts & Accessories (General),Automotive,1150,33.12,19.69,2.61,0.075,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Auto Service & Repair (General),Automotive,1000,47.47,41.26,5.05,0.0476,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Battery Repairing & Recharging,Automotive,1000,33.45,29.96,3.63,0.0695,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Body Repair & Paint,Automotive,1040,59.74,50.4,5.75,0.052,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Brake Repair & Inspection,Automotive,1000,37.71,31.82,3.71,0.0564,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Coolant Servicing & Cooling Systems,Automotive,1000,33.78,27.94,3.97,0.0582,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Electrical System Repair,Automotive,1000,27.94,23.57,4.1,0.0592,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Engine Repair & Tune-Up,Automotive,1000,37.34,30.88,3.74,0.0582,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Fluid Level Check,Automotive,750,27.11,24.29,3.63,0.0657,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Fuel Injection Cleaning,Automotive,5000,62.8,190.57,3.71,0.0553,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts","Garages, Parking & Storage",Automotive,2000,78.26,82.27,5,0.0896,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Gas & Filling Stations,Automotive,1000,7.92,7.54,2.59,0.2257,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Glass (Window) Repair,Automotive,1401,43.38,33.12,6.62,0.0633,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Inspection & Diagnostic Services,Automotive,950,32.46,28.79,4.01,0.0547,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Insurance (Auto),Professional Services,1000,25.79,27.11,4.76,0.0694,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts","Limousine Service, Repair & Parts",Automotive,1000,17.81,16.44,5.31,0.1575,Poor
+USA,USD,"Automotive -- Repair, Service & Parts",Maintenance & Tune-Ups,Automotive,1000,34.81,29.37,3.46,0.0559,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Mobile Service & Repair,Automotive,750,37.34,37.34,4.66,0.076,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Motorcycles & Motor Scooter Service and Repair,Automotive,800,39.25,45.15,3.19,0.0472,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Muffler / Exhaust System Repair,Automotive,1400,47.94,42.1,4.35,0.0534,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Oil Change & Lubrication,Automotive,1200,52.46,40.04,4.81,0.0592,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Racing & High Performance,Automotive,2000,21.54,17.81,1.57,0.1513,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Renting & Leasing,Automotive,750,44.7,32.79,5.26,0.1032,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Roadside Service,Automotive,500,46.06,44.26,6.36,0.049,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",RV Parts / Services,Automotive,1500,106.7,80.64,5.42,0.0565,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Shock / Strut Repair,Automotive,1000,36.97,30.88,3.35,0.0563,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Smog Test & Certification,Automotive,850,26.84,24.78,4.71,0.0556,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Sound & Video,Automotive,1000,72.24,66.02,4.62,0.0537,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Steering & Suspension,Automotive,750,37.34,32.14,3.22,0.052,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Tire & Wheel Alignment and Rotation,Automotive,828.97,36.97,29.67,3.86,0.0649,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Tires (Dealers),Automotive,900,24.53,22.42,2.89,0.0561,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Tire & Wheel Repair,Automotive,750,21.76,19.11,2.89,0.0577,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Towing,Automotive,1000,23.57,19.89,5.87,0.0505,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Trailers,Automotive,1150,54.6,55.7,3.29,0.0682,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Transmission & Clutch Repair,Automotive,1000,38.47,35.16,6.96,0.0548,Strong
+USA,USD,"Automotive -- Repair, Service & Parts",Transporters & Drive-Aways,Automotive,3500,18.17,126.47,14.01,0.0842,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Upholstery Repair,Automotive,1500,19.3,17.46,3.35,0.0647,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Warranty Services,Automotive,750,17.29,15.18,2.59,0.0853,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Washing & Detailing,Automotive,1000,82.27,35.52,3.67,0.0579,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Wrecking,Automotive,1500,36.6,33.12,3.29,0.0747,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Boat Parts & Supplies,Automotive,1000,18.17,18.17,5.31,0.1177,Weak
+USA,USD,"Automotive -- Repair, Service & Parts",Boat Services & Maintenance,Automotive,3000,97.51,87.36,6.49,0.0449,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Traffic Schools,Automotive,1000,17.81,16.44,5.31,0.1575,Poor
+USA,USD,"Automotive -- Repair, Service & Parts",Wheels (Dealers),Automotive,750,32.79,26.84,2.83,0.0559,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",Glass (Window) Tinting,Automotive,1500,74.44,58.56,6.05,0.0547,Moderate
+USA,USD,"Automotive -- Repair, Service & Parts",z - Other (Specify Keywords Below),Automotive,1045.5,36.23,29.08,3.67,0.0767,Moderate
+USA,USD,Beauty & Personal Care,Barber Shops,Specialty Services,206,29.96,9.21,2.18,0.0894,Strong
+USA,USD,Beauty & Personal Care,Bath & Body Products,Specialty Services,2100,1326.1,888.91,6.23,0.0224,Weak
+USA,USD,Beauty & Personal Care,Beauty Salons & Stylists,Specialty Services,825.51,56.83,42.95,4.85,0.0928,Moderate
+USA,USD,Beauty & Personal Care,Cosmetic Surgery,Healthcare,2500,156.02,107.77,6.55,0.0513,Strong
+USA,USD,Beauty & Personal Care,Day Spas,Healthcare,1500,67.36,59.15,3.9,0.0834,Strong
+USA,USD,Beauty & Personal Care,Diet & Weight Loss Centers/Products,Healthcare,1540,154.47,91.84,5.1,0.0719,Moderate
+USA,USD,Beauty & Personal Care,Facial & Skin Care,Healthcare,1250,167.34,157.59,11.7,0.0425,Strong
+USA,USD,Beauty & Personal Care,Foot Care,Specialty Services,825,24.53,24.05,2.29,0.094,Weak
+USA,USD,Beauty & Personal Care,Hair Care,Specialty Services,750,57.4,37.34,2.41,0.0732,Moderate
+USA,USD,Beauty & Personal Care,Hair Removal (excl. Waxing),Healthcare,2750,70.81,60.95,4.44,0.0656,Moderate
+USA,USD,Beauty & Personal Care,Hair Replacement & Restoration,Healthcare,1925,91.84,73.7,5.05,0.0944,Moderate
+USA,USD,Beauty & Personal Care,Image & Personal Appearance Services,Specialty Services,1500,121.51,107.77,5.58,0.0709,Weak
+USA,USD,Beauty & Personal Care,Massage Therapy,Healthcare,1000,56.83,55.15,2.53,0.0577,Moderate
+USA,USD,Beauty & Personal Care,Nail Care,Specialty Services,1500,111.05,45.15,4.53,0.0362,Weak
+USA,USD,Beauty & Personal Care,Tattoos & Body Piercing,Specialty Services,250,42.52,27.94,3.46,0.0644,Weak
+USA,USD,Beauty & Personal Care,Tanning,Specialty Services,429.73,38.09,31.5,1.58,0.2286,Weak
+USA,USD,Beauty & Personal Care,Waxing,Specialty Services,1000,84.77,52.98,5.42,0.0556,Weak
+USA,USD,Beauty & Personal Care,z - Other (Specify Keywords Below),Specialty Services,2000,208.51,188.67,9.78,0.0476,Strong
+USA,USD,Business Opportunities,Business Brokers,Specialty Services,1500,109.95,48.91,5,0.0748,Weak
+USA,USD,Business Opportunities,Construction Business Opportunities,Specialty Services,825,112.17,104.58,3.19,0.0566,Poor
+USA,USD,Business Opportunities,Manufacturing Business Opportunities,Specialty Services,2000,78.26,64.72,2.53,0.0725,Weak
+USA,USD,Business Opportunities,Partners / Affiliate Programs,Specialty Services,5000,265.07,252.14,6.23,0.057,Poor
+USA,USD,Business Opportunities,Retail Business Opportunities,Specialty Services,600,130.32,66.69,2.18,0.0797,Poor
+USA,USD,Business Opportunities,Service Business Opportunities,Specialty Services,600,130.32,66.69,2.18,0.0797,Poor
+USA,USD,Business Opportunities,z - Other (Specify Keywords Below),Specialty Services,285,57.97,54.6,3.56,0.0857,Moderate
+USA,USD,Business Services,Accountants & Bookkeeping,Specialty Services,1500,230.44,196.37,8.33,0.0393,Moderate
+USA,USD,Business Services,Advertising & Marketing,Specialty Services,2000,204.38,148.41,5.37,0.0655,Strong
+USA,USD,Business Services,"Banking, Financial Services & Treasury",Professional Services,2000,259.82,196.37,5.31,0.0809,Moderate
+USA,USD,Business Services,Business Brokers & Liquidators,Specialty Services,1750,267.74,177.68,4.62,0.1166,Poor
+USA,USD,Business Services,Business Development & Sales Support,Specialty Services,1500,,365.04,6.69,0.0554,Poor
+USA,USD,Business Services,Business Software,Specialty Services,3000,595.86,512.86,4.57,0.0509,Moderate
+USA,USD,Business Services,Cafeteria & Food Services,Specialty Services,1000,100.48,66.69,8.94,0.0352,Weak
+USA,USD,Business Services,Career Counseling,Specialty Services,4700,2368.47,780.55,9.49,0.0642,Moderate
+USA,USD,Business Services,"Cellular Phones, Pagers & Wireless Services",Specialty Services,1500,19.49,19.49,0.55,0.3901,Poor
+USA,USD,Business Services,Consultants (Industry / Other),Specialty Services,1500,130.32,101.49,2.25,0.0536,Moderate
+USA,USD,Business Services,Conventions & Conferences,Specialty Services,2500,146.94,96.54,4.57,0.0652,Moderate
+USA,USD,Business Services,Copiers & Copy Services,Specialty Services,1000,411.58,391.51,53.52,0.0652,Poor
+USA,USD,Business Services,Credit Check & Collection Agencies,Specialty Services,2000,100.48,76.71,14.01,0.0649,Poor
+USA,USD,Business Services,Customer Service,Specialty Services,5000,1422.26,1064.22,6.3,0.0482,Poor
+USA,USD,Business Services,Design Services,Specialty Services,5133,237.46,17.46,1.73,0.0677,Poor
+USA,USD,Business Services,Employment Recruiters & Agencies,Specialty Services,1500,284.29,200.34,5.7,0.0686,Strong
+USA,USD,Business Services,Event Management,Specialty Services,750,88.23,49.4,5.16,0.0222,Poor
+USA,USD,Business Services,Facilities Management & Janitorial,Specialty Services,1500,142.59,98.49,11.7,0.0437,Moderate
+USA,USD,Business Services,Human Resources,Specialty Services,1000,350.72,828.82,6.62,0.0484,Weak
+USA,USD,Business Services,Incorporation Services,Specialty Services,1500,192.48,192.48,12.18,0.0409,Poor
+USA,USD,Business Services,Insurance & Benefits,Professional Services,3000,,953.37,7.17,0.0779,Weak
+USA,USD,Business Services,Internet Services,Specialty Services,3000,64.07,162.39,3.42,0.0873,Moderate
+USA,USD,Business Services,Investigation & Security Services,Specialty Services,1500,116.75,100.48,5.93,0.052,Moderate
+USA,USD,Business Services,"Mailing, Shipping & Courier Services",Specialty Services,1800,190.57,181.27,6.36,0.037,Moderate
+USA,USD,Business Services,Management & Strategy Consulting Services,Specialty Services,3000,820.57,314.19,4.18,0.0204,Poor
+USA,USD,Business Services,Mergers & Acquisitions Services,Specialty Services,1500,214.86,212.72,10.18,0.0428,Weak
+USA,USD,Business Services,Notaries,Specialty Services,1000,27.39,24.78,7.54,0.0438,Poor
+USA,USD,Business Services,Office Furniture Sales & Rental,Specialty Services,2800,184.93,90.92,5.26,0.0399,Moderate
+USA,USD,Business Services,Outplacement Services,Specialty Services,1500,219.2,219.2,2.72,0.0181,Poor
+USA,USD,Business Services,Outsourcing,Specialty Services,24951,1176.15,4722.06,10.8,0.047,Weak
+USA,USD,Business Services,Payroll Service,Specialty Services,1100,70.11,68.72,3.19,0.0708,Weak
+USA,USD,Business Services,"Printers, Publishers & Engravers",Specialty Services,1850,162.39,119.1,5.87,0.0407,Moderate
+USA,USD,Business Services,Promotional Products & Services,Specialty Services,1000,100.48,92.76,6.17,0.0426,Moderate
+USA,USD,Business Services,Real Estate,Professional Services,2300,111.05,90.92,3.86,0.0702,Moderate
+USA,USD,Business Services,"Research, Development & Testing Services",Specialty Services,6000,934.49,523.22,10.38,0.0547,Moderate
+USA,USD,Business Services,Shredding & Document Security,Specialty Services,2000,103.54,70.81,6.69,0.0651,Moderate
+USA,USD,Business Services,"Signs, Banners & Decals",Specialty Services,1500,190.57,121.51,5.53,0.0526,Moderate
+USA,USD,Business Services,Tax Return Preparation & Advisory,Specialty Services,1620,301.87,244.69,7.32,0.0483,Weak
+USA,USD,Business Services,Technology Services,Specialty Services,2550,327.01,252.14,5.1,0.0444,Moderate
+USA,USD,Business Services,Telephone Equipment & Systems,Specialty Services,1450,262.43,262.43,14.3,0.0585,Poor
+USA,USD,Business Services,"Training Services, Programs & Materials",Specialty Services,1000,200.34,200.34,6.89,0.0191,Poor
+USA,USD,Business Services,Translation and Interpretation Services,Specialty Services,600,135.64,93.69,1.25,0.0393,Weak
+USA,USD,Business Services,"Venture Capital, Funding & Loans Available",Specialty Services,5050,550.04,333.62,2.46,0.0358,Poor
+USA,USD,Business Services,Video Production & Editing,Specialty Services,2200,186.79,157.59,7.46,0.0489,Weak
+USA,USD,Business Services,"Warehousing, Transportation & Distribution",Specialty Services,1500,149.9,126.47,16.95,0.0423,Poor
+USA,USD,Business Services,Waste Management & Recycling,Specialty Services,1411,54.6,47.94,6.05,0.0634,Strong
+USA,USD,Business Services,z - Other (Specify Keywords Below),Specialty Services,1868.4,78.26,72.24,4.14,0.0701,Strong
+USA,USD,Career & Employment,Employment Opportunities (Jobs),Specialty Services,2000,130.32,88.23,5.26,0.0663,Strong
+USA,USD,Career & Employment,Human Resources & Misc. Employment Services,Specialty Services,2500,,,5.47,0.0357,Moderate
+USA,USD,Career & Employment,Recruiters & Agencies (excl. Executive Search),Specialty Services,2500,122.73,28.5,4.31,0.0839,Poor
+USA,USD,Career & Employment,Seeking Employment,Specialty Services,3950,533.79,68.03,16.28,0.08,Poor
+USA,USD,Career & Employment,Temporary Employment Agencies,Specialty Services,1540,57.97,44.26,5.93,0.0718,Poor
+USA,USD,Career & Employment,Training & Development,Specialty Services,4300,85.63,42.95,4.57,0.0953,Poor
+USA,USD,"Community, Garage Sales & Organizations",Athletic Organizations,Specialty Services,500,13.33,8.33,0.77,0.3,Poor
+USA,USD,"Community, Garage Sales & Organizations",Chambers of Commerce,Specialty Services,1000,,11.7,2.97,0.0517,Poor
+USA,USD,"Community, Garage Sales & Organizations",Charitable Donations & Auctions,Specialty Services,1500,265.07,175.91,3.1,0.0724,Weak
+USA,USD,"Community, Garage Sales & Organizations",Civic and Social Organizations/Services,Specialty Services,6000,350.72,212.72,10.38,0.0572,Weak
+USA,USD,"Community, Garage Sales & Organizations",Community Events,Specialty Services,1000,72.24,12.68,1.03,0.1169,Moderate
+USA,USD,"Community, Garage Sales & Organizations",Community Service & Volunteerism,Specialty Services,1500,12.18,8,1.77,0.0603,Poor
+USA,USD,"Community, Garage Sales & Organizations",Farmers' Markets,Specialty Services,1000,,11.7,2.97,0.0517,Poor
+USA,USD,"Community, Garage Sales & Organizations",Grantmaking & Giving Organizations,Specialty Services,3900,,,0.63,0.4166,Poor
+USA,USD,"Community, Garage Sales & Organizations",Membership Organizations,Specialty Services,10000,,190.57,5.47,0.0514,Weak
+USA,USD,"Community, Garage Sales & Organizations",Religious Organizations,Specialty Services,900,54.6,17.81,3.74,0.0822,Weak
+USA,USD,"Community, Garage Sales & Organizations",Social Advocacy Organizations,Specialty Services,1700,51.42,35.87,3.86,0.0753,Poor
+USA,USD,"Community, Garage Sales & Organizations",z - Other (Specify Keywords Below),Specialty Services,3075,45.15,46.06,1.05,0.1308,Moderate
+USA,USD,"Computers, Telephony & Internet","Cabling & Installation (Voice, Data & Video)",Specialty Services,1000,,,1.19,0.3162,Poor
+USA,USD,"Computers, Telephony & Internet",Cell Phones,Specialty Services,2400,55.15,55.15,4.1,0.0393,Poor
+USA,USD,"Computers, Telephony & Internet",Computer Add-Ons & Accessories,Specialty Services,1500,441.42,1118.79,3.42,0.0279,Weak
+USA,USD,"Computers, Telephony & Internet",Computer Service & Repair,Specialty Services,1000,50.4,50.91,9.39,0.0731,Weak
+USA,USD,"Computers, Telephony & Internet",Computer Software Development & Services,Specialty Services,1600,122.73,101.49,5,0.0738,Weak
+USA,USD,"Computers, Telephony & Internet",Computer Support & Training,Specialty Services,3000,181.27,179.47,4.57,0.0531,Weak
+USA,USD,"Computers, Telephony & Internet",Desktops,Specialty Services,2400,55.15,55.15,4.1,0.0393,Poor
+USA,USD,"Computers, Telephony & Internet",Internet Access Services (ISPs),Specialty Services,750,36.23,34.12,3.71,0.1879,Poor
+USA,USD,"Computers, Telephony & Internet","Phones, Accessories & Answering Machines",Specialty Services,2951,1286.91,1286.91,12.81,0.0635,Poor
+USA,USD,"Computers, Telephony & Internet",Software,Specialty Services,5500,862.64,523.22,4.81,0.0354,Weak
+USA,USD,"Computers, Telephony & Internet",Telephone Service (Local),Specialty Services,750,36.23,34.12,3.71,0.1879,Poor
+USA,USD,"Computers, Telephony & Internet",Voice Mail and Messaging Services,Specialty Services,750,36.23,34.12,3.71,0.1879,Poor
+USA,USD,"Computers, Telephony & Internet",Video Games,Specialty Services,2400,55.15,55.15,4.1,0.0393,Poor
+USA,USD,"Computers, Telephony & Internet",z - Other (Specify Keywords Below),Specialty Services,500,55.15,48.91,2.56,0.1214,Poor
+USA,USD,Dentists & Dental Services,Cosmetic Dentistry,Healthcare,1900,138.38,122.73,8.67,0.0508,Strong
+USA,USD,Dentists & Dental Services,Dental Equipment & Supplies,Healthcare,2000,70.81,55.7,3.32,0.0711,Weak
+USA,USD,Dentists & Dental Services,Dental Hygienists,Healthcare,1500,66.69,57.4,3.49,0.0546,Weak
+USA,USD,Dentists & Dental Services,Emergency Dentistry,Healthcare,1000,82.27,75.19,7.85,0.0681,Strong
+USA,USD,Dentists & Dental Services,Endodontics,Healthcare,2000,314.19,314.19,10.7,0.0141,Poor
+USA,USD,Dentists & Dental Services,General Dentistry,Healthcare,1500,94.63,86.49,7.32,0.0513,Strong
+USA,USD,Dentists & Dental Services,Implantology,Healthcare,2000,230.44,204.38,9.49,0.053,Strong
+USA,USD,Dentists & Dental Services,Oral-Maxillofacial Pathology,Healthcare,1500,333.62,482.99,2.01,0.0538,Poor
+USA,USD,Dentists & Dental Services,Oral-Maxillofacial Radiology,Healthcare,1500,181.27,92.76,5.31,0.0248,Poor
+USA,USD,Dentists & Dental Services,Oral-Maxillofacial Surgery,Healthcare,1500,67.36,58.56,8.41,0.0589,Strong
+USA,USD,Dentists & Dental Services,Orthodontics,Healthcare,1525,83.1,75.94,8.33,0.046,Strong
+USA,USD,Dentists & Dental Services,Pediatric Dentistry,Healthcare,1500,48.91,45.15,8.33,0.0445,Strong
+USA,USD,Dentists & Dental Services,Periodontics,Healthcare,2500,129.02,105.64,1.3,0.0417,Poor
+USA,USD,Dentists & Dental Services,Prosthodontics,Healthcare,2500,98.49,95.58,5.75,0.0751,Moderate
+USA,USD,Dentists & Dental Services,Sedation Dentistry,Healthcare,2300,139.77,115.58,8.25,0.0616,Moderate
+USA,USD,Dentists & Dental Services,Teeth Whitening Centers,Healthcare,1900,56.26,48.42,3.67,0.0634,Moderate
+USA,USD,Dentists & Dental Services,z - Other (Specify Keywords Below),Healthcare,1500,242.26,208.51,7.1,0.0563,Moderate
+USA,USD,Education & Instruction,After-School Programs,Specialty Services,900,83.1,74.44,2.77,0.0669,Moderate
+USA,USD,Education & Instruction,Agricultural & Food Sciences Schools and Programs,Specialty Services,1250,317.35,247.15,5.1,0.0559,Weak
+USA,USD,Education & Instruction,Art & Design Schools and Programs,Specialty Services,2800,265.07,164.02,4.22,0.0671,Weak
+USA,USD,Education & Instruction,Beauty Schools,Specialty Services,1500,69.41,40.04,4.57,0.1004,Moderate
+USA,USD,Education & Instruction,Business / Management Schools and Programs (including MBA),Specialty Services,3300,658.52,533.79,3.42,0.028,Weak
+USA,USD,Education & Instruction,Certifications,Specialty Services,1500,267.74,154.47,5.87,0.087,Moderate
+USA,USD,Education & Instruction,Computer & IT Schools and Programs,Specialty Services,6000,1669.03,130.32,18.36,0.0624,Weak
+USA,USD,Education & Instruction,Dance / Ballet Schools & Lessons,Specialty Services,850,112.17,62.8,4.62,0.0588,Moderate
+USA,USD,Education & Instruction,Drama & Dramatic Arts Schools and Instruction,Specialty Services,1000,83.1,53.52,2.41,0.0813,Weak
+USA,USD,Education & Instruction,Driving Schools,Specialty Services,1000,79.04,57.97,5.47,0.0884,Moderate
+USA,USD,Education & Instruction,Education Schools and Programs,Specialty Services,1350,83.93,47.47,4.35,0.095,Strong
+USA,USD,Education & Instruction,Graduation,Specialty Services,925,17.64,14.73,1.26,0.2,Poor
+USA,USD,Education & Instruction,Grants & Fellowships,Specialty Services,2000,,403.43,1.3,0.0525,Poor
+USA,USD,Education & Instruction,K-12 Schools,Specialty Services,1500,127.74,88.23,4.53,0.0624,Strong
+USA,USD,Education & Instruction,Language Schools,Specialty Services,500,116.75,116.75,5.99,0.0791,Poor
+USA,USD,Education & Instruction,Law & Paralegal Schools and Programs,Specialty Services,5600,,,5.21,0.0717,Weak
+USA,USD,Education & Instruction,Liberal Arts & Humanities Schools and Programs,Specialty Services,1500,105.64,111.05,4.14,0.0625,Poor
+USA,USD,Education & Instruction,Medical Schools (excl. Nursing & Allied Health),Specialty Services,3000,720.54,561.16,9.78,0.0349,Moderate
+USA,USD,Education & Instruction,Miscellaneous & Specialty Instruction,Specialty Services,2000,183.09,108.85,3.86,0.1353,Weak
+USA,USD,Education & Instruction,Music Schools & Teachers,Specialty Services,1800,54.6,14.01,2.56,0.1765,Weak
+USA,USD,Education & Instruction,"Nursing, Allied/Mental Health & Human Services Schools and Programs",Specialty Services,5000,502.7,154.47,7.03,0.0656,Moderate
+USA,USD,Education & Instruction,Personal Development & Wellness Instruction,Specialty Services,500,,160.77,11.02,0.0671,Poor
+USA,USD,Education & Instruction,Post-Graduate Degree Programs (Masters & Doctorates),Specialty Services,2750,533.79,130.32,5.99,0.0538,Strong
+USA,USD,Education & Instruction,Pre-School,Specialty Services,932,146.94,107.77,8.25,0.0476,Strong
+USA,USD,Education & Instruction,Religion / Theology Schools and Programs,Specialty Services,1500,91.84,86.49,3.25,0.0879,Moderate
+USA,USD,Education & Instruction,Special Education & Learning Disabilities,Specialty Services,750,23.34,22.65,5.1,0.0909,Moderate
+USA,USD,Education & Instruction,Test / Exam Preparation,Specialty Services,800,120.3,61.56,0.7,0.0732,Poor
+USA,USD,Education & Instruction,Trade & Vocational Schools and Programs (Other),Specialty Services,1700,46.53,43.82,3.94,0.0839,Strong
+USA,USD,Education & Instruction,Tutoring,Specialty Services,960,244.69,304.9,15.18,0.0392,Weak
+USA,USD,Education & Instruction,Universities & Colleges,Specialty Services,2350,55.15,51.42,2.89,0.1057,Strong
+USA,USD,Education & Instruction,z - Other (Specify Keywords Below),Specialty Services,1900,154.47,61.56,4.35,0.0691,Moderate
+USA,USD,Electronics & Photo,Cameras & Photo (Albums),Specialty Services,2000,200.34,53.52,3.6,0.0284,Weak
+USA,USD,Electronics & Photo,Car Electronics,Specialty Services,1000,90.92,80.64,4.76,0.0591,Weak
+USA,USD,Electronics & Photo,Gadgets & Other Electronics,Specialty Services,6150,492.75,372.41,4.26,0.0233,Weak
+USA,USD,Electronics & Photo,Televisions & Home Theaters,Specialty Services,750,144.03,75.94,5.1,0.083,Weak
+USA,USD,Electronics & Photo,Satellite & Cable TV,Home Services,750,92.76,48.91,6.49,0.0807,Poor
+USA,USD,Electronics & Photo,Audio / Video Accessories & Media,Specialty Services,1800,228.15,139.77,7.69,0.0619,Weak
+USA,USD,Electronics & Photo,Home Audio,Home Services,1700,112.17,97.51,6.42,0.0554,Weak
+USA,USD,Electronics & Photo,z - Other (Specify Keywords Below),Specialty Services,1000,170.72,113.3,4.1,0.0505,Weak
+USA,USD,Farming & Agriculture,Auctions,Specialty Services,1381,169.02,225.88,1.97,0.0513,Weak
+USA,USD,Farming & Agriculture,Bees and Honey,Specialty Services,2200,68.72,68.72,1.11,0.0485,Poor
+USA,USD,Farming & Agriculture,Farms (excl. Crops),Specialty Services,500,104.58,90.02,3.1,0.0432,Weak
+USA,USD,Farming & Agriculture,Farm Equipment & Supplies,Specialty Services,1900,139.77,121.51,4.81,0.0559,Moderate
+USA,USD,Farming & Agriculture,Feed & Feed Ingredients,Specialty Services,1200,58.56,58.56,0.88,0.0616,Poor
+USA,USD,Farming & Agriculture,Fencing & Fencing Supplies,Specialty Services,630,54.6,43.82,3.22,0.0507,Weak
+USA,USD,Farming & Agriculture,Fertilizers & Pesticides,Specialty Services,4215,361.41,169.02,8,0.0454,Weak
+USA,USD,Farming & Agriculture,Food Manufacturers,Specialty Services,1000,30.88,31.19,8.85,0.1287,Weak
+USA,USD,Farming & Agriculture,Food Processors,Specialty Services,500,43.82,34.47,1.01,0.0993,Poor
+USA,USD,Farming & Agriculture,Horticulture,Specialty Services,1000,57.97,54.6,3.32,0.0282,Poor
+USA,USD,Farming & Agriculture,Livestock & Livestock Services,Specialty Services,1000,137,137,3.13,0.064,Poor
+USA,USD,Farming & Agriculture,Storage,Specialty Services,1500,181.27,149.9,9.68,0.058,Weak
+USA,USD,Farming & Agriculture,Tractors & Accessories,Specialty Services,2500,80.64,51.94,7.32,0.0538,Moderate
+USA,USD,Farming & Agriculture,Wildlife Management,Specialty Services,550,40.04,35.52,7.69,0.0544,Poor
+USA,USD,Farming & Agriculture,z - Other (Specify Keywords Below),Specialty Services,1500,27.94,27.66,5.47,0.0607,Weak
+USA,USD,Finance & Insurance,Accountants & CPAs,Professional Services,1651,372.41,298.87,15.96,0.0381,Poor
+USA,USD,Finance & Insurance,Bail Bonds,Professional Services,1000,212.72,212.72,21.98,0.0168,Poor
+USA,USD,Finance & Insurance,Banks,Professional Services,2000,132.95,79.04,2.34,0.1,Strong
+USA,USD,Finance & Insurance,Credit Cards,Professional Services,2000,22.65,16.78,1.27,0.1454,Moderate
+USA,USD,Finance & Insurance,Credit Unions,Professional Services,1500,39.25,46.99,1.97,0.1296,Strong
+USA,USD,Finance & Insurance,Estate Planning,Professional Services,3000,1043.15,749.95,9.58,0.0647,Weak
+USA,USD,Finance & Insurance,Insurance: Auto,Professional Services,550,79.84,57.97,3.16,0.089,Moderate
+USA,USD,Finance & Insurance,Insurance: Business,Professional Services,2000,244.69,244.69,22.42,0.017,Poor
+USA,USD,Finance & Insurance,Insurance: Home,Professional Services,600,67.36,43.82,3.39,0.1094,Moderate
+USA,USD,Finance & Insurance,Insurance: Life,Professional Services,1500,50.91,46.99,2.56,0.1405,Moderate
+USA,USD,Finance & Insurance,Insurance: Medical,Healthcare,1700,210.61,99.48,4.1,0.0419,Moderate
+USA,USD,Finance & Insurance,Insurance: Other,Professional Services,1900,137,129.02,9.68,0.0475,Moderate
+USA,USD,Finance & Insurance,Loans & Borrowing (excl. Mortgages),Professional Services,2500,67.36,111.05,4.66,0.0881,Strong
+USA,USD,Finance & Insurance,Mortgages & Refinancing,Professional Services,1822.68,49.9,82.27,4.66,0.0747,Strong
+USA,USD,Finance & Insurance,Pawn Shops,Professional Services,1500,115.58,36.6,14.88,0.0804,Poor
+USA,USD,Finance & Insurance,Retirement Planning & Pensions,Professional Services,1600,376.15,249.64,4.57,0.0681,Moderate
+USA,USD,Finance & Insurance,"Stocks, Mutual Funds & Investments (Planning & Trading)",Professional Services,1500,340.36,307.97,4.39,0.0607,Moderate
+USA,USD,Finance & Insurance,Tax Preparation & Planning,Professional Services,14587.5,175.91,93.69,2.61,0.0625,Moderate
+USA,USD,Finance & Insurance,Trust Companies,Professional Services,1500,61.56,105.64,6.82,0.0648,Moderate
+USA,USD,Finance & Insurance,z - Other (Specify Keywords Below),Professional Services,2500,151.41,144.03,4.14,0.07,Moderate
+USA,USD,Furniture,Accent Furniture,Specialty Services,1533.4,154.47,87.36,2.48,0.0661,Moderate
+USA,USD,Furniture,Baby / Nursery Furniture,Specialty Services,1500,210.61,194.42,6.36,0.0489,Weak
+USA,USD,Furniture,Bathroom Furniture,Specialty Services,2950,464.05,102.51,3.82,0.0452,Weak
+USA,USD,Furniture,Bedroom Furniture,Specialty Services,2300,152.93,97.51,3.78,0.0587,Strong
+USA,USD,Furniture,Bookcases & Storage,Specialty Services,2950,399.41,76.71,5.58,0.0537,Weak
+USA,USD,Furniture,Children's Furniture,Specialty Services,1500,230.44,112.17,4.31,0.0399,Weak
+USA,USD,Furniture,"Covers, Fabric & Upholstery",Specialty Services,3000,376.15,407.48,7.77,0.0601,Weak
+USA,USD,Furniture,Dining Room & Kitchen Furniture,Specialty Services,2500,165.67,113.3,4.06,0.0672,Strong
+USA,USD,Furniture,Furniture Rental,Specialty Services,2500,106.7,106.7,5.37,0.0494,Weak
+USA,USD,Furniture,Furniture Repair & Refinishing,Specialty Services,1000,82.27,59.74,4.31,0.0707,Moderate
+USA,USD,Furniture,Home Decor,Specialty Services,2950,200.34,154.47,3.42,0.0574,Moderate
+USA,USD,Furniture,Home Entertainment Furniture,Specialty Services,3278,170.72,123.97,2.64,0.0657,Moderate
+USA,USD,Furniture,Lighting,Specialty Services,2950,361.41,70.81,3.39,0.0494,Weak
+USA,USD,Furniture,Living Room Furniture,Specialty Services,2300,113.3,94.63,3.39,0.063,Strong
+USA,USD,Furniture,Mattresses & Bedding,Specialty Services,1500,179.47,126.47,5.81,0.0553,Strong
+USA,USD,Furniture,Office Furniture,Specialty Services,1720,278.66,177.68,4.71,0.0474,Moderate
+USA,USD,Furniture,Outdoor / Patio Furniture,Specialty Services,1500,202.35,179.47,4.71,0.0471,Moderate
+USA,USD,Furniture,z - Other (Specify Keywords Below),Specialty Services,4750,228.15,183.09,7.1,0.0544,Moderate
+USA,USD,Government & Politics,Business & Commerce,Specialty Services,4790,1032.77,1085.72,1.79,0.0562,Moderate
+USA,USD,Government & Politics,City / County Government,Specialty Services,825,121.51,146.94,1.21,0.0844,Weak
+USA,USD,Government & Politics,Consumer Protection,Specialty Services,5000,154.47,152.93,5.37,0.0935,Weak
+USA,USD,Government & Politics,Education,Specialty Services,1050,,,1.39,0.1509,Weak
+USA,USD,Government & Politics,Environment,Specialty Services,1558,141.17,141.17,5.21,0.0683,Moderate
+USA,USD,Government & Politics,Fire,Specialty Services,1500,292.95,237.46,10.91,0.042,Poor
+USA,USD,Government & Politics,Government Bids,Specialty Services,2850,30.27,30.27,3,0.1072,Poor
+USA,USD,Government & Politics,Health & Human Services,Healthcare,3000,42.52,27.39,2.89,0.084,Moderate
+USA,USD,Government & Politics,Immigration,Specialty Services,2500,1085.72,1085.72,15.96,0.0874,Poor
+USA,USD,Government & Politics,Labor & Employment,Specialty Services,4250,24.78,24.29,1.57,0.0772,Poor
+USA,USD,Government & Politics,Parks & Interior,Specialty Services,800,175.91,42.52,3.49,0.0383,Poor
+USA,USD,Government & Politics,Police,Specialty Services,1000,265.07,188.67,4.44,0.0723,Poor
+USA,USD,Government & Politics,State Government,Specialty Services,3000,204.38,204.38,2.51,0.0819,Moderate
+USA,USD,Government & Politics,"Taxes, Treasury & Money",Specialty Services,15000,,77.48,2.61,0.1459,Poor
+USA,USD,Government & Politics,Transportation,Specialty Services,9000,2724.39,962.95,3.86,0.0664,Weak
+USA,USD,Government & Politics,Veterans Affairs,Specialty Services,7000,41.68,41.68,0.47,0.6124,Poor
+USA,USD,Government & Politics,z - Other (Specify Keywords Below),Specialty Services,2470,64.07,38.47,3.53,0.0799,Moderate
+USA,USD,Health & Fitness,Acupuncture / Accupressure,Healthcare,1500,144.03,45.6,6.96,0.0213,Weak
+USA,USD,Health & Fitness,Addiction Recovery,Healthcare,1617,125.21,120.3,3.25,0.0451,Strong
+USA,USD,Health & Fitness,Alternative Health,Healthcare,1750,154.47,105.64,5.87,0.0344,Moderate
+USA,USD,Health & Fitness,"Assisted Living, Elder & Home Care Services",Healthcare,785,78.26,72.97,5.58,0.0703,Strong
+USA,USD,Health & Fitness,Bodybuilding & Weight Training,Healthcare,1500,103.54,59.74,3.56,0.0449,Moderate
+USA,USD,Health & Fitness,Bottled Water & Water Filters,Healthcare,2678,651.97,626.41,2.53,0.073,Poor
+USA,USD,Health & Fitness,Cancer Centers,Healthcare,1200,16.12,6.17,2.8,0.1113,Moderate
+USA,USD,Health & Fitness,Chiropractic Care,Healthcare,1250,70.81,59.74,5.05,0.0468,Strong
+USA,USD,Health & Fitness,"Counselors for Marriage, Family & Self",Healthcare,750,114.43,72.24,4.85,0.0446,Strong
+USA,USD,Health & Fitness,Immunizations & Vaccinations,Healthcare,750,23.57,21.76,2.51,0.0494,Strong
+USA,USD,Health & Fitness,Diet & Weight Loss Centers/Products,Healthcare,2036.25,188.67,149.9,9.49,0.0614,Strong
+USA,USD,Health & Fitness,Exercise Equipment,Healthcare,1500,184.93,11.25,3.9,0.0671,Weak
+USA,USD,Health & Fitness,Family Planning Centers,Specialty Services,1820,167.34,144.03,4.9,0.0516,Moderate
+USA,USD,Health & Fitness,First Aid Instruction & Medical Supplies,Healthcare,2000,79.84,67.36,4.76,0.0708,Moderate
+USA,USD,Health & Fitness,Health Clubs & Gyms,Healthcare,1100,62.18,45.15,3.74,0.0643,Strong
+USA,USD,Health & Fitness,Health Food Stores,Healthcare,1000,141.17,141.17,1.86,0.0444,Poor
+USA,USD,Health & Fitness,Health Insurance,Professional Services,2500,9.49,4.26,0.56,0.1918,Weak
+USA,USD,Health & Fitness,Hearing Aids & Care,Healthcare,1500,73.7,67.36,7.77,0.0536,Strong
+USA,USD,Health & Fitness,Hospitals & Clinics (Specialized Services),Healthcare,1350,64.72,75.19,4.76,0.0761,Strong
+USA,USD,Health & Fitness,Imaging & X-Rays,Healthcare,1700,15.18,13.46,2.75,0.0626,Moderate
+USA,USD,Health & Fitness,Kidney Dialysis Centers,Healthcare,500,,162.39,2.66,0.0209,Poor
+USA,USD,Health & Fitness,Massage Therapy,Healthcare,450,14.15,14.15,1.7,0.0809,Moderate
+USA,USD,Health & Fitness,Mental Health,Healthcare,1650,167.34,144.03,4.01,0.0457,Strong
+USA,USD,Health & Fitness,Nursing & Allied Health,Healthcare,1000,77.48,66.02,4.57,0.085,Moderate
+USA,USD,Health & Fitness,Nutritionists & Dietitians,Healthcare,1750,252.14,123.97,13.33,0.0567,Weak
+USA,USD,Health & Fitness,Occupational Health & Safety,Healthcare,650,68.72,64.07,4.81,0.0311,Poor
+USA,USD,Health & Fitness,"Opticians, Glasses & Contacts",Healthcare,1400,27.94,25.28,4.95,0.0933,Moderate
+USA,USD,Health & Fitness,Personal Fitness Trainers,Healthcare,1000,37.34,19.11,3,0.0748,Moderate
+USA,USD,Health & Fitness,Pharmacies,Healthcare,5000,68.03,65.37,4.35,0.0327,Moderate
+USA,USD,Health & Fitness,Physical Therapy,Healthcare,500,37.71,34.12,5.1,0.0675,Strong
+USA,USD,Health & Fitness,Podiatry,Healthcare,1600,80.64,79.04,12.94,0.0897,Moderate
+USA,USD,Health & Fitness,Prescription Drugs / Pharmaceuticals,Healthcare,14741,2018.28,1012.32,13.07,0.04,Weak
+USA,USD,Health & Fitness,Prosthetics,Healthcare,638,55.7,62.18,7.03,0.0542,Moderate
+USA,USD,Health & Fitness,Public Health,Healthcare,1200,51.42,58.56,2.41,0.0697,Moderate
+USA,USD,Health & Fitness,Sleep Disorders,Healthcare,2000,52.46,48.42,5.47,0.0602,Moderate
+USA,USD,Health & Fitness,Vitamins & Nutritional Supplements,Healthcare,1500,320.54,97.51,8.17,0.0583,Moderate
+USA,USD,Health & Fitness,"Women's Health, Fertility & Reproductive",Healthcare,2055,5.26,6.69,1.54,0.1888,Moderate
+USA,USD,Health & Fitness,Yoga & Meditation Instruction,Healthcare,500,64.72,51.94,1.38,0.0454,Moderate
+USA,USD,Health & Fitness,z - Other (Specify Keywords Below),Healthcare,1000,98.49,97.51,4.57,0.0838,Strong
+USA,USD,Home & Home Improvement,Air Conditioning Installation and Repair,Home Services,3600,148.41,123.97,9.87,0.0658,Strong
+USA,USD,Home & Home Improvement,Air Conditioning Sales,Home Services,3000,105.64,88.23,9.49,0.0669,Strong
+USA,USD,Home & Home Improvement,Appliance Installation and Repair,Home Services,1000,54.6,43.82,7.46,0.0712,Strong
+USA,USD,Home & Home Improvement,Appliance Rental and Sales,Home Services,1500,62.8,45.6,4.14,0.0607,Strong
+USA,USD,Home & Home Improvement,Architects,Home Services,1750,265.07,198.34,3.53,0.0384,Weak
+USA,USD,Home & Home Improvement,Attics & Basements,Home Services,4000,295.89,235.1,10.07,0.0619,Weak
+USA,USD,Home & Home Improvement,Awnings & Canopies,Home Services,2000,137,103.54,7.77,0.0683,Strong
+USA,USD,Home & Home Improvement,Barbecues & Grills,Home Services,1000,40.45,40.45,4.76,0.0899,Weak
+USA,USD,Home & Home Improvement,"Bathroom Fixtures, Equipment & Supplies",Home Services,1500,79.04,68.72,4.35,0.0716,Moderate
+USA,USD,Home & Home Improvement,Bathroom Remodeling,Home Services,3000,230.44,190.57,7.32,0.067,Strong
+USA,USD,Home & Home Improvement,Blinds & Window Treatments,Home Services,1100,121.51,112.17,7.46,0.0657,Strong
+USA,USD,Home & Home Improvement,Cabinetry & Woodwork,Home Services,2500,330.3,244.69,9.03,0.057,Strong
+USA,USD,Home & Home Improvement,Carpenters,Home Services,2500,249.64,196.37,8.33,0.0457,Weak
+USA,USD,Home & Home Improvement,Carpet & Flooring Installation,Home Services,1600,156.02,129.02,6.82,0.0576,Strong
+USA,USD,Home & Home Improvement,"Carpet, Rug & Flooring Cleaning",Home Services,1500,111.05,90.02,10.91,0.0647,Moderate
+USA,USD,Home & Home Improvement,"Carpet, Rugs & Flooring Sales and Rentals",Home Services,1900,159.17,130.32,7.77,0.0562,Strong
+USA,USD,Home & Home Improvement,Ceilings,Home Services,1000,141.17,109.95,8.5,0.0765,Poor
+USA,USD,Home & Home Improvement,Cement & Paving (incl. Driveways),Home Services,1500,162.39,119.1,8.33,0.0479,Strong
+USA,USD,Home & Home Improvement,Chimney & Fireplace,Home Services,2000,114.43,90.02,8,0.0584,Strong
+USA,USD,Home & Home Improvement,Cleaning / Maid / Butler Services,Home Services,1500,96.54,45.15,8.58,0.0849,Strong
+USA,USD,Home & Home Improvement,Closets & Storage,Home Services,1700,145.47,134.29,6.55,0.0593,Moderate
+USA,USD,Home & Home Improvement,Concrete & Masonry,Home Services,1820,134.29,116.75,8.58,0.0575,Strong
+USA,USD,Home & Home Improvement,Construction & Contractors (General),Home Services,2000,273.14,174.16,5.21,0.0646,Strong
+USA,USD,Home & Home Improvement,Countertops,Home Services,2000,169.02,142.59,6.96,0.052,Moderate
+USA,USD,Home & Home Improvement,Court (Athletic) Construction,Home Services,1150,200.34,111.05,8.25,0.0628,Weak
+USA,USD,Home & Home Improvement,Damage Restoration (incl. Water and Fire),Home Services,1750,237.46,179.47,10.7,0.0419,Strong
+USA,USD,Home & Home Improvement,Decks & Patios,Home Services,2000,281.46,212.72,10.18,0.0606,Strong
+USA,USD,Home & Home Improvement,Demolition and Disposal,Home Services,2000,212.72,160.77,15.33,0.0587,Weak
+USA,USD,Home & Home Improvement,Doors & Windows Installation and Repair,Home Services,2290,144.03,123.97,6.69,0.068,Strong
+USA,USD,Home & Home Improvement,Doors & Windows Sales,Home Services,3000,225.88,190.57,8.25,0.058,Strong
+USA,USD,Home & Home Improvement,Drywall and Plastering,Home Services,1500,154.47,116.75,12.94,0.0667,Moderate
+USA,USD,Home & Home Improvement,Electricians & Electrical Contractors,Home Services,1750,117.92,92.76,11.82,0.0497,Strong
+USA,USD,Home & Home Improvement,Elevators & Lifts,Home Services,1250,115.58,97.51,5.81,0.0544,Weak
+USA,USD,Home & Home Improvement,Engineering,Home Services,1500,419.89,228.15,7.85,0.0378,Poor
+USA,USD,Home & Home Improvement,Environmental Testing & Cleanup,Home Services,1600,130.32,98.49,8.58,0.0487,Moderate
+USA,USD,Home & Home Improvement,Excavation,Home Services,1450,135.64,103.54,10.49,0.034,Moderate
+USA,USD,Home & Home Improvement,Fencing / Perimeter Walls,Home Services,1800,109.95,82.27,7.77,0.062,Strong
+USA,USD,Home & Home Improvement,Foundations & Retaining Walls,Home Services,3610,365.04,281.46,11.7,0.0566,Strong
+USA,USD,Home & Home Improvement,Garages,Home Services,1500,96.54,83.1,5.31,0.078,Strong
+USA,USD,Home & Home Improvement,Glass & Screens,Home Services,1500,46.53,38.86,6.05,0.0714,Strong
+USA,USD,Home & Home Improvement,Handicapped Accessible,Home Services,600,85.63,62.18,4.18,0.1505,Strong
+USA,USD,Home & Home Improvement,Handyman Services,Home Services,1200,72.24,54.05,7.24,0.0625,Strong
+USA,USD,Home & Home Improvement,Heating & Furnaces,Home Services,3550,148.41,126.47,9.21,0.0611,Strong
+USA,USD,Home & Home Improvement,Home Automation,Home Services,5800,888.91,888.91,22.42,0.0783,Poor
+USA,USD,Home & Home Improvement,Home Entertainment Installation & Repair,Home Services,1000,194.42,186.79,10.8,0.0317,Weak
+USA,USD,Home & Home Improvement,Home Furnishings & Decor,Home Services,1125,81.45,88.23,4.1,0.0467,Moderate
+USA,USD,Home & Home Improvement,Home Improvement Centers,Home Services,1000,65.37,55.7,4.53,0.0669,Moderate
+USA,USD,Home & Home Improvement,Inspection,Home Services,2000,72.24,58.56,8.41,0.0402,Weak
+USA,USD,Home & Home Improvement,Insulation & Weather Stripping,Home Services,2000,169.02,146.94,11.36,0.0506,Strong
+USA,USD,Home & Home Improvement,Interior Decorators & Designers,Home Services,1000,223.63,210.61,6.89,0.0505,Moderate
+USA,USD,Home & Home Improvement,Kitchen Remodeling,Home Services,1840,304.9,267.74,7.17,0.0575,Strong
+USA,USD,Home & Home Improvement,Land Clearing,Home Services,3500,85.63,62.8,13.2,0.051,Weak
+USA,USD,Home & Home Improvement,Landscaping,Home Services,1500,146.94,116.75,8.41,0.0468,Strong
+USA,USD,Home & Home Improvement,Lawn & Garden Care,Home Services,1000,75.94,57.4,6.36,0.0562,Strong
+USA,USD,Home & Home Improvement,Lawn & Garden Equipment Sales & Service,Home Services,1200,85.63,46.99,4.66,0.0576,Moderate
+USA,USD,Home & Home Improvement,Lighting,Home Services,1000,107.77,81.45,5.53,0.049,Moderate
+USA,USD,Home & Home Improvement,Locks & Locksmiths,Home Services,750,62.8,26.84,13.74,0.0376,Weak
+USA,USD,Home & Home Improvement,Lumber & Other Building Materials,Home Services,2500,146.94,134.29,3.56,0.0639,Strong
+USA,USD,Home & Home Improvement,Movers & Moving,Home Services,2200,120.3,88.23,10.7,0.0596,Moderate
+USA,USD,Home & Home Improvement,Nursery and Garden Centers,Home Services,1100,33.45,27.39,2.46,0.0724,Moderate
+USA,USD,Home & Home Improvement,Paint and Painting,Home Services,1400,160.77,134.29,13.07,0.0593,Strong
+USA,USD,Home & Home Improvement,Pest & Rodent Control,Home Services,2000,106.7,95.58,9.68,0.0533,Strong
+USA,USD,Home & Home Improvement,Plumbing,Home Services,3250,159.17,134.29,10.49,0.0507,Strong
+USA,USD,Home & Home Improvement,Pools and Spas,Home Services,580,47.47,44.26,5.75,0.0494,Strong
+USA,USD,Home & Home Improvement,Propane Gas & Tanks,Home Services,2308,90.02,75.19,9.03,0.0742,Strong
+USA,USD,Home & Home Improvement,Roofing & Gutters,Home Services,2975,287.15,235.1,10.07,0.0592,Strong
+USA,USD,Home & Home Improvement,Security & Alarm Systems,Home Services,3500,103.54,101.49,6.36,0.0633,Strong
+USA,USD,Home & Home Improvement,Septic & Sewer Services,Home Services,2000,96.54,83.1,8.85,0.0718,Strong
+USA,USD,Home & Home Improvement,"Siding Sales, Installation & Repair",Home Services,2000,327.01,287.15,10.8,0.0465,Strong
+USA,USD,Home & Home Improvement,Solar Panels & Power,Home Services,3300,304.9,239.85,10.28,0.0498,Strong
+USA,USD,Home & Home Improvement,"Staining, Finishing & Waterproofing",Home Services,1900,259.82,208.51,8,0.0622,Moderate
+USA,USD,Home & Home Improvement,Stairs / Railings,Home Services,1150,157.59,52.46,6.55,0.0674,Moderate
+USA,USD,Home & Home Improvement,Storage,Home Services,1000,146.94,121.51,7.69,0.0778,Strong
+USA,USD,Home & Home Improvement,Stucco & Plaster,Home Services,2500,507.76,217.02,16.95,0.0422,Poor
+USA,USD,Home & Home Improvement,Sunrooms and Solariums,Home Services,2300,235.1,190.57,7.61,0.0694,Moderate
+USA,USD,Home & Home Improvement,Surveying,Home Services,1000,33.45,21.98,4.18,0.042,Weak
+USA,USD,Home & Home Improvement,Tile & Marble Contractors & Dealers,Home Services,1000,83.93,82.27,4.31,0.057,Moderate
+USA,USD,Home & Home Improvement,Tools & Hardware,Home Services,1500,13.87,11.94,1.62,0.1711,Moderate
+USA,USD,Home & Home Improvement,Tree Services,Home Services,1435,98.49,83.93,10.28,0.0438,Strong
+USA,USD,Home & Home Improvement,"Upholstery, Covers & Fabric",Specialty Services,1200,57.97,38.09,3.39,0.0511,Weak
+USA,USD,Home & Home Improvement,Wallpaper Installation,Home Services,3000,103.54,101.49,2.48,0.0457,Poor
+USA,USD,Home & Home Improvement,Waste Removal (incl. Rubbish Containers),Home Services,2000,122.73,92.76,7.1,0.067,Strong
+USA,USD,Home & Home Improvement,Water Heaters,Home Services,2600,228.15,210.61,10.07,0.0457,Moderate
+USA,USD,Home & Home Improvement,Water Purification,Home Services,500,95.58,81.45,8.94,0.0725,Strong
+USA,USD,Home & Home Improvement,Well Drilling & Service,Home Services,1500,127.74,149.9,11.25,0.0561,Moderate
+USA,USD,Home & Home Improvement,Window Cleaning,Home Services,1000,103.54,68.03,9.3,0.093,Strong
+USA,USD,Home & Home Improvement,z - Other (Specify Keywords Below),Home Services,1450,126.47,97.51,6.75,0.0584,Strong
+USA,USD,Home & Home Improvement,Outbuildings,Home Services,1300,127.74,98.49,2.69,0.0777,Moderate
+USA,USD,Industrial & Commercial,Mining,Specialty Services,800,137,34.47,3.56,0.037,Moderate
+USA,USD,Industrial & Commercial,Oil & Gas,Specialty Services,1500,62.8,57.4,8.25,0.0859,Strong
+USA,USD,Industrial & Commercial,Power & Utilities,Specialty Services,1800,142.59,104.58,5.7,0.063,Strong
+USA,USD,Industrial & Commercial,Construction Services & Contractors,Specialty Services,1500,156.02,123.97,6.82,0.0594,Strong
+USA,USD,Industrial & Commercial,Transportation Services,Specialty Services,1150,64.07,54.05,6.89,0.0645,Weak
+USA,USD,Industrial & Commercial,Construction Equipment,Specialty Services,1500,51.94,46.99,4.14,0.0731,Strong
+USA,USD,Industrial & Commercial,Electronic Components,Specialty Services,2100,223.63,105.64,3.78,0.0559,Moderate
+USA,USD,Industrial & Commercial,Healthcare & Medical Equipment,Healthcare,1500,46.53,88.23,2.8,0.0833,Moderate
+USA,USD,Industrial & Commercial,Industrial Supply & MRO,Specialty Services,1950,132.95,103.54,5.58,0.0545,Strong
+USA,USD,Industrial & Commercial,Laboratory & Life Science,Specialty Services,500,105.64,88.23,8.94,0.0645,Moderate
+USA,USD,Industrial & Commercial,Metalworking,Specialty Services,2300,95.58,72.97,5.58,0.054,Strong
+USA,USD,Industrial & Commercial,Plastics Equipment & Materials,Specialty Services,3000,235.1,154.47,7.61,0.0699,Weak
+USA,USD,Industrial & Commercial,Process Equipment,Specialty Services,1800,194.42,152.93,4.01,0.0586,Moderate
+USA,USD,Industrial & Commercial,Restaurant Equipment,Specialty Services,2850,174.16,125.21,6.23,0.0539,Weak
+USA,USD,Industrial & Commercial,Retail Equipment & Supplies,Specialty Services,1100,46.53,28.5,1.92,0.0682,Moderate
+USA,USD,Industrial & Commercial,Test Equipment,Specialty Services,4000,1261.43,464.05,7.85,0.0339,Poor
+USA,USD,Industrial & Commercial,Textile & Apparel Manufacturing,Specialty Services,1000,340.36,221.41,1.58,0.0242,Poor
+USA,USD,Industrial & Commercial,z - Other (Specify Keywords Below),Specialty Services,2000,144.03,114.43,6.89,0.0567,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Banquet Halls,Specialty Services,1500,154.47,88.23,3.32,0.0624,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Bridal Shops,Specialty Services,1450,28.22,13.07,1.55,0.0468,Weak
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Catering & Personal Chefs,Specialty Services,3000,454.86,273.14,5.7,0.0457,Weak
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Costume Sales & Rental,Specialty Services,1250,89.12,79.84,6.62,0.1078,Poor
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Dating & Matchmaking,Specialty Services,1200,164.02,14.73,1.39,0.1378,Moderate
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Daycare / Babysitters & Baby Services,Specialty Services,750,78.26,31.5,5.53,0.0597,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Dry Cleaners & Laundry,Specialty Services,1939,160.77,154.47,6.82,0.0706,Moderate
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Funeral & Cemetery,Specialty Services,1300,96.54,84.77,4.66,0.0777,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Limousine & Valet Services,Specialty Services,2500,42.52,40.45,4.9,0.0831,Moderate
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Party & Special Event Planning,Specialty Services,1500,48.91,38.09,3.1,0.0855,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)","Photographers, Portrait & Commercial",Specialty Services,1100,290.03,177.68,5.7,0.0725,Weak
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Repair Services (excl. Auto & Home),Specialty Services,750,235.1,235.1,1.31,0.0119,Poor
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Wedding Planning & Wedding Services,Specialty Services,1500,190.57,101.49,3.94,0.067,Moderate
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Private Investigation,Specialty Services,1560,174.16,144.03,2.44,0.0553,Poor
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Mail & Shipping,Specialty Services,650,37.34,35.87,2.36,0.0287,Poor
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Cleaning / Maid Services,Home Services,1200,101.49,50.91,8.94,0.0743,Strong
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",Concierge Services,Specialty Services,500,,497.7,11.25,0.3256,Poor
+USA,USD,"Personal Services (Weddings, Cleaners, etc.)",z - Other (Specify Keywords Below),Specialty Services,1000,72.97,57.97,4.31,0.0815,Moderate
+USA,USD,Physicians & Surgeons,Allergy & Immunology,Healthcare,5500,96.54,78.26,9.3,0.0659,Strong
+USA,USD,Physicians & Surgeons,Alternative Medicine,Healthcare,3640,127.74,112.17,4.85,0.0477,Weak
+USA,USD,Physicians & Surgeons,Audiology,Healthcare,1000,86.49,79.84,7.1,0.0611,Strong
+USA,USD,Physicians & Surgeons,Cardiology,Healthcare,1400,27.11,27.39,1.97,0.0899,Moderate
+USA,USD,Physicians & Surgeons,Chiropractic,Healthcare,1911,86.49,79.04,9.78,0.0369,Moderate
+USA,USD,Physicians & Surgeons,Dermatology,Healthcare,800,35.16,20.7,4.66,0.0636,Strong
+USA,USD,Physicians & Surgeons,Diving (Hyperbaric) Medicine,Healthcare,1000,113.3,92.76,6.75,0.0568,Weak
+USA,USD,Physicians & Surgeons,Emergency Medicine,Healthcare,2700,64.72,51.42,2.27,0.1033,Strong
+USA,USD,Physicians & Surgeons,"Endocrinology, Diabetes, & Metabolism",Healthcare,1200,177.68,162.39,3.86,0.0455,Weak
+USA,USD,Physicians & Surgeons,Gastronenterology,Healthcare,2500,32.79,24.29,4.9,0.0657,Moderate
+USA,USD,Physicians & Surgeons,General Practice (Family Medicine),Healthcare,2925,68.03,63.43,5.47,0.0601,Strong
+USA,USD,Physicians & Surgeons,Hematology,Healthcare,2250,39.25,28.79,4.18,0.0578,Weak
+USA,USD,Physicians & Surgeons,Infertility/Reproductive Medicine,Healthcare,2500,172.43,132.95,3.29,0.0643,Moderate
+USA,USD,Physicians & Surgeons,Internal Medicine,Healthcare,1825,89.12,74.44,2.72,0.079,Moderate
+USA,USD,Physicians & Surgeons,Neurology,Healthcare,1170,62.8,73.7,2.36,0.0687,Moderate
+USA,USD,Physicians & Surgeons,Obstetrics & Gynecology,Healthcare,1750,57.4,46.53,5.58,0.049,Moderate
+USA,USD,Physicians & Surgeons,Occupational Medicine,Healthcare,1500,24.53,21.98,2.72,0.0546,Weak
+USA,USD,Physicians & Surgeons,Oncology (Cancer),Healthcare,2000,43.38,37.71,3.63,0.0613,Strong
+USA,USD,Physicians & Surgeons,Ophthalmology,Healthcare,1500,29.67,30.57,4.95,0.0669,Strong
+USA,USD,Physicians & Surgeons,Optometry,Healthcare,1500,35.87,34.81,5.53,0.0556,Strong
+USA,USD,Physicians & Surgeons,Orthopedics,Healthcare,1850,25.79,22.42,3.9,0.0777,Strong
+USA,USD,Physicians & Surgeons,Osteopathy,Healthcare,750,11.94,11.36,2.56,0.0606,Weak
+USA,USD,Physicians & Surgeons,Otolaryngology,Healthcare,7000,68.72,57.4,9.3,0.0629,Moderate
+USA,USD,Physicians & Surgeons,Pain Management,Healthcare,1500,56.26,47.94,6.23,0.0518,Strong
+USA,USD,Physicians & Surgeons,Palliative (Hospice) Care,Healthcare,2499,93.69,93.69,4.66,0.0218,Weak
+USA,USD,Physicians & Surgeons,Pathology,Healthcare,2500,354.25,257.24,5.64,0.0515,Poor
+USA,USD,Physicians & Surgeons,Pediatrics,Healthcare,1827,37.34,26.31,3.97,0.0533,Moderate
+USA,USD,Physicians & Surgeons,Physical Therapy & Rehabilitation,Healthcare,900,45.15,44.26,4.95,0.0583,Strong
+USA,USD,Physicians & Surgeons,Plastic / Cosmetic Surgery,Healthcare,2000,146.94,114.43,5.87,0.0636,Strong
+USA,USD,Physicians & Surgeons,Podiatry,Healthcare,2000,52.98,56.26,5.37,0.0588,Moderate
+USA,USD,Physicians & Surgeons,Psychiatry,Healthcare,1600,79.84,73.7,5.42,0.0559,Moderate
+USA,USD,Physicians & Surgeons,Psychology,Healthcare,5000,60.34,58.56,4.26,0.0409,Poor
+USA,USD,Physicians & Surgeons,Radiology,Healthcare,2180,39.25,38.86,4.35,0.0543,Moderate
+USA,USD,Physicians & Surgeons,Respiratory Medicine (Pulmonology),Healthcare,6000,82.27,81.45,4.62,0.0557,Weak
+USA,USD,Physicians & Surgeons,Rheumatology,Healthcare,3800,90.02,90.02,5.16,0.0493,Poor
+USA,USD,Physicians & Surgeons,Sports Medicine,Healthcare,2500,177.68,119.1,4.35,0.0551,Weak
+USA,USD,Physicians & Surgeons,Surgery,Healthcare,1500,41.68,33.45,5.99,0.0936,Strong
+USA,USD,Physicians & Surgeons,Urology,Healthcare,1150,109.95,106.7,5.58,0.0619,Strong
+USA,USD,Physicians & Surgeons,z - Other (Specify Keywords Below),Healthcare,1750,56.26,52.98,4.39,0.0596,Strong
+USA,USD,Real Estate,Apartments & Rentals,Professional Services,2000,125.21,98.49,2.48,0.0799,Strong
+USA,USD,Real Estate,Commercial Properties for Sale / Rent,Professional Services,2300,507.76,361.41,14.3,0.0651,Moderate
+USA,USD,Real Estate,Condominiums,Professional Services,4000,317.35,127.74,2.59,0.094,Moderate
+USA,USD,Real Estate,Homes for Sale (Agent),Professional Services,1500,146.94,107.77,2.32,0.0899,Strong
+USA,USD,Real Estate,Homes for Sale (For Sale by Owner),Professional Services,1250,145.47,11.94,4.66,0.0942,Moderate
+USA,USD,Real Estate,Land,Professional Services,1900,228.15,62.18,2.66,0.0945,Weak
+USA,USD,Real Estate,Moving & Movers,Professional Services,3400,145.47,589.93,14.44,0.0583,Poor
+USA,USD,Real Estate,Property Management,Professional Services,1300,112.17,87.36,4.53,0.0743,Strong
+USA,USD,Real Estate,Real Estate -- Appraisers,Professional Services,3400,780.55,403.43,7.03,0.0369,Weak
+USA,USD,Real Estate,Real Estate -- Inspection,Professional Services,850,52.46,27.11,8.5,0.0536,Weak
+USA,USD,Real Estate,Real Estate -- Other Services,Professional Services,1800,212.72,192.48,4.48,0.0582,Moderate
+USA,USD,Real Estate,Real Estate Agent (Commercial / Industrial),Professional Services,1100,217.02,75.19,2.29,0.0733,Weak
+USA,USD,Real Estate,Real Estate Agent (Residential),Professional Services,2000,219.2,200.34,3.29,0.0882,Strong
+USA,USD,Real Estate,Real Estate Broker,Professional Services,1000,175.91,109.95,2.75,0.0642,Strong
+USA,USD,Real Estate,Storage,Professional Services,3200,109.95,103.54,14.15,0.0737,Moderate
+USA,USD,Real Estate,Title Companies,Professional Services,1750,287.15,275.89,23.1,0.0393,Poor
+USA,USD,Real Estate,z - Other (Specify Keywords Below),Professional Services,1200,159.17,106.7,2.94,0.071,Strong
+USA,USD,Religion & Spirituality,Associations & Organizations,Specialty Services,750,13.2,20.09,5.99,0.0621,Moderate
+USA,USD,Religion & Spirituality,Churches,Specialty Services,750,79.04,67.36,3.25,0.1094,Moderate
+USA,USD,Religion & Spirituality,Faiths & Practices,Specialty Services,1000,,,2.27,0.0102,Poor
+USA,USD,Religion & Spirituality,Instruction & Training,Specialty Services,6000,190.57,97.51,1.93,0.0561,Weak
+USA,USD,Religion & Spirituality,zz - Not For Use,Specialty Services,3000,,172.43,12.43,0.0779,Poor
+USA,USD,Restaurants & Food,Bakers & Bakeries,Specialty Services,1100,181.27,181.27,8.33,0.0851,Poor
+USA,USD,Restaurants & Food,Beer & Liquor (excl. Wine),Specialty Services,1000,44.26,38.09,2.01,0.0605,Moderate
+USA,USD,Restaurants & Food,Caterers,Specialty Services,1000,71.52,32.79,3.25,0.055,Moderate
+USA,USD,Restaurants & Food,Coffee & Tea,Specialty Services,750,132.95,54.6,4.35,0.048,Poor
+USA,USD,Restaurants & Food,"Grocery, Ethnic & Specialty",Specialty Services,1000,37.71,34.47,0.97,0.1403,Moderate
+USA,USD,Restaurants & Food,Fast Food,Specialty Services,750,44.26,21.33,2.2,0.0761,Moderate
+USA,USD,Restaurants & Food,Food & Beverage Services,Specialty Services,1000,92.76,82.27,2.89,0.1016,Moderate
+USA,USD,Restaurants & Food,Restaurants,Specialty Services,825,44.26,33.45,1.88,0.0591,Strong
+USA,USD,Restaurants & Food,Wine,Specialty Services,1000,183.09,104.58,5.26,0.0174,Moderate
+USA,USD,Restaurants & Food,Candy & Sweets,Specialty Services,300,35.16,16.44,2.08,0.081,Strong
+USA,USD,Restaurants & Food,z - Other (Specify Keywords Below),Specialty Services,750,125.21,75.19,3.39,0.1044,Strong
+USA,USD,"Shopping, Collectibles & Gifts (General)",Antiques,Specialty Services,1300,141.17,97.51,6.49,0.069,Moderate
+USA,USD,"Shopping, Collectibles & Gifts (General)",Collectibles,Specialty Services,750,126.47,75.19,4.39,0.0767,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Department Stores,Specialty Services,2699,20.49,11.36,2.83,0.0895,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Flowers,Specialty Services,550,50.91,40.04,3.9,0.0926,Strong
+USA,USD,"Shopping, Collectibles & Gifts (General)",Gifts & Occasions,Specialty Services,3500,81.45,57.97,2.1,0.0917,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Mature Audiences,Specialty Services,1250,340.36,340.36,5.21,0.0867,Poor
+USA,USD,"Shopping, Collectibles & Gifts (General)",Outlet Shopping,Specialty Services,3000,403.43,214.86,3.25,0.0452,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Party & Wedding Supplies,Specialty Services,600,40.85,36.97,7.17,0.0586,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Pawnbrokers,Specialty Services,1000,41.68,38.86,6.17,0.07,Moderate
+USA,USD,"Shopping, Collectibles & Gifts (General)",Shopping Centers & Malls,Specialty Services,3400,174.16,21.98,0.48,0.2936,Weak
+USA,USD,"Shopping, Collectibles & Gifts (General)",Stationery Stores,Specialty Services,7000,651.97,445.86,1.34,0.0212,Poor
+USA,USD,"Shopping, Collectibles & Gifts (General)",Trophies & Awards,Specialty Services,1150,79.84,70.81,10.38,0.0583,Poor
+USA,USD,"Shopping, Collectibles & Gifts (General)",z - Other (Specify Keywords Below),Specialty Services,3000,73.7,64.07,2.46,0.1022,Moderate
+USA,USD,Sports & Recreation,Athletic Shoes & Clothing,Specialty Services,16000,,7.92,0.87,0.105,Poor
+USA,USD,Sports & Recreation,Aviation & Aeronautics,Specialty Services,6880,1248.88,772.78,3,0.063,Poor
+USA,USD,Sports & Recreation,Baseball,Specialty Services,1500,126.47,91.84,0.53,0.2243,Moderate
+USA,USD,Sports & Recreation,"Bicycles, Cycling & Biking Supplies",Specialty Services,1250,39.65,27.11,1.51,0.0512,Moderate
+USA,USD,Sports & Recreation,Boating & Sailing,Specialty Services,1400.5,130.32,90.92,3.78,0.0596,Strong
+USA,USD,Sports & Recreation,Bowling Centers & Equipment,Specialty Services,500,19.89,14.01,1.43,0.1631,Poor
+USA,USD,Sports & Recreation,"Camping, Camps & Hiking",Specialty Services,1500,38.09,37.71,1.9,0.0839,Moderate
+USA,USD,Sports & Recreation,"Gambling, Casinos & Sportsbooks",Specialty Services,2000,,,0.66,0.0825,Poor
+USA,USD,Sports & Recreation,Clubs and Organizations,Specialty Services,1000,46.06,35.87,2.41,0.1186,Weak
+USA,USD,Sports & Recreation,Coaching,Specialty Services,1500,217.02,281.46,6.82,0.0488,Poor
+USA,USD,Sports & Recreation,Equestrian & Horse Riding,Specialty Services,2100,259.82,154.47,1.06,0.2263,Poor
+USA,USD,Sports & Recreation,Events,Specialty Services,700,119.1,13.74,3.86,0.0588,Moderate
+USA,USD,Sports & Recreation,"Fishing Tackle, Guides & Charters",Specialty Services,500,131.63,18.73,6.11,0.0825,Weak
+USA,USD,Sports & Recreation,Games (Board / Card),Specialty Services,1500,270.43,230.44,5.58,0.0444,Poor
+USA,USD,Sports & Recreation,"Golf Courses, Equipment & Instruction",Specialty Services,1500,70.81,54.6,2.8,0.0862,Strong
+USA,USD,Sports & Recreation,Gymnastics,Specialty Services,500,28.79,26.31,1.51,0.1585,Moderate
+USA,USD,Sports & Recreation,Hobbies,Specialty Services,1500,399.41,156.02,1.75,0.1049,Poor
+USA,USD,Sports & Recreation,"Hunting Equipment, Guides & Lodges",Specialty Services,2000,265.07,247.15,5.16,0.0714,Weak
+USA,USD,Sports & Recreation,Ice Hockey,Specialty Services,800,114.43,70.81,4.48,0.0765,Weak
+USA,USD,Sports & Recreation,Martial Arts & Self-Defense,Specialty Services,700,142.59,99.48,6.05,0.0364,Weak
+USA,USD,Sports & Recreation,Other Sports & Recreation Activities,Specialty Services,1000,49.4,35.52,1.68,0.1088,Moderate
+USA,USD,Sports & Recreation,Parks & Preserves,Specialty Services,4850,75.94,12.68,2.97,0.1016,Moderate
+USA,USD,Sports & Recreation,Rodeos,Specialty Services,4250,,1053.63,4.57,0.2945,Poor
+USA,USD,Sports & Recreation,Running,Specialty Services,1500,292.95,6.82,2.16,0.0942,Weak
+USA,USD,Sports & Recreation,"RV & Camper Sales, Rental, Storage & Parts",Automotive,6000,217.02,119.1,1.35,0.0881,Moderate
+USA,USD,Sports & Recreation,Soccer,Specialty Services,2200,424.11,188.67,2.2,0.13,Weak
+USA,USD,Sports & Recreation,Sports Bars & Brew Pubs,Specialty Services,1000,8.17,1.54,0.27,0.191,Poor
+USA,USD,Sports & Recreation,Sports & Recreation Equipment,Specialty Services,1141,64.07,57.4,4.71,0.0492,Moderate
+USA,USD,Sports & Recreation,Sports & Recreation Instruction,Specialty Services,3250,139.77,41.26,2.44,0.1505,Weak
+USA,USD,Sports & Recreation,Stadiums & Venues,Specialty Services,2250,55.15,3.86,0.78,0.2543,Moderate
+USA,USD,Sports & Recreation,Swimming & Diving,Specialty Services,1104,17.12,17.12,2.32,0.1354,Moderate
+USA,USD,Sports & Recreation,"Tennis, Raquetball & Squash",Specialty Services,750,66.02,113.3,4.22,0.0217,Weak
+USA,USD,Sports & Recreation,Tickets,Specialty Services,2500,36.23,61.56,1.97,0.1384,Moderate
+USA,USD,Sports & Recreation,"Water Sports (Scuba, Surfing, Skiing)",Specialty Services,700,84.77,68.72,3.6,0.0284,Weak
+USA,USD,Sports & Recreation,Weight Lifting & Bodybuilding,Specialty Services,700,204.38,194.42,9.58,0.07,Poor
+USA,USD,Sports & Recreation,Youth Activities & Programs,Specialty Services,1125,90.02,83.93,1.93,0.1386,Moderate
+USA,USD,Sports & Recreation,Motorsports,Automotive,2000,119.1,60.34,2.25,0.1017,Strong
+USA,USD,Sports & Recreation,Supplements & Diet,Healthcare,500,28.5,40.85,6.05,0.0325,Poor
+USA,USD,Sports & Recreation,Autographs,Specialty Services,1500,94.63,88.23,7.61,0.0456,Poor
+USA,USD,Sports & Recreation,z - Other (Specify Keywords Below),Specialty Services,1725,53.52,16.12,2.36,0.077,Moderate
+USA,USD,Toys & Hobbies,Arts & Craft Toys,Specialty Services,1100,95.58,66.02,3.16,0.037,Weak
+USA,USD,Toys & Hobbies,Hobbies,Specialty Services,960,66.69,63.43,2.77,0.0504,Poor
+USA,USD,Toys & Hobbies,Games,Specialty Services,2100,206.44,206.44,8.85,0.016,Poor
+USA,USD,Toys & Hobbies,Outdoor & Playground Toys,Specialty Services,1500,262.43,219.2,4.66,0.0425,Moderate
+USA,USD,Toys & Hobbies,Crafts & Fabrics,Specialty Services,3750,780.55,139.77,1.13,0.0219,Poor
+USA,USD,Toys & Hobbies,z - Other (Specify Keywords Below),Specialty Services,600,70.11,59.15,3.32,0.0744,Poor
+USA,USD,Travel,Airlines & Airline Travel (United States),Specialty Services,1500,327.01,217.02,4.48,0.0568,Poor
+USA,USD,Travel,Airports,Specialty Services,1350,,26.31,0.39,0.2553,Moderate
+USA,USD,Travel,Attractions,Specialty Services,1300,127.74,111.05,2.16,0.0415,Moderate
+USA,USD,Travel,Bus Lines & Charters,Specialty Services,2000,99.48,59.74,5.37,0.0587,Moderate
+USA,USD,Travel,Car Rental,Specialty Services,2000,208.51,177.68,4.1,0.0832,Weak
+USA,USD,Travel,Cruises,Specialty Services,2000,75.94,39.25,1.46,0.2277,Moderate
+USA,USD,Travel,Hotels & Motels -- Lodging (International),Specialty Services,2000,225.88,131.63,4.39,0.0713,Weak
+USA,USD,Travel,Hotels & Motels -- Lodging (United States),Specialty Services,1200,98.49,120.3,2.03,0.0936,Moderate
+USA,USD,Travel,Last-Minute Deals (United States),Specialty Services,500,3.1,2.66,0.13,0.3884,Weak
+USA,USD,Travel,Resorts & Vacation Packages / Rentals (United States),Specialty Services,1740.33,21.98,15.96,0.93,0.2525,Strong
+USA,USD,Travel,Resorts & Vacation Packages / Rentals (International),Specialty Services,1500,148.41,98.49,5.93,0.0642,Weak
+USA,USD,Travel,"Taxi, Limousine & Shuttle",Specialty Services,1000,35.87,29.67,1.88,0.0731,Weak
+USA,USD,Travel,Tour Operators & Guides (International),Specialty Services,3000,685.4,304.9,3.97,0.0416,Weak
+USA,USD,Travel,Tour Operators & Guides (United States),Specialty Services,1350,76.71,63.43,1.92,0.0906,Strong
+USA,USD,Travel,Trains,Specialty Services,1700,14.59,7.24,0.51,0.279,Weak
+USA,USD,Travel,Travel Agencies (International),Specialty Services,901,343.78,142.59,2.27,0.0287,Poor
+USA,USD,Travel,Travel Agencies (United States),Specialty Services,2000,157.59,157.59,2.23,0.0791,Weak
+USA,USD,Travel,Travel Services & Information,Specialty Services,1500,160.77,125.21,2.12,0.0585,Moderate
+USA,USD,Travel,z - Other (Specify Keywords Below),Specialty Services,2300,177.68,107.77,2.41,0.0706,Strong
