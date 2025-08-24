@@ -16,12 +16,18 @@ DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
 
 app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
+ALLOWED_ORIGINS = [
+    "https://northlight.pages.dev",  # <-- replace with EXACT value from window.location.origin
+    "http://localhost",
+    "http://127.0.0.1:3000"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-project.pages.dev"],  # Important: Replace with your actual Cloudflare Pages URL!
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,                # be explicit
+    allow_methods=["GET", "POST", "OPTIONS"],     # you call GET /benchmarks/meta and POST /diagnose
+    allow_headers=["content-type", "authorization"],
+    allow_credentials=False,                      # keep False (no cookies sent)
 )
 
 BENCH: Dict[str, Any] = {}
@@ -420,22 +426,17 @@ def diagnose(req: DiagnoseIn):
     }, cpl_dms)
     
     print(f"GOAL_SCENARIO_DEBUG: goal_scenario = {goal_scenario}")
-    print(f"GOAL_SCENARIO_DEBUG: type(goal_scenario) = {type(goal_scenario)}")
+    print(f"GOAL_SCENARIO_DEBUG: req.goal_cpl = {req.goal_cpl}")
     print(f"GOAL_SCENARIO_DEBUG: realistic_low = {realistic_low}")
     print(f"GOAL_SCENARIO_DEBUG: realistic_high = {realistic_high}")
-    print(f"GOAL_SCENARIO_DEBUG: req.goal_cpl = {req.goal_cpl}")
     print(f"GOAL_SCENARIO_DEBUG: cpl_dms = {cpl_dms}")
     
-    # Ensure goal_scenario is not None or empty before adding to dict
+    # Ensure goal_scenario is never None to prevent FastAPI from filtering it out
     if goal_scenario is None:
-        print("ERROR: goal_scenario is None!")
-        goal_scenario = "error_none"
-    elif goal_scenario == "":
-        print("ERROR: goal_scenario is empty string!")
-        goal_scenario = "error_empty"
+        goal_scenario = "unknown"
+        print(f"GOAL_SCENARIO_DEBUG: goal_scenario was None, setting to 'unknown'")
 
     # ---- goal realism block (market context copy)
-    print(f"GOAL_ANALYSIS_DEBUG: About to create goal_analysis with goal_scenario = {goal_scenario}")
     goal_analysis = {
         "market_band": market_band,
         "prob_leq_goal": r4(prob_goal) if prob_goal is not None else None,
@@ -448,9 +449,6 @@ def diagnose(req: DiagnoseIn):
         "note": None,
         "can_autoadopt": market_band in ("aggressive", "unrealistic")
     }
-    print(f"GOAL_ANALYSIS_DEBUG: Created goal_analysis = {goal_analysis}")
-    print(f"GOAL_ANALYSIS_DEBUG: goal_scenario in goal_analysis = {'goal_scenario' in goal_analysis}")
-    print(f"GOAL_ANALYSIS_DEBUG: goal_analysis['goal_scenario'] = {goal_analysis.get('goal_scenario', 'NOT_FOUND')}")
     if prob_goal is not None and req.goal_cpl is not None:
         goal_analysis["note"] = f"{int(round((1 - prob_goal) * 100))}% of campaigns do not achieve the stated goal."
 
@@ -623,10 +621,6 @@ def diagnose(req: DiagnoseIn):
         },
         "meta": {"data_version": BENCH.get("_version"), "category_key": key},
     }
-    
-    print(f"FINAL_RESPONSE_DEBUG: goal_analysis = {response.get('goal_analysis', {})}")
-    print(f"FINAL_RESPONSE_DEBUG: goal_scenario in response = {response.get('goal_analysis', {}).get('goal_scenario', 'MISSING')}")
-    
     return response
 
 # ---------- Enhanced PPT Export ----------
