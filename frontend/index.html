@@ -16,245 +16,794 @@
   .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
   button { padding: 10px 14px; border-radius: 8px; border: 1px solid #333; cursor: pointer; background:#fff; }
   .small { color:var(--muted); font-size:12px; }
-
   .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); margin-right:6px;}
   .pill.good { background:#ecfdf3; border-color:#bbf7d0; color:#065f46;}
   .pill.ok   { background:#fffbeb; border-color:#fde68a; color:#92400e;}
-  .pill.bad  { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
+  .pill.bad   { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
 
-  .tag { display:inline-block; padding:2px 6px; border-radius:6px; border:1px solid var(--line); font-size:12px; }
-  .tag.green    { background:#ecfdf3; border-color:#bbf7d0; color:#065f46;}
-  .tag.amber    { background:#fff7ed; border-color:#fed7aa; color:#9a3412;}
-  .tag.red      { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
-  .tag.average  { background:#f0f9ff; border-color:#bae6fd; color:#075985;}
-  .tag.unknown  { background:#f3f4f6; border-color:#e5e7eb; color:#374151;}
-  .tag.above_avg{ background:#eefce8; border-color:#cdecc7; color:#22543d;}
-  .tag.below_avg{ background:#fff7ed; border-color:#fed7aa; color:#9a3412;}
-  .tag.context  { background:#f3f4f6; border-color:#e5e7eb; color:#374151;}
+  /* Verdict-First Benchmark Design */
+  .benchmark-verdict {
+    margin: 16px 0 24px; padding: 16px; border-radius: 12px; background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #e5e7eb;
+  }
+  .benchmark-verdict.outside-target { border-left-color: #ef4444; }
+  .benchmark-verdict.on-target { border-left-color: #22c55e; }
+  .benchmark-verdict.exceeds-target { border-left-color: #2563eb; }
 
-  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .primary-value { font-size: 28px; font-weight: 700; color: var(--fg); margin-top: 8px; }
+  .verdict-context { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .delta-text { font-size: 14px; color: var(--muted); }
+  .delta-text.negative { color: #059669; }
+  .delta-text.positive { color: #dc2626; }
+  .peer-context { font-size: 13px; color: var(--muted); background: #f8fafc; padding: 4px 8px; border-radius: 6px; }
 
-  /* Gauge */
-  .gauge { margin: 10px 0 18px; }
-  .g-head { display:flex; align-items:center; justify-content:space-between; }
-  .g-head .metric { font-weight:600; }
-  .g-track { position:relative; height:12px; background:#f3f3f3; border-radius:6px; margin:8px 0 4px; }
-  .g-fill  { position:absolute; top:0; left:0; height:12px; border-radius:6px; }
-  .g-mark  { position:absolute; top:-3px; width:10px; height:18px; background:#111; border-radius:2px; transform:translateX(-50%); }
-  .g-tick  { position:absolute; top:-6px; width:1px; height:24px; background:#ddd; }
-  .g-label { position:absolute; top:18px; font-size:10px; color:#888; transform:translateX(-50%); }
-  .g-foot  { display:flex; justify-content:space-between; font-size:11px; color:#666; }
+  /* --- "Spotlight Marker" Bar System --- */
+  .bar-container { padding-top: 28px; margin-bottom: 8px; }
+  .bar-scale { position: relative; height: 16px; margin-bottom: 4px; }
+  .scale-point { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--muted); }
 
-  .g-green { background:#d1fae5; }
-  .g-amber { background:#fde68a; }
-  .g-red   { background:#fecaca; }
+  .bar-scale .scale-point:first-child { left: 0; transform: translateX(6px); }
+  .bar-scale .scale-point:last-child  { left: 100%; transform: translateX(calc(-100% - 6px)); }
+
+  .bar-track {
+    position: relative; height: 20px; border-radius: 10px;
+    display: flex; overflow: visible; border: 1px solid #e5e7eb;
+  }
+  .zone-bg { height: 100%; }
+  .zone-bg.excellent, .zone-bg.needs-improvement { background-color: #f3f4f6; }
+  .zone-bg.target-range { background-color: #dcfce7; }
+
+  .user-marker {
+    position: absolute; top: 50%; width: 24px; height: 24px;
+    border-radius: 50%; border: 3px solid white;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    z-index: 3;
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
+  }
+  .user-marker.excellent { background-color: #2563eb; }
+  .user-marker.target-range { background-color: #22c55e; }
+  .user-marker.needs-improvement { background-color: #ef4444; }
+
+  .user-label {
+    position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 700; color: #111;
+    background: white; padding: 4px 8px; border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;
+    z-index: 5; text-align: center; pointer-events: none;
+  }
+  .user-label .label-title { font-size: 9px; font-weight: 500; color: var(--muted); display: block; }
+
+  .bar-labels { display: flex; margin-top: 10px; font-size: 10px; font-weight: 500; }
+  .bar-labels .label { text-align: center; color: var(--muted); transition: all 0.3s ease; flex-shrink: 0; }
+  .bar-labels .label.active { font-weight: 700; }
+  .bar-labels .label.active.excellent { color: #2563eb; }
+  .bar-labels .label.active.target-range { color: #166534; }
+  .bar-labels .label.active.needs-improvement { color: #ef4444; }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .primary-value { font-size: 20px; }
+    .verdict-context { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .bar-container { padding-top: 32px; }
+  }
+
+  /* Goal CPL Block Styles */
+  .primary-status-block {
+    border: 1px solid var(--line); border-left: 4px solid #e5e7eb;
+    border-radius: 12px; padding: 16px; margin: 16px 0;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .primary-status-block.outside-target { border-left-color: #ef4444; }
+  .primary-status-block.on-target { border-left-color: #22c55e; }
+  
+  .primary-status-block.scenario-aggressive,
+  .primary-status-block.scenario-good,
+  .primary-status-block.scenario-conservative { background: #fff; }
+
+  .status-header { font-size: 20px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .status-header.on-target { color: var(--fg); }
+  .status-header.outside-target { color: #dc2626; }
+  .status-header.exceeds-target { color: #3730a3; }
+  .status-header.good { color: var(--good); }
+  .status-header.bad { color: var(--bad); }
+  .status-header.ok { color: var(--ok); }
+  
+  .goal-comparison {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 12px 0; padding: 0; border: none; background: transparent;
+  }
+  .goal-item { display:flex; flex-direction:column; gap:2px; }
+  .goal-k { font-size:12px; color:var(--muted); }
+  .goal-v { font-size:16px; font-weight:600; color: var(--fg); }
+
+  .goal-value.crossed-out { text-decoration: none; opacity: 1; }
+  
+  .recommendation-chip {
+    display:inline-block; padding:6px 10px; border-radius:8px;
+    background:#ecfdf3; border:1px solid #bbf7d0; color:#065f46; font-weight:600;
+    margin-top: 8px;
+  }
+  .context-text { color: var(--muted); font-size: 14px; margin: 8px 0; }
+  
+  /* Diagnosis Card Styles */
+  .diagnosis-card { padding: 20px; border: 2px solid var(--line); border-radius: 12px; margin: 24px 0; }
+  .diagnosis-card .status-header { margin-bottom: 8px; }
+  .diagnosis-card p { margin: 4px 0 12px; font-size: 14px; line-height: 1.5; }
+  .diagnosis-card ul { margin: 12px 0 12px 20px; padding: 0; font-size: 13px; }
+  .diagnosis-card li { margin-bottom: 6px; }
+  .diag-kicker { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 16px; }
+
+/* --- Upgraded Scenario Builder Styles --- */
+.scenario-builder-input-grid {
+  grid-template-columns: 1fr; /* Mobile first */
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .scenario-builder-input-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* "Pod" container for each slider control */
+.scenario-builder-input-grid > div {
+  background: #f8fafc;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.scenario-builder-input-grid .label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px; /* Add space above slider */
+}
+
+/* Wrapper for adding currency/percent symbols */
+.numeric-input-wrapper {
+  position: relative;
+}
+.numeric-input-wrapper .numeric-input {
+  background-color: #fff;
+  width: 90px;
+}
+.numeric-input-wrapper::before {
+  content: attr(data-symbol);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.numeric-input-wrapper.symbol-after::before {
+  left: auto;
+  right: 10px;
+}
+/* Add padding to input to avoid text overlap */
+.numeric-input-wrapper.symbol-before .numeric-input {
+  padding-left: 24px;
+}
+.numeric-input-wrapper.symbol-after .numeric-input {
+  padding-right: 24px;
+}
+
+/* Enhanced Slider Styles */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  outline: none;
+  --track-color: #3b82f6; /* Blue for progress */
+}
+
+/* Track progress fill */
+input[type="range"] {
+  background-image: linear-gradient(var(--track-color), var(--track-color));
+  background-size: var(--progress, 0%) 100%;
+  background-repeat: no-repeat;
+}
+
+/* Slider Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--track-color);
+  border: 3px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  margin-top: -6px; /* Center thumb on track */
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--track-color);
+  border: 3px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
 </style>
 </head>
 <body>
   <h1>Benchmark MVP</h1>
 
   <div class="card">
-    <div class="row">
-      <div>
-        <label for="category">Category</label>
-        <select id="category"></select>
-      </div>
-      <div>
-        <label for="subcategory">Subcategory</label>
-        <select id="subcategory"></select>
-      </div>
-    </div>
-
-    <div class="row3">
-      <div>
-        <label for="website">Website (optional)</label>
-        <input id="website" placeholder="example.com" />
-      </div>
-      <div>
-        <label for="goal_cpl">Goal CPL</label>
-        <input id="goal_cpl" type="number" step="0.01" />
-      </div>
-      <div>
-        <label for="budget">Budget (period)</label>
-        <input id="budget" type="number" step="0.01" />
-      </div>
-    </div>
-
-    <div class="row3">
-      <div>
-        <label for="clicks">Clicks</label>
-        <input id="clicks" type="number" step="1" />
-      </div>
-      <div>
-        <label for="leads">Leads</label>
-        <input id="leads" type="number" step="1" />
-      </div>
-      <div>
-        <label for="impressions">Impressions (optional)</label>
-        <input id="impressions" type="number" step="1" />
-      </div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <label><input id="dash_enabled" type="checkbox" /> Dash AI call/SMS enabled</label>
-    </div>
-
-    <div style="margin-top:16px;">
-      <button id="runBtn">Run Benchmark</button>
-    </div>
+  <div class="row">
+    <div><label for="category">Category</label><select id="category"></select></div>
+    <div><label for="subcategory">Subcategory</label><select id="subcategory"></select></div>
   </div>
+
+  <div class="row">
+    <div><label for="goal_cpl">Goal CPL</label><input id="goal_cpl" type="number" step="0.01" /></div>
+    <div><label for="budget">Budget (period)</label><input id="budget" type="number" step="0.01" /></div>
+  </div>
+
+  <div class="row">
+    <div><label for="clicks">Clicks</label><input id="clicks" type="number" step="1" /></div>
+    <div><label for="leads">Leads</label><input id="leads" type="number" step="1" /></div>
+  </div>
+
+  <div style="margin-top:16px;"><button id="runBtn">Run Benchmark</button></div>
+</div>
+
 
   <div id="results" class="card" style="display:none;">
     <h3>Results</h3>
+    <div id="primaryStatusBlock"></div>
+    <div id="cpl-verdict-container"></div>
+    <div id="cpc-verdict-container"></div>
+    <div id="cr-verdict-container"></div>
+    
+    <div id="diagnosisCard"></div>
 
-    <!-- Status & Market chips -->
-    <div class="chips" id="chipsRow"></div>
-
-    <!-- Goal Analysis -->
-    <div class="card" style="margin:10px 0; background:#fafafa;">
-      <div class="small" id="goalProb"></div>
-      <div class="small" id="goalRange"></div>
-      <div class="small" id="goalNote"></div>
-      <div style="margin-top:8px;">
-        <button id="adoptBtn" style="display:none;">Use recommended goal</button>
-        <span id="goalRec" class="pill ok" style="display:none;"></span>
-      </div>
-    </div>
-
-    <!-- Benchmarks -->
-    <div class="card" style="margin:10px 0;">
-      <h3 style="margin:0 0 8px;">Benchmarks vs Peers</h3>
-      <div class="small" id="currentCplNote" style="margin-bottom:8px;"></div>
-
-      <!-- CPL -->
-      <div id="g-cpl" class="gauge">
-        <div class="g-head"><span class="metric">CPL</span><span id="g-cpl-band" class="tag unknown">—</span></div>
-        <div class="g-track" id="g-cpl-track"></div>
-        <div class="g-foot"><span>worse</span><span>better</span></div>
-        <div class="small" id="g-cpl-note"></div>
-      </div>
-
-      <!-- CPC -->
-      <div id="g-cpc" class="gauge">
-        <div class="g-head"><span class="metric">CPC</span><span id="g-cpc-band" class="tag unknown">—</span></div>
-        <div class="g-track" id="g-cpc-track"></div>
-        <div class="g-foot"><span>pricier</span><span>cheaper</span></div>
-        <div class="small" id="g-cpc-note"></div>
-      </div>
-
-      <!-- CR -->
-      <div id="g-cr" class="gauge">
-        <div class="g-head"><span class="metric">CR</span><span id="g-cr-band" class="tag unknown">—</span></div>
-        <div class="g-track" id="g-cr-track"></div>
-        <div class="g-foot"><span>lower</span><span>higher</span></div>
-        <div class="small" id="g-cr-note"></div>
-      </div>
-    </div>
-
-    <div class="card" id="scaleCard" style="display:none;">
-      <strong>Scaling preview</strong>
-      <div class="small" id="scaleNote"></div>
-      <div id="scaleRows" class="small" style="margin-top:6px;"></div>
-    </div>
-
-    <div>
-      <div><strong>Diagnosis</strong></div>
-      <div id="diagPrimary" style="margin:6px 0;"></div>
-      <div id="diagTags" class="small"></div>
-
-      <div style="height:12px;"></div>
-
-      <div><strong>Targets</strong></div>
-      <div id="targetsBlock" class="small"></div>
-    </div>
-
-    <div style="margin:12px 0;">
-      <button id="exportBtn">Export PPTX</button>
-    </div>
-
-    <div style="height:12px;"></div>
-    <h4>Raw</h4>
-    <pre id="raw"></pre>
+    <div id="scenarioBuilder" class="card" style="display:none; margin-top:24px;"></div>
   </div>
 
 <script>
-const API = "http://127.0.0.1:8008";
+const API = "https://northlight-wsgw.onrender.com";
 let lastPayload = null;
 
 // ---------- UI helpers ----------
-function fmtPct(v)  { return (v == null) ? "—" : (v*100).toFixed(0) + "%"; }
 function fmtPct1(v) { return (v == null) ? "—" : (v*100).toFixed(1) + "%"; }
 function fmtMoney(v){ return (v == null) ? "—" : "$" + Number(v).toFixed(2); }
 function pill(text, cls) { return `<span class="pill ${cls}">${text}</span>`; }
-function tag(text, cls){ return `<span class="tag ${cls}">${text}</span>`; }
 
-function bandLabel(band) {
-  if (band === "green") return "strong";
-  if (band === "amber") return "average";
-  if (band === "red")   return "weak";
-  if (band === "above_avg") return "above avg";
-  if (band === "below_avg") return "below avg";
-  if (band === "context")   return "context";
-  return "unknown";
-}
-
-function goalStatusPill(status, marketBand, celebration){
-  if (celebration === "exceeded_aggressive")   return pill("🎉 Exceeded aggressive target","good");
-  if (celebration === "exceeded_unrealistic")  return pill("🚀 Exceeded unrealistic target","good");
-  if (status === "achieved")                   return pill("✅ Goal achieved","good");
-  if (status === "on_track")                   return pill("Goal: On track","ok");
-  if (status === "behind") {
-    if (marketBand === "aggressive" || marketBand === "unrealistic") return pill("Goal: Needs adjustment","ok");
-    return pill("Goal: Behind","bad");
+// ---------- Data handling helpers ----------
+function ensureTargetRange(metricData, unit, metricName) {
+  if (metricData?.target_range?.low != null && metricData?.target_range?.high != null) {
+    return metricData.target_range;
   }
-  return pill("Goal: —","ok");
+  const m = metricData?.median ?? metricData?.value ?? (unit === '%' ? 0.05 : (metricName === 'CPC' ? 3 : 50));
+  const p25 = metricData?.p25, p75 = metricData?.p75;
+  if (p25 != null && p75 != null) return { low: Math.max(0, p25), high: Math.max(p75, p25) };
+  const span = Math.max(0.00001, m * 0.15); // ±15%
+  return { low: Math.max(0, m - span), high: m + span };
 }
 
-function marketBandPill(band){
-  if (band === "acceptable") return pill("Market difficulty: Acceptable","good");
-  if (band === "aggressive") return pill("Market difficulty: Aggressive","ok");
-  if (band === "unrealistic")return pill("Market difficulty: Unrealistic","bad");
-  return pill("Market difficulty: —","ok");
+function deriveVerdict(value, targetRange, direction) {
+  if (value == null || targetRange?.low == null || targetRange?.high == null) return 'unknown';
+  const { low, high } = targetRange;
+  if (value >= low && value <= high) return 'on_target';
+  if (direction === 'lower-is-better') {
+    return (value < low) ? 'exceeds_target' : 'outside_target';
+  } else {
+    return (value > high) ? 'exceeds_target' : 'outside_target';
+  }
 }
 
-function buildGauge(trackEl, percentile, bandCls) {
-  trackEl.innerHTML = "";
-  // 10%, 25%, 50%, 75%, 90%
-  const ticks = [
-    {p:0.10, label:"10%"},
-    {p:0.25, label:"25%"},
-    {p:0.50, label:"50%"},
-    {p:0.75, label:"75%"},
-    {p:0.90, label:"90%"},
-  ];
-  ticks.forEach(t => {
-    const tick = document.createElement("div");
-    tick.className = "g-tick";
-    tick.style.left = (t.p * 100) + "%";
-    trackEl.appendChild(tick);
-    const lab = document.createElement("div");
-    lab.className = "g-label";
-    lab.style.left = (t.p * 100) + "%";
-    lab.textContent = t.label;
-    trackEl.appendChild(lab);
-  });
-  const p = (percentile == null) ? 0 : Math.max(0, Math.min(1, percentile));
-  const fill = document.createElement("div");
-  fill.className = "g-fill " + (bandCls || "");
-  fill.style.width = (p*100) + "%";
-  trackEl.appendChild(fill);
-  const mk = document.createElement("div");
-  mk.className = "g-mark";
-  mk.style.left = (p*100) + "%";
-  trackEl.appendChild(mk);
+function deltaPctFromRange(value, targetRange) {
+  const { low, high } = targetRange;
+  if (value < low) return ((low - value) / Math.max(low, 1e-9)) * 100;
+  if (value > high) return ((value - high) / Math.max(high, 1e-9)) * 100;
+  return 0;
 }
 
-// ---------- Data ----------
+function roundUpToNiceCurrency(x) {
+  const targets = [0.5, 1, 2, 3, 5, 7.5, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000];
+  const want = x * 1.15;
+  for (const t of targets) if (want <= t) return t;
+  return Math.ceil(want / 100) * 100;
+}
+
+function roundUpToNicePercent(x) {
+  const targets = [0.05, 0.08, 0.10, 0.12, 0.15, 0.18, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.80, 1.00];
+  const want = x * 1.15;
+  for (const t of targets) if (want <= t) return t;
+  return Math.min(1.00, Math.ceil(want * 20) / 20);
+}
+
+
+// ---------- Component Rendering ----------
+function renderVerdictBenchmark(containerEl, metricData, metricName, metricUnit, direction, opts = {}) {
+  const { hidePeer = false } = opts;
+  const value = metricData?.value;
+
+  if (value == null) {
+    containerEl.innerHTML = `<div class="benchmark-verdict" style="padding: 12px;">No data for ${metricName}</div>`;
+    return;
+  }
+
+  const target_range = ensureTargetRange(metricData, metricUnit === '%' ? '%' : '$', metricName);
+  const localVerdict = deriveVerdict(value, target_range, direction);
+  const rawDelta = (typeof metricData?.delta_from_target === 'number') ? Math.abs(metricData.delta_from_target) : deltaPctFromRange(value, target_range);
+  const median = metricData?.median;
+  const peer_multiple = metricData?.peer_multiple;
+
+  const verdictLabels = { "outside_target": "Outside Target", "on_target": "On Target", "exceeds_target": "Excellent", "unknown": "Benchmark" };
+  const verdictIcons  = { "outside_target": "⚠️", "on_target": "🎯", "exceeds_target": "🎉", "unknown": "📊" };
+
+  const valueFormatter = metricUnit === '$' ? fmtMoney : fmtPct1;
+  const primaryValue   = valueFormatter(value);
+  const verdictClass   = (localVerdict || "").replace(/_/g, "-");
+
+  let deltaText = "";
+  if (target_range) {
+    const below = value < target_range.low;
+    const above = value > target_range.high;
+    if (below || above) {
+      const isGood = (direction === 'lower-is-better' && below) || (direction === 'higher-is-better' && above);
+      const deltaClass = isGood ? 'negative' : 'positive';
+      const rangeText = `(${valueFormatter(target_range.low)}–${valueFormatter(target_range.high)})`;
+      const deltaDescription = below ? "below target range" : "above target range";
+      deltaText = `<span class="delta-text ${deltaClass}">${Math.round(Math.abs(rawDelta))}% ${deltaDescription} ${rangeText}</span>`;
+    } else {
+      deltaText = `<span class="delta-text">within target range (${valueFormatter(target_range.low)}–${valueFormatter(target_range.high)})</span>`;
+    }
+  }
+
+  const peerText = (!hidePeer && peer_multiple && median) ? `<span class="peer-context">${peer_multiple.toFixed(1)}× peer median</span>` : "";
+  const barData = calculateBarData(value, target_range, median, direction, metricUnit, metricName);
+
+  containerEl.innerHTML = `
+    <div class="benchmark-verdict ${verdictClass}">
+      <div class="status-header ${verdictClass}">
+        ${verdictIcons[localVerdict] || "📊"} ${verdictLabels[localVerdict] || "Benchmark"}
+      </div>
+      <div class="primary-value">Your ${metricName} is ${primaryValue}</div>
+      ${(deltaText || peerText) ? `<div class="verdict-context">${deltaText} ${peerText}</div>` : ''}
+      <div class="bar-container">${generateBar(barData)}</div>
+    </div>`;
+}
+
+function calculateBarData(userValue, targetRange, median, direction, metricUnit, metricName) {
+  if (!targetRange || targetRange.low == null || targetRange.high == null) {
+    targetRange = ensureTargetRange({ value: userValue, median }, metricUnit, metricName);
+  }
+
+  const baseTop = Math.max( userValue ?? 0, targetRange.high ?? 0, median ?? 0 );
+  let minScale = 0, maxScale;
+  if (metricUnit === '%') {
+    maxScale = roundUpToNicePercent(baseTop);
+  } else {
+    if (metricName === 'CPC') {
+      maxScale = roundUpToNiceCurrency(baseTop);
+    } else {
+      maxScale = Math.max(baseTop * 1.4, targetRange.high * 1.6, (median || 0) * 1.5);
+      maxScale = roundUpToNiceCurrency(maxScale);
+    }
+  }
+
+  const totalRange = maxScale - minScale;
+  if (totalRange <= 0) return null;
+
+  let userSection = 'target-range';
+  if (userValue < targetRange.low) {
+    userSection = (direction === 'lower-is-better') ? 'excellent' : 'needs-improvement';
+  } else if (userValue > targetRange.high) {
+    userSection = (direction === 'lower-is-better') ? 'needs-improvement' : 'excellent';
+  }
+
+  const valueFormatter = metricUnit === '$' ? fmtMoney : fmtPct1;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const userPosition = clamp01((userValue - minScale) / totalRange) * 100;
+
+  let excellentWidth = clamp01((targetRange.low - minScale) / totalRange) * 100;
+  let targetWidth    = clamp01((targetRange.high - targetRange.low) / totalRange) * 100;
+  let improvementWidth = Math.max(0, 100 - excellentWidth - targetWidth);
+
+  const sum = excellentWidth + targetWidth + improvementWidth;
+  if (sum !== 100 && sum > 0) {
+    excellentWidth = (excellentWidth / sum) * 100;
+    targetWidth = (targetWidth / sum) * 100;
+    improvementWidth = (improvementWidth / sum) * 100;
+  }
+
+  const sectionWidths = (direction === 'lower-is-better')
+    ? { 'excellent': excellentWidth, 'target-range': targetWidth, 'needs-improvement': improvementWidth }
+    : { 'needs-improvement': excellentWidth, 'target-range': targetWidth, 'excellent': improvementWidth };
+
+  const scalePoints = [
+    { value: minScale }, { value: targetRange.low },
+    { value: targetRange.high }, { value: maxScale }
+  ].map(p => ({
+    label: valueFormatter(p.value),
+    position: clamp01((p.value - minScale) / totalRange) * 100
+  }));
+
+  return { userValue, userPosition, userSection, sectionWidths, scalePoints, valueFormatter, direction, metricName };
+}
+
+function generateBar(data) {
+  if (!data) return '';
+  const scaleHtml = data.scalePoints.map(p => `<div class="scale-point" style="left: ${p.position}%;">${p.label}</div>`).join('');
+  const sections = (data.direction === 'lower-is-better')
+    ? ['excellent', 'target-range', 'needs-improvement']
+    : ['needs-improvement', 'target-range', 'excellent'];
+
+  return `
+    <div class="bar-scale">${scaleHtml}</div>
+    <div class="bar-track">
+      ${sections.map(key => `<div class="zone-bg ${key}" style="flex-basis: ${(data.sectionWidths[key] || 0)}%"></div>`).join('')}
+      <div class="user-marker ${data.userSection}" style="left: ${data.userPosition}%; ">
+        <div class="user-label">
+          <span class="label-title">Your ${data.metricName}</span>
+          ${data.valueFormatter(data.userValue)}
+        </div>
+      </div>
+    </div>
+    <div class="bar-labels">
+      ${sections.map(key => {
+        const labelText = key.replace(/-/g, ' ');
+        return `<div class="label ${key} ${data.userSection === key ? 'active' : ''}" style="text-transform: capitalize; flex-basis: ${(data.sectionWidths[key] || 0)}%">${labelText}</div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderPrimaryStatusBlock(d) {
+  const container = document.getElementById("primaryStatusBlock");
+  const ga = d.goal_analysis || {};
+  const userGoal = d.input?.goal_cpl;
+
+  container.className = "primary-status-block";
+  if (!userGoal) {
+    container.innerHTML = '<div class="context-text">Enter a goal CPL to see analysis.</div>';
+    return;
+  }
+
+  const range = (ga.realistic_range && ga.realistic_range.low != null && ga.realistic_range.high != null)
+    ? ga.realistic_range
+    : ensureTargetRange({ value: userGoal, median: d?.benchmarks?.cpl?.median }, '$', 'CPL');
+
+  const { low, high } = range;
+  const recommended = ga.recommended_cpl ?? null;
+  let verdictClass = 'on-target';
+  if (ga.goal_scenario === 'goal_too_aggressive') verdictClass = 'outside-target';
+  if (ga.goal_scenario === 'goal_in_range')      verdictClass = 'on-target';
+  if (ga.goal_scenario === 'goal_conservative')  verdictClass = 'on-target';
+
+  let deltaHtml = '';
+  if (userGoal < low || userGoal > high) {
+    const pct = Math.round(deltaPctFromRange(userGoal, range));
+    const below = userGoal < low;
+    const deltaClass = 'positive';
+    const desc = below ? "below typical range" : "above typical range";
+    deltaHtml = `<span class="delta-text ${deltaClass}">${pct}% ${desc} (${fmtMoney(low)}–${fmtMoney(high)})</span>`;
+  } else {
+    deltaHtml = `<span class="delta-text">within typical range (${fmtMoney(low)}–${fmtMoney(high)})</span>`;
+  }
+
+  const titleIcon = (verdictClass === 'outside-target') ? '⚠️' : '🎯';
+  const titleText = 'Goal CPL check';
+  const conservativeNote = (ga.goal_scenario === 'goal_conservative') ? `<span class="pill ok">Conservative goal</span>` : '';
+  const recChip = recommended ? `<div class="recommendation-chip">Suggested target: ${fmtMoney(recommended)}</div>` : '';
+
+  container.classList.add(verdictClass);
+  container.innerHTML = `
+    <div class="status-header ${verdictClass}">${titleIcon} ${titleText}</div>
+    <div class="primary-value">Goal CPL: ${fmtMoney(userGoal)}</div>
+    <div class="verdict-context">${deltaHtml} ${conservativeNote}</div>
+    <div class="goal-comparison">
+      <div class="goal-item">
+        <div class="goal-k">Your goal</div>
+        <div class="goal-v">${fmtMoney(userGoal)}</div>
+      </div>
+      <div class="goal-item">
+        <div class="goal-k">Typical</div>
+        <div class="goal-v">${fmtMoney(low)} – ${fmtMoney(high)}</div>
+      </div>
+      <div class="goal-item">
+        <div class="goal-k">Recommended</div>
+        <div class="goal-v">${recommended ? fmtMoney(recommended) : '—'}</div>
+      </div>
+    </div>
+    ${recChip}
+  `;
+}
+
+function statusFromBench(metric, metricName, unit, direction) {
+  if (!metric || metric.value == null) return 'UNKNOWN';
+  const tr = ensureTargetRange(metric, unit, metricName);
+  const verdict = deriveVerdict(metric.value, tr, direction);
+  if (verdict === 'on_target' || verdict === 'exceeds_target') return 'GOOD';
+  const delta = deltaPctFromRange(metric.value, tr);
+  return (delta <= 15) ? 'AVG' : 'WEAK';
+}
+
+// Helper function to generate the diagnosis card HTML
+function createDiagnosisCard(status, title, message, listItems = [], kicker = '', provisionalInfo = '') {
+  const listHtml = listItems.length ? `<ul>${listItems.map(item => `<li>${item}</li>`).join('')}</ul>` : '';
+  return `
+    <div class="card diagnosis-card">
+      ${provisionalInfo}
+      <div class="status-header ${status}">${title}</div>
+      <p>${message}</p>
+      ${listHtml}
+      ${kicker}
+    </div>
+  `;
+}
+
+function renderDiagnosis(d) {
+    const el = document.getElementById("diagnosisCard");
+    const { input, goal_analysis: ga, benchmarks: bm, targets, overall } = d;
+    const status = overall?.goal_status;
+
+    // --- Pre-checks (Guardrails) ---
+    if ((input.clicks || 0) === 0) {
+        el.innerHTML = createDiagnosisCard('bad', '🛑 No Traffic', 'There are no clicks recorded for this period. Expand coverage or bids before optimizing.', ['Broaden match types/targets; check ad eligibility and daily budgets.']);
+        return;
+    }
+
+    const crSuspicious = (() => {
+        const v = bm.cr?.value;
+        if (v == null) return false;
+        const tr = ensureTargetRange(bm.cr, '%', 'CR');
+        return v > Math.max(tr.high * 1.8, 0.15);
+    })();
+
+    if ((input.leads === 0 && (input.clicks || 0) >= 100) || crSuspicious) {
+        el.innerHTML = createDiagnosisCard('bad', '🚨 Verify Tracking',
+            (input.leads === 0) ? 'Clicks but zero conversions. Likely tracking failure.' : 'Suspiciously high CR. You may be counting non-lead events.',
+            ['Fire a test conversion; verify thank-you tag/pixel.', 'Confirm you’re counting qualified leads only.']
+        );
+        return;
+    }
+    
+    if (input.budget != null && input.budget < 500) {
+        el.innerHTML = createDiagnosisCard('bad', '💰 Budget Too Low', 'Under $500 isn’t enough signal. Increase budget or <strong>Run Grader</strong> to find the right budget.');
+        return;
+    }
+
+    let softBudgetBanner = (input.budget != null && input.budget < 1000)
+      ? `<div class="pill ok" style="margin-bottom:8px;">Budget constrained ($${input.budget}) — insights are provisional</div>`
+      : '';
+    const provisional = ((input.leads || 0) < 15 || (input.clicks || 0) < 300);
+    const provisionalTag = provisional ? '<div class="pill ok" style="margin-bottom:8px;">Provisional – low data volume</div>' : softBudgetBanner;
+    
+    // --- Main Diagnosis Logic ---
+    const cplStatus = statusFromBench(bm.cpl, 'CPL', '$', 'lower-is-better');
+    const cpcStatus = statusFromBench(bm.cpc, 'CPC', '$', 'lower-is-better');
+    const crStatus  = statusFromBench(bm.cr,  'CR',  '%', 'higher-is-better');
+    const goalScenario = ga.goal_scenario;
+    const performanceIsGood = cplStatus !== 'WEAK' && cpcStatus !== 'WEAK' && crStatus !== 'WEAK';
+
+    if (performanceIsGood) {
+        if (status === 'achieved' || status === 'on_track') {
+            el.innerHTML = createDiagnosisCard('good', '🚀 Ready to Scale',
+                `CPL is meeting or beating the goal. ${goalScenario === 'goal_conservative' ? 'Your goal is conservative — you can scale with confidence.' : 'Performance is solid.'}`,
+                ['Increase budget (start +30–50%).', 'Add adjacent ad groups / geos.'], '', provisionalTag
+            );
+        } else { // Performance is good, but goal is still missed -> Expectations problem.
+            const rec = ga.recommended_cpl;
+            const rng = ga.realistic_range;
+            el.innerHTML = createDiagnosisCard('ok', '🎯 Realign Goal Expectations',
+                `Your performance is good, but your goal is outside the typical range. A more realistic target is <strong>${fmtMoney(rec)}</strong> (Typical: ${fmtMoney(rng?.low)}–${fmtMoney(rng?.high)}).`,
+                ['<strong>Primary Action:</strong> Use this benchmark data to reset the CPL goal with your client.', '<strong>Next Step:</strong> Run a deeper ROAS calculation to find the true breakeven CPL.'], '', provisionalTag
+            );
+        }
+        return;
+    }
+
+    if (status === 'behind') {
+        const needCr = targets.target_cr ?? ((bm.cpc?.value && input?.goal_cpl) ? (bm.cpc.value / input.goal_cpl) : null);
+        const needCpc = targets.target_cpc ?? ((input?.goal_cpl != null && bm.cr?.value != null) ? input.goal_cpl * bm.cr.value : null);
+        const kicker = (goalScenario === 'goal_too_aggressive') ? `<div class="diag-kicker">*Note: Your CPL goal is also aggressive for this market. Re-evaluate it after improving performance.</div>` : '';
+        
+        const trCPC = ensureTargetRange(bm.cpc, '$', 'CPC');
+        const trCR  = ensureTargetRange(bm.cr,  '%', 'CR');
+        const cpcExtreme = bm.cpc?.value > trCPC.high * 1.5;
+        const crDeep     = bm.cr?.value  < trCR.low  * 0.5;
+
+        if (crStatus === 'WEAK' && cpcStatus !== 'WEAK') { // CR is the clear bottleneck
+            el.innerHTML = createDiagnosisCard('bad', '🔧 Fix Conversion Rate',
+                `Your CR of ${fmtPct1(bm.cr?.value)} is the main bottleneck. You need ~<strong>${needCr != null ? fmtPct1(Math.max(0, needCr)) : '—'}</strong> to hit your CPL goal.`,
+                ['Audit page speed & mobile experience (aim &lt;2.5s LCP).', 'Ensure message match: ad → headline; CTA above fold.'], kicker, provisionalTag
+            );
+        } else if (cpcStatus === 'WEAK' && crStatus !== 'WEAK') { // CPC is the clear bottleneck
+            el.innerHTML = createDiagnosisCard('bad', '💰 Reduce Traffic Cost',
+                `Your pages convert well, but the CPC of ${fmtMoney(bm.cpc?.value)} is too high. You need ~<strong>${needCpc != null ? fmtMoney(Math.max(0, needCpc)) : '—'}</strong> to hit your goal.`,
+                ['Add negatives; cut waste by geo/device/daypart.', 'Tighten match types; refresh RSAs.'], kicker, provisionalTag
+            );
+        } else { // Both are weak, use tie-breaker
+            if (cpcExtreme && !crDeep) { // CPC is extremely bad, CR is not as bad
+                el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CPC, then CR',
+                    'Both levers need work, but your CPC is an extreme outlier. Start by fixing traffic cost.',
+                    ['Aggressively prune queries and tighten targeting to control CPCs.', 'Once CPC is in a healthier range, shift focus to landing page optimization.'], kicker, provisionalTag
+                );
+            } else { // Default to CR first
+                el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CR, then CPC',
+                    'Both levers need work. Start with CR for faster lift, then address CPC.',
+                    ['Apply LP quick wins; verify tracking quality.', 'Then prune queries / restructure bids.'], kicker, provisionalTag
+                );
+            }
+        }
+        return;
+    }
+
+    el.innerHTML = createDiagnosisCard('', '📊 Monitor Performance', 'Your campaign is performing within average ranges. Continue to test incremental CR and CPC improvements to increase efficiency.', [], '', provisionalTag);
+}
+
+function renderScenarioBuilder(d) {
+  const el = document.getElementById('scenarioBuilder');
+  const bm = d.benchmarks || {};
+  const goal = d.input?.goal_cpl ?? null;
+
+  const hasCPC = bm.cpc && (bm.cpc.value != null || bm.cpc.median != null);
+  const hasCR  = bm.cr  && (bm.cr.value  != null || bm.cr.median  != null);
+  if (!hasCPC || !hasCR) {
+    el.style.display = 'none';
+    return;
+  }
+
+  let state = {
+    budget: d.input?.budget ?? 5000,
+    cpc:    bm.cpc?.value ?? bm.cpc?.median ?? 3.00,
+    cr:     bm.cr?.value  ?? bm.cr?.median  ?? 0.04
+  };
+  const current = { ...state };
+  
+  const p25cpc = bm.cpc?.p25, p75cpc = bm.cpc?.p75;
+  const p25cr  = bm.cr?.p25,  p75cr  = bm.cr?.p75;
+
+  const bounds = {
+    budgetMin: 0,
+    budgetMax: Math.max((d.input?.budget ?? 5000) * 2, 10000),
+    cpcMin: Math.max(0.2, (p25cpc ?? state.cpc) * 0.5),
+    cpcMax: (p75cpc ?? state.cpc) * 1.8 || 20,
+    crMin: Math.max(0.001, (p25cr ?? state.cr) * 0.3),
+    crMax: Math.min(1.0, (p75cr ?? state.cr) * 2.0)
+  };
+  if (bounds.cpcMin >= bounds.cpcMax) { bounds.cpcMin = Math.max(0.2, state.cpc * 0.5); bounds.cpcMax = state.cpc * 2.0; }
+  if (bounds.crMin  >= bounds.crMax)  { bounds.crMin  = Math.max(0.001, state.cr  * 0.5); bounds.crMax  = Math.min(1.0, state.cr  * 2.0); }
+
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+  const compute = () => {
+    const clicks = (state.budget > 0 && state.cpc > 0) ? state.budget / state.cpc : 0;
+    const leads  = (state.cr > 0 && state.cpc > 0) ? state.budget * state.cr / state.cpc : 0;
+    const cpl    = (state.cr > 0) ? state.cpc / state.cr : null;
+    return { clicks, leads, cpl };
+  }
+
+  // --- Event Handling (attached once) ---
+  const updateState = (key, rawValue, isFromNumeric) => {
+    let num = parseFloat(rawValue);
+    if (!isFinite(num)) return;
+    if (key === 'cr' && isFromNumeric) num /= 100; // numeric CR input is in %
+    state[key] = clamp(num, bounds[`${key}Min`], bounds[`${key}Max`]);
+    render();
+  };
+
+  el.oninput = (e) => {
+    const keyMap = { sb_budget: 'budget', sb_cpc: 'cpc', sb_cr: 'cr' };
+    if (keyMap[e.target.id]) updateState(keyMap[e.target.id], e.target.value, false);
+  };
+  
+  el.onchange = (e) => {
+    const keyMap = { sb_budget_n: 'budget', sb_cpc_n: 'cpc', sb_cr_n: 'cr' };
+    if (keyMap[e.target.id]) updateState(keyMap[e.target.id], e.target.value, true);
+  };
+
+  el.onclick = (e) => {
+    if (e.target.id === 'sb_reset') {
+        state = { ...current };
+        render();
+    }
+    if (goal && e.target.id === 'sb_snap_cr' && goal > 0 && state.cpc > 0) {
+        state.cr = clamp(state.cpc / goal, bounds.crMin, bounds.crMax);
+        render();
+    }
+    if (goal && e.target.id === 'sb_snap_cpc' && goal > 0 && state.cr > 0) {
+        state.cpc = clamp(goal * state.cr, bounds.cpcMin, bounds.cpcMax);
+        render();
+    }
+  };
+
+  function render() {
+    const { clicks, leads, cpl } = compute();
+    const banners = [];
+    if (clicks < 300 || leads < 15) banners.push(`<span class="pill ok" style="margin-bottom:8px;">Provisional – low volume</span>`);
+    if (state.budget >= 500 && state.budget < 1000) banners.push(`<span class="pill ok" style="margin-bottom:8px;">Budget constrained (${fmtMoney(state.budget)})</span>`);
+
+    // Calculate progress for slider tracks
+    const budgetProgress = (state.budget - bounds.budgetMin) / (bounds.budgetMax - bounds.budgetMin) * 100;
+    const cpcProgress = (state.cpc - bounds.cpcMin) / (bounds.cpcMax - bounds.cpcMin) * 100;
+    const crProgress = (state.cr - bounds.crMin) / (bounds.crMax - bounds.crMin) * 100;
+
+    el.style.display = 'block';
+    el.innerHTML = `
+      <h3 style="margin:0 0 12px;">Scenario Builder</h3>
+      ${banners.join(' ')}
+      <div class="scenario-builder-input-grid" style="margin-top:8px;">
+        <div>
+          <div class="label-row">
+            <label>Budget</label>
+            <div class="numeric-input-wrapper symbol-before" data-symbol="$">
+              <input type="number" id="sb_budget_n" class="numeric-input" value="${Math.round(state.budget)}" />
+            </div>
+          </div>
+          <input type="range" id="sb_budget" min="${bounds.budgetMin}" max="${bounds.budgetMax}" step="50" value="${state.budget}" style="--progress: ${budgetProgress}%">
+          <div class="slider-labels">
+            <span>${fmtMoney(bounds.budgetMin)}</span>
+            <span>${fmtMoney(bounds.budgetMax)}</span>
+          </div>
+        </div>
+        <div>
+          <div class="label-row">
+            <label>CPC</label>
+            <div class="numeric-input-wrapper symbol-before" data-symbol="$">
+              <input type="number" id="sb_cpc_n" step="0.01" class="numeric-input" value="${state.cpc.toFixed(2)}" />
+            </div>
+          </div>
+          <input type="range" id="sb_cpc" min="${bounds.cpcMin.toFixed(2)}" max="${bounds.cpcMax.toFixed(2)}" step="0.01" value="${state.cpc}" style="--progress: ${cpcProgress}%">
+          <div class="slider-labels">
+            <span>${fmtMoney(bounds.cpcMin)}</span>
+            <span>${fmtMoney(bounds.cpcMax)}</span>
+          </div>
+        </div>
+        <div>
+          <div class="label-row">
+            <label>CR</label>
+            <div class="numeric-input-wrapper symbol-after" data-symbol="%">
+              <input type="number" id="sb_cr_n" step="0.1" class="numeric-input" value="${(state.cr * 100).toFixed(1)}" />
+            </div>
+          </div>
+          <input type="range" id="sb_cr" min="${bounds.crMin.toFixed(3)}" max="${bounds.crMax.toFixed(3)}" step="0.001" value="${state.cr}" style="--progress: ${crProgress}%">
+          <div class="slider-labels">
+            <span>${fmtPct1(bounds.crMin)}</span>
+            <span>${fmtPct1(bounds.crMax)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:20px;">
+        <div class="card">
+          <div class="small">Leads</div>
+          <div class="primary-value" style="margin-top:4px;">${Math.round(leads)}</div>
+          <div class="small">Clicks: ${Math.round(clicks)}</div>
+        </div>
+        <div class="card">
+          <div class="small">CPL ${goal && cpl != null && cpl > goal ? `(Goal: ${fmtMoney(goal)})` : ''}</div>
+          <div class="primary-value" style="margin-top:4px; color:${(goal && cpl != null && cpl <= goal) ? 'var(--good)' : 'var(--fg)'}">${cpl != null ? fmtMoney(cpl) : '—'}</div>
+          <div class="small">Formula: CPC ÷ CR</div>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        ${goal ? `<button id="sb_snap_cr" class="small">Solve for Goal via CR</button>
+                 <button id="sb_snap_cpc" class="small">Solve for Goal via CPC</button>` : ''}
+        <button id="sb_reset" class="small">Reset to Current</button>
+      </div>
+    `;
+  }
+  render(); // Initial render
+}
+
+// ---------- Main Execution ----------
 async function fetchMeta() {
   const res = await fetch(`${API}/benchmarks/meta`);
   const meta = await res.json();
-  const catSel = document.getElementById("category");
-  const subSel = document.getElementById("subcategory");
+  const catSel = document.getElementById("category"), subSel = document.getElementById("subcategory");
   const cats = [...new Set(meta.map(x => x.category))].sort();
   catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
   function buildSubcats(cat) {
@@ -267,15 +816,12 @@ async function fetchMeta() {
 
 async function runDiag() {
   const payload = {
-    website: document.getElementById("website").value || null,
     category: document.getElementById("category").value,
     subcategory: document.getElementById("subcategory").value,
-    budget: parseFloat(document.getElementById("budget").value),
-    clicks: parseFloat(document.getElementById("clicks").value),
-    leads: parseFloat(document.getElementById("leads").value),
-    goal_cpl: document.getElementById("goal_cpl").value ? parseFloat(document.getElementById("goal_cpl").value) : null,
-    impressions: document.getElementById("impressions").value ? parseFloat(document.getElementById("impressions").value) : null,
-    dash_enabled: document.getElementById("dash_enabled").checked
+    budget: parseFloat(document.getElementById("budget").value) || null,
+    clicks: parseFloat(document.getElementById("clicks").value) || null,
+    leads: parseFloat(document.getElementById("leads").value) || null,
+    goal_cpl: document.getElementById("goal_cpl").value ? parseFloat(document.getElementById("goal_cpl").value) : null
   };
   lastPayload = payload;
 
@@ -284,194 +830,33 @@ async function runDiag() {
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(payload)
   });
-  if (!res.ok) {
-    const t = await res.text();
-    alert(`Error ${res.status}: ${t}`);
-    return;
-  }
-  const data = await res.json();
-  renderResults(data);
+  if (!res.ok) { alert(`Error ${res.status}: ${await res.text()}`); return; }
+  renderResults(await res.json());
 }
 
 function renderResults(d) {
   document.getElementById("results").style.display = "block";
-
-  // Chips
-  const chips = [];
-  chips.push(goalStatusPill(d.overall?.goal_status, d.goal_analysis?.market_band, d.overall?.celebration));
-  chips.push(marketBandPill(d.goal_analysis?.market_band || d.goal_realism?.band));
-  document.getElementById("chipsRow").innerHTML = chips.join("");
-
-  // Goal analysis text
-  const prob = d.goal_analysis?.prob_leq_goal;
-  const userGoal = d.input?.goal_cpl;
-  document.getElementById("goalProb").textContent =
-    (prob != null && userGoal != null)
-      ? `≈${fmtPct(prob)} of campaigns achieve CPL ≤ ${fmtMoney(userGoal)} in this category.`
-      : "";
-  const rng = d.goal_analysis?.realistic_range || {};
-  document.getElementById("goalRange").textContent =
-    (rng.low != null && rng.high != null) ? `Typical range: ${fmtMoney(rng.low)} – ${fmtMoney(rng.high)}` : "";
-  document.getElementById("goalNote").textContent = d.goal_analysis?.note || "";
-
-  const rec = d.goal_analysis?.recommended_cpl;
-  const canAdopt = d.goal_analysis?.can_autoadopt && rec != null;
-  const recEl = document.getElementById("goalRec");
-  const adoptBtn = document.getElementById("adoptBtn");
-  if (canAdopt) {
-    recEl.style.display = "inline-block";
-    recEl.textContent = `Recommended target: ${fmtMoney(rec)}`;
-    adoptBtn.style.display = "inline-block";
-  } else {
-    recEl.style.display = "none";
-    adoptBtn.style.display = "none";
-  }
-
-  // Current CPL statement
-  document.getElementById("currentCplNote").textContent = d.overall?.current_cpl_statement || "";
-
-  // Benchmarks / Gauges
   const bm = d.benchmarks || {};
 
-  // CPL
-  const cpl = bm.cpl || {};
-  document.getElementById("g-cpl-band").innerHTML = tag(bandLabel(cpl.band || "unknown"), cpl.band || "unknown");
-  buildGauge(
-    document.getElementById("g-cpl-track"),
-    (typeof cpl.display_percentile === "number" ? cpl.display_percentile : null),
-    "g-" + (cpl.band || "unknown")
-  );
-  document.getElementById("g-cpl-note").textContent =
-    (typeof cpl.display_percentile === "number" && cpl.value != null)
-      ? `Top ${fmtPct(cpl.display_percentile)} performance at ${fmtMoney(cpl.value)} vs median ${fmtMoney(cpl.median)}.`
-      : "";
+  const metricsToRender = [
+    { id: "cpl-verdict-container", data: bm.cpl, name: "CPL", unit: "$", dir: 'lower-is-better' },
+    { id: "cpc-verdict-container", data: bm.cpc, name: "CPC", unit: "$", dir: 'lower-is-better' },
+    { id: "cr-verdict-container",  data: bm.cr,  name: "CR",  unit: "%", dir: 'higher-is-better' }
+  ];
 
-  // CPC
-  const cpc = bm.cpc || {};
-  document.getElementById("g-cpc-band").innerHTML = tag(bandLabel(cpc.band || "unknown"), cpc.band || "unknown");
-  buildGauge(
-    document.getElementById("g-cpc-track"),
-    (typeof cpc.display_percentile === "number" ? cpc.display_percentile : null),
-    "g-" + (cpc.band || "unknown")
-  );
-  document.getElementById("g-cpc-note").textContent =
-    (typeof cpc.display_percentile === "number" && cpc.value != null)
-      ? `Top ${fmtPct(cpc.display_percentile)} performance at ${fmtMoney(cpc.value)} vs median ${fmtMoney(cpc.median)}.`
-      : "";
-
-  // CR
-  const cr = bm.cr || {};
-  document.getElementById("g-cr-band").innerHTML = tag(bandLabel(cr.band || "unknown"), cr.band || "unknown");
-
-  // Prefer display_percentile; fallback to raw percentile
-  let crP = (typeof cr.display_percentile === "number")
-    ? cr.display_percentile
-    : (typeof cr.percentile === "number" ? cr.percentile : null);
-
-  // Safety valve: if CR < median but percentile > 0.5, nudge below 50% so UI direction matches reality
-  if (crP != null && cr.median != null && cr.value != null && cr.value < cr.median && crP > 0.5) {
-    const ratio = cr.value / cr.median;            // <1 means worse than median
-    crP = Math.max(0, Math.min(0.49, 0.5 * ratio)); // push left proportionally
-  }
-
-  buildGauge(document.getElementById("g-cr-track"), crP, "g-" + (cr.band || "unknown"));
-
-  const crMedTxt = (cr.median != null) ? ` (median ${fmtPct1(cr.median)})` : "";
-  document.getElementById("g-cr-note").textContent =
-    (crP != null && cr.value != null)
-      ? `Top ${fmtPct(crP)} performance at ${fmtPct1(cr.value)}${crMedTxt}.`
-      : "";
-
-  // Scaling preview
-  const sp = d.advice?.scaling_preview || null;
-  const scaleCard = document.getElementById("scaleCard");
-  if (sp && Array.isArray(sp.scenarios) && sp.scenarios.length) {
-    scaleCard.style.display = "block";
-    const rows = (sp.scenarios || []).map(scn => {
-      const head = `${scn.budget_increase} → ${fmtMoney(scn.new_budget)}`;
-      const variants = (scn.lead_projections || []).map(v => `${v.scenario}: ~${v.leads}`).join("  |  ");
-      return `${head}  →  ${variants}`;
-    });
-    document.getElementById("scaleRows").innerHTML = rows.join("<br/>");
-    document.getElementById("scaleNote").textContent = sp.disclaimer || "Indicative projections.";
-  } else {
-    scaleCard.style.display = "none";
-  }
-
-  // Diagnosis
-  const primary = d.diagnosis?.primary;
-  const reason  = d.diagnosis?.reason;
-  const why     = d.diagnosis?.why;
-  let text = "";
-  let cls  = "ok";
-  if (primary === "scale") { text = "Recommendation: Scale budget / add products"; cls = "good"; }
-  else if (primary === "cr") { text = "Improve Conversion Rate first (LP/offer/flow)"; cls = "bad"; }
-  else if (primary === "cpc") { text = "Reduce Media Cost first (keywords/bids/negatives)"; cls = "ok"; }
-  else {
-    if (d.overall?.goal_status === "achieved")       { text = "Recommendation: Scale budget / add products"; cls = "good"; }
-    else if (d.overall?.goal_status === "on_track")  { text = "On track: monitor; no immediate lever change required"; cls = "ok"; }
-    else                                              { text = "No primary bottleneck selected"; cls = "ok"; }
-  }
-  document.getElementById("diagPrimary").innerHTML =
-    `<span class="pill ${cls}">${text}</span>` + (why ? ` <span class="small">(${why})</span>` : (reason ? ` <span class="small">(${reason})</span>` : ""));
-
-  const tags = (d.diagnosis?.tags || []).map(t => `<span class="pill ok">${t.replaceAll("_"," ")}</span>`).join(" ");
-  document.getElementById("diagTags").innerHTML = tags;
-
-  // Targets
-  const status = d.overall?.goal_status;
-  const t = d.targets || {};
-  if (status === "achieved") {
-    document.getElementById("targetsBlock").textContent = "Goal already achieved at current performance.";
-  } else if (status === "on_track") {
-    document.getElementById("targetsBlock").textContent = "On track; monitor trend. No immediate numeric targets.";
-  } else {
-    const tgt = [];
-    if (t.cr_needed != null)  tgt.push(`CR needed: ${fmtPct1(t.cr_needed)}`);
-    if (t.cpc_needed != null) tgt.push(`CPC needed: ${fmtMoney(t.cpc_needed)}`);
-    document.getElementById("targetsBlock").innerHTML = (tgt.length ? tgt.join(" \u00A0•\u00A0 ") : "—");
-  }
-
-  // Raw
-  document.getElementById("raw").textContent = JSON.stringify(d, null, 2);
-}
-
-async function exportPPTX() {
-  if (!lastPayload) { alert("Run a benchmark first."); return; }
-  const res = await fetch(`${API}/export/pptx`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(lastPayload)
+  metricsToRender.forEach(metric => {
+    renderVerdictBenchmark(
+      document.getElementById(metric.id),
+      metric.data, metric.name, metric.unit, metric.dir, { hidePeer: true }
+    );
   });
-  if (!res.ok) {
-    const t = await res.text();
-    alert(`Export failed ${res.status}: ${t}`);
-    return;
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const cat = lastPayload.category.replace(/\s+/g,"_");
-  const sub = lastPayload.subcategory.replace(/\s+/g,"_");
-  a.href = url;
-  a.download = `benchmark_${cat}_${sub}.pptx`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  
+  renderPrimaryStatusBlock(d);
+  renderDiagnosis(d);
+  renderScenarioBuilder(d);
 }
 
 document.getElementById("runBtn").addEventListener("click", runDiag);
-document.getElementById("exportBtn").addEventListener("click", exportPPTX);
-document.getElementById("adoptBtn").addEventListener("click", () => {
-  const recTxt = document.getElementById("goalRec").textContent || "";
-  const m = recTxt.match(/\$([\d\.]+)/);
-  if (!m) return;
-  const val = parseFloat(m[1]);
-  document.getElementById("goal_cpl").value = String(val);
-  runDiag();
-});
-
 fetchMeta();
 </script>
 </body>

@@ -9,7 +9,7 @@ import backend.services.goal as goal_svc
 import backend.services.diagnosis as diag_svc
 
 from backend.services.projections import scaling_preview
-from backend.utils.math import r2
+from backend.utils.math import r2, r4
 from backend.config import ALGO_VERSION
 
 
@@ -49,8 +49,11 @@ def diagnose(req: DiagnoseIn) -> Dict[str, Any]:
 
     goal_stat = diag_svc.goal_status(cpl, req.goal_cpl, max(1.0, (req.goal_cpl * 0.05)) if req.goal_cpl else 1.0)
 
-    cpl_eval = analysis_svc.eval_cost_metric(cpl, med_cpl, cpl_dms)
-    cpc_eval = analysis_svc.eval_cost_metric(cpc, med_cpc, cpc_dms)
+    # Prepare target range for CPL (from goal analysis)
+    cpl_target_range = {"low": realistic_low, "high": realistic_high} if realistic_low and realistic_high else None
+    
+    cpl_eval = analysis_svc.eval_cost_metric(cpl, med_cpl, cpl_dms, cpl_target_range)
+    cpc_eval = analysis_svc.eval_cost_metric(cpc, med_cpc, cpc_dms)  # No target range for CPC yet
     cr_eval  = analysis_svc.eval_rate_metric(cr, med_cpc, cpl_dms)
     budget_eval = analysis_svc.eval_budget(req.budget, med_budget, budget_dms)
 
@@ -65,12 +68,51 @@ def diagnose(req: DiagnoseIn) -> Dict[str, Any]:
 
     targets = diag_svc.targets_for_display(goal_stat, cpc, req.goal_cpl, cr)
 
+    # Goal scenario detection for Primary Status Block
+    def determine_goal_scenario(user_goal, realistic_range, cpl_dms):
+        """Determine which of the three goal scenarios applies"""
+        if user_goal is None:
+            return "unknown"
+        
+        range_low = realistic_range.get("low")
+        range_high = realistic_range.get("high")
+        
+        # If we don't have sufficient benchmark data, fall back to market_difficulty
+        if range_low is None or range_high is None:
+            # Use market_difficulty as fallback
+            if market_band == "unrealistic":
+                return "goal_too_aggressive"
+            elif market_band == "aggressive":
+                return "goal_too_aggressive"
+            elif market_band == "acceptable":
+                return "goal_in_range"
+            else:
+                return "unknown"
+        
+        # For CPL (cost metrics), lower values are better
+        # Scenario 1: Goal Too Aggressive (goal is lower/better than what's realistic)
+        if user_goal < range_low:
+            return "goal_too_aggressive"
+        
+        # Scenario 3: Goal Too Conservative (goal is higher/worse than realistic range)
+        if user_goal > range_high:
+            return "goal_conservative"
+        
+        # Scenario 2: Goal in Range (within realistic range)
+        return "goal_in_range"
+
+    goal_scenario = determine_goal_scenario(req.goal_cpl, {
+        "low": realistic_low,
+        "high": realistic_high
+    }, cpl_dms)
+
     goal_analysis = {
         "market_band": market_band,
         "prob_leq_goal": prob,
         "recommended_cpl": r2(rec66) if rec66 is not None else (r2(med_cpl) if med_cpl is not None else None),
         "realistic_range": {"low": r2(realistic_low) if realistic_low is not None else None,
                             "high": r2(realistic_high) if realistic_high is not None else None},
+        "goal_scenario": goal_scenario,  # NEW: Add scenario to response
         "note": (f"{int(round((1 - (prob or 0)) * 100))}% of campaigns do not achieve the stated goal."
                  if (prob is not None and req.goal_cpl is not None) else None),
         "can_autoadopt": market_band in ("aggressive", "unrealistic")
@@ -93,9 +135,9 @@ def diagnose(req: DiagnoseIn) -> Dict[str, Any]:
             "impressions": req.impressions, "dash_enabled": bool(req.dash_enabled)
         },
         "goal_analysis": goal_analysis,
-        "derived": {"cpc": r2(cpc), "cpl": r2(cpl), "cr": analysis_svc.r4(cr), "ctr": analysis_svc.r4(ctr)},
+        "derived": {"cpc": r2(cpc), "cpl": r2(cpl), "cr": r4(cr), "ctr": r4(ctr)},
         "benchmarks": {
-            "medians": {"cpl": r2(med_cpl), "cpc": r2(med_cpc), "ctr": analysis_svc.r4(med_ctr), "budget": r2(med_budget)},
+           "medians": {"cpl": r2(med_cpl), "cpc": r2(med_cpc), "ctr": r4(med_ctr), "budget": r2(med_budget)},
             "cpl_dms": cpl_dms, "cpc_dms": cpc_dms, "budget_dms": budget_dms,
             "cpl": cpl_eval, "cpc": cpc_eval, "cr": cr_eval, "budget": budget_eval
         },

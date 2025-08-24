@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test Gauge Visualization</title>
+<style>
+  .gauge { margin: 20px 0; width: 600px; }
+  .g-head { display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px; }
+  .g-head .metric { font-weight:600; }
+  .g-track { position:relative; height:12px; background:#f3f3f3; border-radius:6px; margin:8px 0 4px; }
+  .g-fill  { position:absolute; top:0; left:0; height:12px; border-radius:6px; }
+  .g-mark  { position:absolute; top:-3px; width:10px; height:18px; background:#111; border-radius:2px; transform:translateX(-50%); }
+  .g-tick  { position:absolute; top:-6px; width:1px; height:24px; background:#ddd; }
+  .g-label { position:absolute; top:18px; font-size:10px; color:#888; transform:translateX(-50%); }
+  .g-foot  { display:flex; justify-content:space-between; font-size:11px; color:#666; margin-top: 4px; }
+  .g-green { background:#d1fae5; }
+  .g-amber { background:#fde68a; }
+  .g-red   { background:#fecaca; }
+  .g-range-highlight { border: 1px solid #22c55e; }
+</style>
+</head>
+<body>
+  <h1>Gauge Visualization Test</h1>
+  
+  <div class="gauge">
+    <div class="g-head">
+      <span class="metric">CPL Test - K-12 Schools</span>
+      <span>$220 vs $88 median (19th percentile)</span>
+    </div>
+    <div class="g-track" id="test-track"></div>
+    <div class="g-foot"><span>worse</span><span>better</span></div>
+    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+      Green zone: $46.99 - $88.23 (realistic range)<br>
+      User position: $220 (should be left of green zone)
+    </div>
+  </div>
+
+<script>
+// Helper function to convert dollar values to percentiles
+function valueToPercentile(value, dmsData) {
+  if (!value || !dmsData) return null;
+  
+  const anchors = [
+    { value: dmsData.top10, percentile: 0.90 },
+    { value: dmsData.top25, percentile: 0.75 },
+    { value: dmsData.avg, percentile: 0.50 },
+    { value: dmsData.bot25, percentile: 0.25 },
+    { value: dmsData.bot10, percentile: 0.10 }
+  ];
+  
+  anchors.sort((a, b) => a.value - b.value);
+  
+  if (value <= anchors[0].value) return Math.min(0.95, anchors[0].percentile + 0.05);
+  if (value >= anchors[anchors.length - 1].value) return Math.max(0.05, anchors[anchors.length - 1].percentile - 0.05);
+  
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const curr = anchors[i];
+    const next = anchors[i + 1];
+    
+    if (value >= curr.value && value <= next.value) {
+      const ratio = (value - curr.value) / (next.value - curr.value);
+      return curr.percentile + (next.percentile - curr.percentile) * ratio;
+    }
+  }
+  
+  return 0.5;
+}
+
+function buildGauge(trackEl, percentile, bandCls, realisticRange = null) {
+  trackEl.innerHTML = "";
+  
+  // Add realistic range highlighting
+  if (realisticRange && realisticRange.start != null && realisticRange.end != null) {
+    const start = Math.max(0, Math.min(1, realisticRange.start));
+    const end = Math.max(0, Math.min(1, realisticRange.end));
+    const width = Math.max(0, end - start);
+    
+    const rangeHighlight = document.createElement("div");
+    rangeHighlight.className = "g-range-highlight";
+    rangeHighlight.style.position = "absolute";
+    rangeHighlight.style.top = "0";
+    rangeHighlight.style.left = (start * 100) + "%";
+    rangeHighlight.style.width = (width * 100) + "%";
+    rangeHighlight.style.height = "12px";
+    rangeHighlight.style.background = "rgba(34, 197, 94, 0.3)";
+    rangeHighlight.style.borderRadius = "6px";
+    rangeHighlight.style.zIndex = "1";
+    trackEl.appendChild(rangeHighlight);
+  }
+  
+  // Ticks
+  const ticks = [
+    {p:0.10, label:"10%"},
+    {p:0.25, label:"25%"},
+    {p:0.50, label:"50%"},
+    {p:0.75, label:"75%"},
+    {p:0.90, label:"90%"},
+  ];
+  
+  ticks.forEach(t => {
+    const tick = document.createElement("div");
+    tick.className = "g-tick";
+    tick.style.left = (t.p * 100) + "%";
+    tick.style.zIndex = "2";
+    trackEl.appendChild(tick);
+    
+    const lab = document.createElement("div");
+    lab.className = "g-label";
+    lab.style.left = (t.p * 100) + "%";
+    lab.style.zIndex = "3";
+    lab.textContent = t.label;
+    trackEl.appendChild(lab);
+  });
+  
+  // Fill bar
+  const p = percentile != null ? Math.max(0, Math.min(1, percentile)) : 0;
+  const fill = document.createElement("div");
+  fill.className = "g-fill " + (bandCls || "g-red");
+  fill.style.width = (p * 100) + "%";
+  fill.style.zIndex = "2";
+  trackEl.appendChild(fill);
+  
+  // Position marker
+  const mk = document.createElement("div");
+  mk.className = "g-mark";
+  mk.style.left = (p * 100) + "%";
+  mk.style.zIndex = "4";
+  trackEl.appendChild(mk);
+}
+
+// Test with K-12 Schools data
+const dmsData = {
+  top10: 20.7,
+  top25: 46.99,
+  avg: 83.93,
+  bot25: 177.68,
+  bot10: 317.35
+};
+
+const realisticRangeDollars = { low: 46.99, high: 88.23 };
+const userCpl = 220.0;
+const userPercentile = 0.19; // 19th percentile
+
+// Calculate range percentiles
+const lowPercentile = valueToPercentile(realisticRangeDollars.low, dmsData);
+const highPercentile = valueToPercentile(realisticRangeDollars.high, dmsData);
+
+console.log("Range Low $46.99 -> Percentile:", lowPercentile);
+console.log("Range High $88.23 -> Percentile:", highPercentile);
+console.log("User CPL $220 -> Percentile:", userPercentile);
+
+const realisticRange = {
+  start: Math.min(lowPercentile, highPercentile),
+  end: Math.max(lowPercentile, highPercentile)
+};
+
+buildGauge(
+  document.getElementById("test-track"),
+  userPercentile,
+  "g-red",
+  realisticRange
+);
+</script>
+</body>
+</html>

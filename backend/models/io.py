@@ -5,6 +5,7 @@ Band = Literal["green", "amber", "red", "unknown"]
 MarketBand = Literal["acceptable", "aggressive", "unrealistic", "unknown"]
 Primary = Literal["cpc", "cr", "scale", "none"]
 GoalStatus = Literal["achieved", "on_track", "behind", "unknown"]
+GoalScenario = Literal["goal_too_aggressive", "goal_in_range", "goal_conservative", "unknown"]
 
 class DiagnoseIn(BaseModel):
     website: Optional[str] = None
@@ -17,6 +18,9 @@ class DiagnoseIn(BaseModel):
     impressions: Optional[confloat(ge=0)] = None
     dash_enabled: Optional[bool] = None
 
+VerdictType = Literal["outside_target", "on_target", "exceeds_target"]
+PerformanceZone = Literal["needs_attention", "on_target", "excellent"]
+
 class MetricEval(BaseModel):
     value: Optional[float] = None
     median: Optional[float] = None
@@ -25,12 +29,21 @@ class MetricEval(BaseModel):
     band: Band = "unknown"
     performance_tier: Optional[Literal["strong","average","weak"]] = None
     method: Optional[str] = None  # for CR
+    
+    # NEW: Verdict-first design fields
+    verdict: VerdictType = "outside_target"
+    performance_score: Optional[float] = None  # 0-100 normalized score
+    performance_zone: PerformanceZone = "needs_attention"
+    target_range: Optional[Dict[str, Optional[float]]] = None  # {"low": x, "high": y}
+    delta_from_target: Optional[float] = None  # percentage above/below target
+    peer_multiple: Optional[float] = None  # e.g., 2.3x peer median
 
 class GoalAnalysis(BaseModel):
     market_band: MarketBand
     prob_leq_goal: Optional[float] = None
     recommended_cpl: Optional[float] = None
     realistic_range: Dict[str, Optional[float]]  # {"low":..., "high":...}
+    goal_scenario: GoalScenario = "unknown"  # NEW: Add goal scenario field
     note: Optional[str] = None
     can_autoadopt: bool = False
 

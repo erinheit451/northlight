@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verdict-First UI Test</title>
+    <style>
+        :root { --fg:#111; --muted:#666; --line:#e5e5e5; --ok:#ffb020; --good:#2ea043; --bad:#d93f0b; }
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; max-width: 960px; color: var(--fg); background: #f8fafc; }
+        
+        /* Verdict-First Benchmark Design */
+        .benchmark-verdict {
+            margin: 16px 0 24px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #e5e7eb;
+        }
+        
+        .benchmark-verdict.outside-target { border-left-color: #ef4444; }
+        .benchmark-verdict.on-target { border-left-color: #f59e0b; }
+        .benchmark-verdict.exceeds-target { border-left-color: #10b981; }
+
+        /* Header Section - Fixed hierarchy */
+        .verdict-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .verdict-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            gap: 4px;
+            order: 1;
+        }
+        
+        .verdict-chip.outside-target { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .verdict-chip.on-target { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .verdict-chip.exceeds-target { background: #ecfdf5; color: #059669; border: 1px solid #bbf7d0; }
+
+        .primary-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--fg);
+            order: 2;
+            flex-grow: 1;
+        }
+
+        /* Context Row */
+        .verdict-context {
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .delta-text {
+            font-size: 14px;
+            color: var(--muted);
+        }
+        
+        .delta-text.negative { color: #059669; }
+        .delta-text.positive { color: #dc2626; }
+        
+        .peer-context {
+            font-size: 13px;
+            color: var(--muted);
+            background: #f8fafc;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        /* Single Dollar-Based Bar System */
+        .dollar-bar-container {
+            margin-top: 16px;
+        }
+
+        .dollar-bar {
+            position: relative;
+            height: 40px;
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 2px solid #e5e7eb;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        /* Performance Zones Background */
+        .performance-zones-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            z-index: 1;
+        }
+
+        .zone-great {
+            background: #059669;
+            flex: 1;
+        }
+
+        .zone-target {
+            background: #22c55e;
+            flex: 1;
+        }
+
+        .zone-needs-work {
+            background: #f59e0b;
+            flex: 1;
+        }
+
+        .zone-poor {
+            background: #ef4444;
+            flex: 1;
+        }
+
+        /* Target Range Highlight */
+        .target-range-overlay {
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            background: rgba(34, 197, 94, 0.4);
+            border: 2px solid #22c55e;
+            border-radius: 16px;
+            z-index: 2;
+        }
+
+        .target-range-label {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            background: #22c55e;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-weight: 600;
+            z-index: 3;
+        }
+
+        /* User Position Marker */
+        .user-position {
+            position: absolute;
+            top: -6px;
+            width: 20px;
+            height: 52px;
+            background: #111;
+            border-radius: 10px;
+            transform: translateX(-50%);
+            z-index: 4;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-position::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .user-label {
+            position: absolute;
+            top: -32px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: 700;
+            color: #111;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+            z-index: 5;
+        }
+
+        .user-arrow {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #111;
+            z-index: 4;
+        }
+
+        /* Dollar Scale Labels */
+        .dollar-scale {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .scale-point {
+            position: relative;
+            text-align: center;
+        }
+
+        .scale-point.major {
+            color: var(--fg);
+            font-weight: 700;
+        }
+
+        /* Performance Zone Labels */
+        .zone-labels {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0 0;
+            font-size: 9px;
+            font-weight: 500;
+            color: var(--muted);
+        }
+
+        .zone-labels .label {
+            flex: 1;
+            text-align: center;
+            padding: 0 4px;
+        }
+
+        .zone-labels .label.great { color: #059669; }
+        .zone-labels .label.target { color: #22c55e; }
+        .zone-labels .label.needs-work { color: #d97706; }
+        .zone-labels .label.poor { color: #dc2626; }
+
+        .lane {
+            position: relative;
+        }
+
+        .lane-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .lane-track {
+            position: relative;
+            height: 32px;
+            background: linear-gradient(90deg, #f3f4f6 0%, #d1d5db 100%);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        /* Performance Score Lane (Lane 1) */
+        .performance-lane .lane-track {
+            background: linear-gradient(90deg, 
+                #ef4444 0% 15%,       /* needs attention */
+                #f59e0b 15% 60%,      /* on target */  
+                #10b981 60% 100%      /* excellent */
+            );
+        }
+
+        .performance-zones {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            z-index: 1;
+        }
+
+        .zone-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .zone-label.left { margin-right: auto; }
+        .zone-label.center { margin: 0 auto; }
+        .zone-label.right { margin-left: auto; }
+
+        /* Value Range Lane (Lane 2) */
+        .value-lane .lane-track {
+            background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+        }
+
+        .target-range-highlight {
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            background: rgba(34, 197, 94, 0.3);
+            border: 2px solid #22c55e;
+            border-radius: 14px;
+            z-index: 1;
+        }
+
+        .range-label {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            background: #22c55e;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        /* Position Markers */
+        .position-marker {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 40px;
+            background: var(--fg);
+            border-radius: 8px;
+            transform: translateX(-50%);
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .position-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        /* Lane Footer Labels */
+        .lane-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 10px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <h1>Verdict-First Benchmark Design Test</h1>
+    
+    <h2>Test Case 1: Outside Target (CPL $220)</h2>
+    <div id="test1"></div>
+    
+    <h2>Test Case 2: On Target (CPL $70)</h2>
+    <div id="test2"></div>
+    
+    <h2>Test Case 3: Exceeds Target (CPL $40)</h2>
+    <div id="test3"></div>
+
+    <script>
+        function fmtMoney(v) { return (v == null) ? "—" : "$" + Number(v).toFixed(2); }
+        function fmtPct1(v) { return (v == null) ? "—" : (v*100).toFixed(1) + "%"; }
+
+        // Calculate dollar bar data and positions
+        function calculateDollarBarData(userValue, targetRange, median) {
+            // Determine scale range
+            let minScale = 0;
+            let maxScale = userValue * 1.5; // Start with 1.5x user value
+            
+            if (targetRange && targetRange.low != null && targetRange.high != null) {
+                // Ensure target range is visible with some padding
+                minScale = Math.min(0, targetRange.low * 0.5);
+                maxScale = Math.max(maxScale, targetRange.high * 2);
+            }
+            
+            if (median) {
+                maxScale = Math.max(maxScale, median * 2);
+            }
+            
+            // Round to nice numbers
+            maxScale = Math.ceil(maxScale / 50) * 50; // Round to nearest 50
+            
+            // Define performance zone boundaries
+            let zoneGreatEnd = targetRange?.low || (median * 0.75) || (maxScale * 0.2);
+            let zoneTargetEnd = targetRange?.high || median || (maxScale * 0.4);
+            let zoneNeedsWorkEnd = zoneTargetEnd * 1.5;
+            
+            // Calculate positions as percentages
+            const userPosition = ((userValue - minScale) / (maxScale - minScale)) * 100;
+            
+            let targetRangeStart = 0;
+            let targetRangeWidth = 0;
+            if (targetRange && targetRange.low != null && targetRange.high != null) {
+                targetRangeStart = ((targetRange.low - minScale) / (maxScale - minScale)) * 100;
+                targetRangeWidth = ((targetRange.high - targetRange.low) / (maxScale - minScale)) * 100;
+            }
+            
+            // Generate scale points
+            const scalePoints = [
+                { value: minScale, label: fmtMoney(minScale), major: true },
+                { value: zoneGreatEnd, label: fmtMoney(zoneGreatEnd), major: true },
+                { value: zoneTargetEnd, label: fmtMoney(zoneTargetEnd), major: true },
+                { value: zoneNeedsWorkEnd, label: fmtMoney(zoneNeedsWorkEnd), major: false },
+                { value: maxScale, label: fmtMoney(maxScale), major: true }
+            ];
+            
+            return {
+                minScale,
+                maxScale,
+                userValue,
+                userPosition,
+                targetRangeStart,
+                targetRangeWidth,
+                targetRange,
+                scalePoints,
+                zoneBreakpoints: {
+                    great: ((zoneGreatEnd - minScale) / (maxScale - minScale)) * 100,
+                    target: ((zoneTargetEnd - minScale) / (maxScale - minScale)) * 100,
+                    needsWork: ((zoneNeedsWorkEnd - minScale) / (maxScale - minScale)) * 100
+                }
+            };
+        }
+
+        // Generate dollar bar HTML
+        function generateDollarBar(data) {
+            return `
+                <div class="dollar-scale">
+                    ${data.scalePoints.map(point => 
+                        `<div class="scale-point ${point.major ? 'major' : ''}">${point.label}</div>`
+                    ).join('')}
+                </div>
+                
+                <div class="dollar-bar">
+                    <div class="performance-zones-bg">
+                        <div class="zone-great" style="width: ${data.zoneBreakpoints.great}%"></div>
+                        <div class="zone-target" style="width: ${data.zoneBreakpoints.target - data.zoneBreakpoints.great}%"></div>
+                        <div class="zone-needs-work" style="width: ${data.zoneBreakpoints.needsWork - data.zoneBreakpoints.target}%"></div>
+                        <div class="zone-poor" style="width: ${100 - data.zoneBreakpoints.needsWork}%"></div>
+                    </div>
+                    
+                    ${data.targetRange ? `
+                        <div class="target-range-overlay" style="left: ${data.targetRangeStart}%; width: ${data.targetRangeWidth}%;">
+                            <div class="target-range-label">Target range (from Goals)</div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="user-position" style="left: ${data.userPosition}%;">
+                        <div class="user-label">YOU: ${fmtMoney(data.userValue)}</div>
+                        <div class="user-arrow"></div>
+                    </div>
+                </div>
+                
+                <div class="zone-labels">
+                    <div class="label great">Great performance</div>
+                    <div class="label target">Target range</div>
+                    <div class="label needs-work">Needs improvement</div>
+                    <div class="label poor">Poor performance</div>
+                </div>
+            `;
+        }
+
+        // Verdict-First Benchmark Component Function
+        function renderVerdictBenchmark(containerEl, metricData, metricName, metricUnit = "$") {
+            const {
+                value, verdict, performance_score, performance_zone, 
+                target_range, delta_from_target, peer_multiple, median
+            } = metricData;
+
+            if (!value) {
+                containerEl.innerHTML = '<div class="benchmark-verdict">No data available</div>';
+                return;
+            }
+
+            // Generate verdict chip
+            const verdictLabels = {
+                "outside_target": "Outside Target",
+                "on_target": "On Target", 
+                "exceeds_target": "Exceeds Target"
+            };
+
+            const verdictIcons = {
+                "outside_target": "⚠️",
+                "on_target": "🎯",
+                "exceeds_target": "✅"
+            };
+
+            // Format primary value
+            const primaryValue = metricUnit === "$" ? fmtMoney(value) : 
+                                metricUnit === "%" ? fmtPct1(value) : 
+                                value.toFixed(2);
+
+            // Generate context text - FIXED
+            let deltaText = "";
+            if (delta_from_target != null && target_range) {
+                const deltaClass = delta_from_target > 0 ? "positive" : "negative";
+                const rangeText = metricUnit === "$" ? 
+                    `(${fmtMoney(target_range.low)}–${fmtMoney(target_range.high)})` :
+                    `(${target_range.low}–${target_range.high})`;
+                
+                // For cost metrics: positive delta means above target (worse)
+                let deltaDescription = "";
+                if (metricUnit === "$") {
+                    deltaDescription = delta_from_target > 0 ? "above target range" : "below target range";
+                } else {
+                    deltaDescription = delta_from_target > 0 ? "above target range" : "below target range";
+                }
+                
+                deltaText = `<span class="delta-text ${deltaClass}">${Math.abs(delta_from_target).toFixed(0)}% ${deltaDescription} ${rangeText}</span>`;
+            }
+
+            let peerText = "";
+            if (peer_multiple && median) {
+                peerText = `<span class="peer-context">${peer_multiple.toFixed(1)}× peer median</span>`;
+            }
+
+            // Calculate lane positions
+            const performancePosition = Math.max(0, Math.min(100, performance_score || 50));
+            
+            // Calculate value position for lane 2
+            let valuePosition = 50; // default to middle
+            if (target_range && target_range.low != null && target_range.high != null) {
+                // Position relative to target range, with padding on sides
+                const rangeSpan = target_range.high - target_range.low;
+                const padding = rangeSpan * 0.5; // 50% padding on each side
+                const minVal = target_range.low - padding;
+                const maxVal = target_range.high + padding;
+                const totalSpan = maxVal - minVal;
+                
+                if (totalSpan > 0) {
+                    valuePosition = Math.max(0, Math.min(100, ((value - minVal) / totalSpan) * 100));
+                }
+            }
+
+            // Calculate target range highlight position and width
+            let targetRangeStyle = "";
+            if (target_range && target_range.low != null && target_range.high != null) {
+                const rangeSpan = target_range.high - target_range.low;
+                const padding = rangeSpan * 0.5;
+                const minVal = target_range.low - padding;
+                const maxVal = target_range.high + padding;
+                const totalSpan = maxVal - minVal;
+                
+                if (totalSpan > 0) {
+                    const startPercent = ((target_range.low - minVal) / totalSpan) * 100;
+                    const widthPercent = (rangeSpan / totalSpan) * 100;
+                    targetRangeStyle = `left: ${startPercent}%; width: ${widthPercent}%;`;
+                }
+            }
+
+            // NEW: Calculate dollar range and positions for single bar
+            if (metricUnit === "$") {
+                const dollarBarData = calculateDollarBarData(value, target_range, median);
+                
+                containerEl.innerHTML = `
+                    <div class="benchmark-verdict ${verdict}">
+                        <div class="verdict-header">
+                            <div class="verdict-chip ${verdict}">
+                                ${verdictIcons[verdict] || "📊"} ${verdictLabels[verdict] || "Unknown"}
+                            </div>
+                            <div class="primary-value">Your ${metricName} is ${primaryValue}</div>
+                        </div>
+                        
+                        ${(deltaText || peerText) ? `
+                            <div class="verdict-context">
+                                ${deltaText}
+                                ${peerText}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="dollar-bar-container">
+                            ${generateDollarBar(dollarBarData)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Fallback for non-dollar metrics
+                containerEl.innerHTML = `
+                    <div class="benchmark-verdict ${verdict}">
+                        <div class="verdict-header">
+                            <div class="verdict-chip ${verdict}">
+                                ${verdictIcons[verdict] || "📊"} ${verdictLabels[verdict] || "Unknown"}
+                            </div>
+                            <div class="primary-value">Your ${metricName} is ${primaryValue}</div>
+                        </div>
+                        
+                        ${(deltaText || peerText) ? `
+                            <div class="verdict-context">
+                                ${deltaText}
+                                ${peerText}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Test Cases - Updated with correct calculations
+        const testCase1 = {
+            value: 220,
+            verdict: "outside_target",
+            performance_score: 33,
+            performance_zone: "needs_attention",
+            target_range: { low: 47, high: 88 },
+            delta_from_target: 150, // 150% above target high: (220-88)/88*100 = 150%
+            peer_multiple: 2.5,
+            median: 88
+        };
+
+        const testCase2 = {
+            value: 70,
+            verdict: "on_target", 
+            performance_score: 65,
+            performance_zone: "on_target",
+            target_range: { low: 47, high: 88 },
+            delta_from_target: 12,
+            peer_multiple: 0.8,
+            median: 88
+        };
+
+        const testCase3 = {
+            value: 40,
+            verdict: "exceeds_target",
+            performance_score: 90,
+            performance_zone: "excellent",
+            target_range: { low: 47, high: 88 },
+            delta_from_target: -15,
+            peer_multiple: 0.45,
+            median: 88
+        };
+
+        // Render test cases
+        renderVerdictBenchmark(document.getElementById("test1"), testCase1, "CPL");
+        renderVerdictBenchmark(document.getElementById("test2"), testCase2, "CPL");
+        renderVerdictBenchmark(document.getElementById("test3"), testCase3, "CPL");
+    </script>
+</body>
+</html>

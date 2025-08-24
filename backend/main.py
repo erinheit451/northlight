@@ -11,15 +11,15 @@ from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
 
 app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["https://your-project.pages.dev"],  # Important: Replace with your actual Cloudflare Pages URL!
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -277,8 +277,8 @@ def diagnose(req: DiagnoseIn):
 
     # Display percentile for CPL gauge
     cpl_pct = _percentile_from_value_log(cpl, anchors_cpl_disp) if (cpl is not None and anchors_cpl_disp) else None
-    realistic_low  = med_cpl
-    realistic_high = cpl_dms.get("bot25") if cpl_dms else None
+    realistic_low  = cpl_dms.get("top25") if cpl_dms else None     # Use top25 (good performance) as realistic low
+    realistic_high = med_cpl                                       # Use median (average performance) as realistic high
 
     # ---- goal status vs current performance ----
     goal_status = "unknown"
@@ -385,7 +385,57 @@ def diagnose(req: DiagnoseIn):
     if "cpl_extreme_outlier" in edge_cases:
         tags.append("performance_outlier")
 
+    # ---- NEW: Goal scenario detection for Primary Status Block ----
+    def determine_goal_scenario(user_goal: Optional[float], realistic_range: Dict[str, Optional[float]], cpl_dms: Dict[str, float]) -> str:
+        """Determine which of the three goal scenarios applies"""
+        if user_goal is None:
+            return "unknown"
+        
+        range_low = realistic_range.get("low")
+        range_high = realistic_range.get("high")
+        
+        # DEBUG: Print values for debugging
+        print(f"DEBUG: user_goal={user_goal}, range_low={range_low}, range_high={range_high}")
+        print(f"DEBUG: cpl_dms keys: {list(cpl_dms.keys())}")
+        print(f"DEBUG: cpl_dms values: {cpl_dms}")
+        
+        # Scenario 1: Goal Too Aggressive (below realistic range low)
+        if range_low is not None and user_goal < range_low:
+            print(f"DEBUG: Returning goal_too_aggressive because {user_goal} < {range_low}")
+            return "goal_too_aggressive"
+        
+        # Scenario 3: Goal Too Conservative (above 90th percentile)
+        p90_high = cpl_dms.get("top10")  # top10 in DMS represents 90th percentile (best 10%)
+        if p90_high is not None and user_goal > p90_high:
+            print(f"DEBUG: Returning goal_conservative because {user_goal} > {p90_high}")
+            return "goal_conservative"
+        
+        # Scenario 2: Goal in Range (everything else)
+        print(f"DEBUG: Returning goal_in_range")
+        return "goal_in_range"
+
+    goal_scenario = determine_goal_scenario(req.goal_cpl, {
+        "low": realistic_low,
+        "high": realistic_high
+    }, cpl_dms)
+    
+    print(f"GOAL_SCENARIO_DEBUG: goal_scenario = {goal_scenario}")
+    print(f"GOAL_SCENARIO_DEBUG: type(goal_scenario) = {type(goal_scenario)}")
+    print(f"GOAL_SCENARIO_DEBUG: realistic_low = {realistic_low}")
+    print(f"GOAL_SCENARIO_DEBUG: realistic_high = {realistic_high}")
+    print(f"GOAL_SCENARIO_DEBUG: req.goal_cpl = {req.goal_cpl}")
+    print(f"GOAL_SCENARIO_DEBUG: cpl_dms = {cpl_dms}")
+    
+    # Ensure goal_scenario is not None or empty before adding to dict
+    if goal_scenario is None:
+        print("ERROR: goal_scenario is None!")
+        goal_scenario = "error_none"
+    elif goal_scenario == "":
+        print("ERROR: goal_scenario is empty string!")
+        goal_scenario = "error_empty"
+
     # ---- goal realism block (market context copy)
+    print(f"GOAL_ANALYSIS_DEBUG: About to create goal_analysis with goal_scenario = {goal_scenario}")
     goal_analysis = {
         "market_band": market_band,
         "prob_leq_goal": r4(prob_goal) if prob_goal is not None else None,
@@ -394,9 +444,13 @@ def diagnose(req: DiagnoseIn):
             "low": r2(realistic_low) if realistic_low is not None else None,
             "high": r2(realistic_high) if realistic_high is not None else None
         },
+        "goal_scenario": goal_scenario,  # NEW: Add scenario to response
         "note": None,
         "can_autoadopt": market_band in ("aggressive", "unrealistic")
     }
+    print(f"GOAL_ANALYSIS_DEBUG: Created goal_analysis = {goal_analysis}")
+    print(f"GOAL_ANALYSIS_DEBUG: goal_scenario in goal_analysis = {'goal_scenario' in goal_analysis}")
+    print(f"GOAL_ANALYSIS_DEBUG: goal_analysis['goal_scenario'] = {goal_analysis.get('goal_scenario', 'NOT_FOUND')}")
     if prob_goal is not None and req.goal_cpl is not None:
         goal_analysis["note"] = f"{int(round((1 - prob_goal) * 100))}% of campaigns do not achieve the stated goal."
 
@@ -569,6 +623,10 @@ def diagnose(req: DiagnoseIn):
         },
         "meta": {"data_version": BENCH.get("_version"), "category_key": key},
     }
+    
+    print(f"FINAL_RESPONSE_DEBUG: goal_analysis = {response.get('goal_analysis', {})}")
+    print(f"FINAL_RESPONSE_DEBUG: goal_scenario in response = {response.get('goal_analysis', {}).get('goal_scenario', 'MISSING')}")
+    
     return response
 
 # ---------- Enhanced PPT Export ----------
