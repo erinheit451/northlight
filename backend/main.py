@@ -24,10 +24,10 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,                # be explicit
-    allow_methods=["GET", "POST", "OPTIONS"],     # you call GET /benchmarks/meta and POST /diagnose
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["content-type", "authorization"],
-    allow_credentials=False,                      # keep False (no cookies sent)
+    allow_credentials=True,  # This MUST be True for it to work
 )
 
 BENCH: Dict[str, Any] = {}
