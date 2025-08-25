@@ -73,6 +73,9 @@ def safe_div(n: Optional[float], d: Optional[float]) -> Optional[float]:
 def r2(x): return None if x is None else round(float(x), 2)
 def r4(x): return None if x is None else round(float(x), 4)
 
+def clamp(x, lo, hi):
+    return None if (x is None or lo is None or hi is None) else max(lo, min(x, hi))
+
 # Anchors for cost metrics (CPL/CPC)
 # DISPLAY: bigger = better (used by gauges)
 ANCHOR_MAP = [
@@ -278,13 +281,18 @@ def diagnose(req: DiagnoseIn):
     # Probability (≈ RAW percentile) of achieving CPL <= goal
     prob_goal = _percentile_from_value_log(req.goal_cpl, anchors_cpl_raw) if (req.goal_cpl and anchors_cpl_raw) else None
 
+    # Typical/Target band for CPL = P50→P75 (median → bot25)
+    realistic_low  = med_cpl
+    realistic_high = cpl_dms.get("bot25") if cpl_dms else None
+
     # Recommended target: 66th RAW percentile (between median and bottom-25 = realistic)
     rec66 = value_at_percentile_log(0.66, cpl_dms) if cpl_dms else None
+    
+    # Recommended target: P66 for cost; clamp to P50→P75 band
+    recommended_cpl = clamp(rec66, realistic_low, realistic_high) if rec66 is not None else (med_cpl if med_cpl is not None else None)
 
     # Display percentile for CPL gauge
     cpl_pct = _percentile_from_value_log(cpl, anchors_cpl_disp) if (cpl is not None and anchors_cpl_disp) else None
-    realistic_low  = cpl_dms.get("top25") if cpl_dms else None     # Use top25 (good performance) as realistic low
-    realistic_high = med_cpl                                       # Use median (average performance) as realistic high
 
     # ---- goal status vs current performance ----
     goal_status = "unknown"
@@ -321,14 +329,29 @@ def diagnose(req: DiagnoseIn):
 
     cpc_pct = _percentile_from_value_log(cpc, anchors_cpc) if (cpc is not None and anchors_cpc) else None
     cpc_band = band_cost_dms(cpc, cpc_dms, med_cpc)
+    
+    # CPC band P50→P75 (median → bot25)
+    cpc_band_low  = med_cpc
+    cpc_band_high = cpc_dms.get("bot25")
+
+    # Helper for CR band = P50→P75 (median → top25)
+    def band_rate_p50_p75(value, p50, p75):
+        if value is None or p50 is None or p75 is None: return "unknown"
+        if value >= p75: return "green"
+        if value >= p50: return "amber"
+        return "red"
 
     # ---- CR evaluation (rate metric; higher better) using MARKET CPC (not user's CPC)
     cr_eval = {"value": r4(cr), "median": None, "percentile": None, "display_percentile": None, "band": "unknown", "method": None}
     market_cpc = med_cpc if isinstance(med_cpc,(int,float)) else cpc_dms.get("avg")
+    cr_p50 = None
+    cr_p75 = None
     if cpl_dms and isinstance(market_cpc,(int,float)) and market_cpc > 0:
         if isinstance(cpl_dms.get("avg"), (int, float)) and cpl_dms["avg"] > 0:
-            cr_med = float(market_cpc) / float(cpl_dms["avg"])
-            cr_eval["median"] = r4(cr_med)
+            cr_med = float(market_cpc) / float(cpl_dms["avg"]); cr_p50 = cr_med; cr_eval["median"] = r4(cr_med)
+        if isinstance(cpl_dms.get("top25"), (int, float)) and cpl_dms["top25"] > 0:
+            cr_p75 = float(market_cpc) / float(cpl_dms["top25"])
+        
         cr_anchors = []
         for (k, p_cpl) in ANCHOR_MAP:
             v_cpl = cpl_dms.get(k)
@@ -341,8 +364,12 @@ def diagnose(req: DiagnoseIn):
         cr_eval["percentile"] = r4(cr_pct) if cr_pct is not None else None
         cr_eval["display_percentile"] = r4(cr_pct) if cr_pct is not None else None
         cr_eval["method"] = "derived_from_cpl_dms_with_market_cpc"
-    cr_band = band_rate(cr, cr_eval.get("median"))
+
+    # band and expose target_range
+    cr_band = band_rate_p50_p75(cr, cr_p50, cr_p75)
     cr_eval["band"] = cr_band
+    if cr_p50 is not None and cr_p75 is not None:
+        cr_eval["target_range"] = {"low": r4(cr_p50), "high": r4(cr_p75)}
 
     # ---- CPL percentile & band (cost metric; lower is better; display uses bigger=better)
     cpl_pct = _percentile_from_value_log(cpl, anchors_cpl_disp) if (cpl is not None and anchors_cpl_disp) else None
@@ -356,7 +383,9 @@ def diagnose(req: DiagnoseIn):
         "display_percentile": r4(cpl_pct) if cpl_pct is not None else None,  # already higher = better
         "band": cpl_band,
         "performance_tier": "strong" if cpl_band == "green" else ("average" if cpl_band == "amber" else "weak"),
-        "label": "lower is better"
+        "label": "lower is better",
+        "target_range": {"low": r2(realistic_low) if realistic_low is not None else None,
+                         "high": r2(realistic_high) if realistic_high is not None else None}
     }
     cpc_eval = {
         "value": r2(cpc),
@@ -364,7 +393,9 @@ def diagnose(req: DiagnoseIn):
         "percentile": r4(cpc_pct) if cpc_pct is not None else None,
         "display_percentile": r4(cpc_pct) if cpc_pct is not None else None,  # already higher = better
         "band": cpc_band,
-        "performance_tier": "strong" if cpc_band == "green" else ("average" if cpc_band == "amber" else "weak")
+        "performance_tier": "strong" if cpc_band == "green" else ("average" if cpc_band == "amber" else "weak"),
+        "target_range": {"low": r2(cpc_band_low) if cpc_band_low is not None else None,
+                         "high": r2(cpc_band_high) if cpc_band_high is not None else None}
     }
 
     # ---- Budget percentile (neutral)
@@ -440,7 +471,7 @@ def diagnose(req: DiagnoseIn):
     goal_analysis = {
         "market_band": market_band,
         "prob_leq_goal": r4(prob_goal) if prob_goal is not None else None,
-        "recommended_cpl": r2(rec66) if rec66 is not None else (r2(med_cpl) if med_cpl is not None else None),
+        "recommended_cpl": r2(recommended_cpl) if recommended_cpl is not None else None,
         "realistic_range": {
             "low": r2(realistic_low) if realistic_low is not None else None,
             "high": r2(realistic_high) if realistic_high is not None else None
