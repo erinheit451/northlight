@@ -16,18 +16,12 @@ DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
 
 app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
-ALLOWED_ORIGINS = [
-    "https://northlight.pages.dev",  # <-- replace with EXACT value from window.location.origin
-    "http://localhost",
-    "http://127.0.0.1:3000"
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Temporarily allow all origins to fix the dropdown issue
+    allow_credentials=False,  # Must be False when using allow_origins=["*"]
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["content-type", "authorization"],
-    allow_credentials=True,  # This MUST be True for it to work
+    allow_headers=["*"],
 )
 
 BENCH: Dict[str, Any] = {}
