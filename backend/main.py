@@ -16,10 +16,18 @@ DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
 
 app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
+# Define the frontend URLs that are allowed to make requests
+ALLOWED_ORIGINS = [
+    "https://northlight.pages.dev",         # Production frontend
+    "https://develop.northlight.pages.dev", # Development frontend
+    "http://localhost",
+    "http://127.0.0.1:5500"                  # For local testing
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporarily allow all origins to fix the dropdown issue
-    allow_credentials=False,  # Must be False when using allow_origins=["*"]
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,  # This MUST be True
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )

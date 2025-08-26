@@ -4,303 +4,306 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Northlight – Benchmark MVP</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<!-- Fonts (Inter for UI, Montserrat for logo only) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+
 <style>
-  :root { --fg:#111; --muted:#666; --line:#e5e5e5; --ok:#ffb020; --good:#2ea043; --bad:#d93f0b; }
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; max-width: 960px; color: var(--fg); }
-  h1 { margin: 0 0 12px; }
-  h3 { margin: 0 0 8px; }
-  .card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
-  label { display:block; margin: 8px 0 6px; font-weight: 600; }
-  input, select { width: 100%; padding: 8px; border:1px solid var(--line); border-radius:8px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  button { padding: 10px 14px; border-radius: 8px; border: 1px solid #333; cursor: pointer; background:#fff; }
-  .small { color:var(--muted); font-size:12px; }
-  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); margin-right:6px;}
-  .pill.good { background:#ecfdf3; border-color:#bbf7d0; color:#065f46;}
-  .pill.ok   { background:#fffbeb; border-color:#fde68a; color:#92400e;}
-  .pill.bad   { background:#fef2f2; border-color:#fecaca; color:#991b1b;}
+/* ===========================
+   NORTHLIGHT – Design System v1
+   (Inter for UI, Montserrat for logo)
+   =========================== */
 
-  /* Verdict-First Benchmark Design */
-  .benchmark-verdict {
-    margin: 16px 0 24px; padding: 16px; border-radius: 12px; background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #e5e7eb;
-  }
-  .benchmark-verdict.outside-target { border-left-color: #ef4444; }
-  .benchmark-verdict.on-target { border-left-color: #22c55e; }
-  .benchmark-verdict.exceeds-target { border-left-color: #2563eb; }
+/* ---- Core tokens ---- */
+:root{
+  /* Legacy aliases (don’t remove) */
+  --fg:#111;
+  --muted:#666;
+  --line:#e5e5e5;
+  --ok:#ffb020;
+  --good:#2ea043;
+  --bad:#d93f0b;
 
-  .primary-value { font-size: 28px; font-weight: 700; color: var(--fg); margin-top: 8px; }
-  .verdict-context { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
-  .delta-text { font-size: 14px; color: var(--muted); }
-  .delta-text.negative { color: #059669; }
-  .delta-text.positive { color: #dc2626; }
-  .peer-context { font-size: 13px; color: var(--muted); background: #f8fafc; padding: 4px 8px; border-radius: 6px; }
+  /* Grays */
+  --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0; --gray-300:#cbd5e1;
+  --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155; --gray-900:#0f172a;
 
-  /* --- "Spotlight Marker" Bar System --- */
-  .bar-container { padding-top: 28px; margin-bottom: 8px; }
-  .bar-scale { position: relative; height: 16px; margin-bottom: 4px; }
-  .scale-point { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--muted); }
+  /* Primary */
+  --primary-50:#eff6ff; --primary-500:#3b82f6; --primary-600:#2563eb; --primary-700:#1d4ed8;
 
-  .bar-scale .scale-point:first-child { left: 0; transform: translateX(6px); }
-  .bar-scale .scale-point:last-child  { left: 100%; transform: translateX(calc(-100% - 6px)); }
+  /* Typography scale */
+  --text-xs:12px; --text-sm:14px; --text-base:16px; --text-lg:18px;
+  --text-xl:20px; --text-2xl:24px; --text-3xl:30px;
 
-  .bar-track {
-    position: relative; height: 20px; border-radius: 10px;
-    display: flex; overflow: visible; border: 1px solid #e5e7eb;
-  }
-  .zone-bg { height: 100%; }
-  .zone-bg.excellent, .zone-bg.needs-improvement { background-color: #f3f4f6; }
-  .zone-bg.target-range { background-color: #dcfce7; }
+  /* Spacing (8px base) */
+  --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-6:24px; --space-8:32px; --space-12:48px;
 
-  .user-marker {
-    position: absolute; top: 50%; width: 24px; height: 24px;
-    border-radius: 50%; border: 3px solid white;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    z-index: 3;
-    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
-  }
-  .user-marker.excellent { background-color: #2563eb; }
-  .user-marker.target-range { background-color: #22c55e; }
-  .user-marker.needs-improvement { background-color: #ef4444; }
-
-  .user-label {
-    position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
-    font-size: 11px; font-weight: 700; color: #111;
-    background: white; padding: 4px 8px; border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;
-    z-index: 5; text-align: center; pointer-events: none;
-  }
-  .user-label .label-title { font-size: 9px; font-weight: 500; color: var(--muted); display: block; }
-
-  .bar-labels { display: flex; margin-top: 10px; font-size: 10px; font-weight: 500; }
-  .bar-labels .label { text-align: center; color: var(--muted); transition: all 0.3s ease; flex-shrink: 0; }
-  .bar-labels .label.active { font-weight: 700; }
-  .bar-labels .label.active.excellent { color: #2563eb; }
-  .bar-labels .label.active.target-range { color: #166534; }
-  .bar-labels .label.active.needs-improvement { color: #ef4444; }
-
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .primary-value { font-size: 20px; }
-    .verdict-context { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .bar-container { padding-top: 32px; }
-  }
-
-  /* Goal CPL Block Styles */
-  .primary-status-block {
-    border: 1px solid var(--line); border-left: 4px solid #e5e7eb;
-    border-radius: 12px; padding: 16px; margin: 16px 0;
-    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .primary-status-block.outside-target { border-left-color: #ef4444; }
-  .primary-status-block.on-target { border-left-color: #22c55e; }
-  
-  .primary-status-block.scenario-aggressive,
-  .primary-status-block.scenario-good,
-  .primary-status-block.scenario-conservative { background: #fff; }
-
-  .status-header { font-size: 20px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-  .status-header.on-target { color: var(--fg); }
-  .status-header.outside-target { color: #dc2626; }
-  .status-header.exceeds-target { color: #3730a3; }
-  .status-header.good { color: var(--good); }
-  .status-header.bad { color: var(--bad); }
-  .status-header.ok { color: var(--ok); }
-  
-  .goal-comparison {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    margin: 12px 0; padding: 0; border: none; background: transparent;
-  }
-  .goal-item { display:flex; flex-direction:column; gap:2px; }
-  .goal-k { font-size:12px; color:var(--muted); }
-  .goal-v { font-size:16px; font-weight:600; color: var(--fg); }
-
-  .goal-value.crossed-out { text-decoration: none; opacity: 1; }
-  
-  .recommendation-chip {
-    display:inline-block; padding:6px 10px; border-radius:8px;
-    background:#ecfdf3; border:1px solid #bbf7d0; color:#065f46; font-weight:600;
-    margin-top: 8px;
-  }
-  .context-text { color: var(--muted); font-size: 14px; margin: 8px 0; }
-  
-  /* Diagnosis Card Styles */
-  .diagnosis-card { padding: 20px; border: 2px solid var(--line); border-radius: 12px; margin: 24px 0; }
-  .diagnosis-card .status-header { margin-bottom: 8px; }
-  .diagnosis-card p { margin: 4px 0 12px; font-size: 14px; line-height: 1.5; }
-  .diagnosis-card ul { margin: 12px 0 12px 20px; padding: 0; font-size: 13px; }
-  .diagnosis-card li { margin-bottom: 6px; }
-  .diag-kicker { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 16px; }
-
-/* --- Upgraded Scenario Builder Styles --- */
-.scenario-builder-input-grid {
-  grid-template-columns: 1fr; /* Mobile first */
-  gap: 12px;
-}
-@media (min-width: 768px) {
-  .scenario-builder-input-grid { grid-template-columns: 1fr 1fr 1fr; }
+  /* Radii */
+  --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
 }
 
-/* "Pod" container for each slider control */
-.scenario-builder-input-grid > div {
-  background: #f8fafc;
-  padding: 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+/* ---- Base ---- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  line-height:1.5; color:var(--fg); background:white;
+  margin:24px; max-width:960px;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
 
-.scenario-builder-input-grid .label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px; /* Add space above slider */
+/* Titles */
+h1{margin:0 0 var(--space-3)}
+h3{margin:0 0 var(--space-2)}
+
+/* Small utility text */
+.small{color:var(--gray-500); font-size:var(--text-xs)}
+
+/* Pills (preserve current look) */
+.pill{
+  display:inline-block; padding:4px var(--space-2); border-radius:999px;
+  font-size:var(--text-xs); font-weight:500; border:1px solid var(--line); margin-right:var(--space-2);
+}
+.pill.good{background:#ecfdf3;border-color:#bbf7d0;color:#065f46}
+.pill.ok{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.pill.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+
+/* Cards */
+.card{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-6); margin:var(--space-4) 0;
+  box-shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);
+  transition:box-shadow .2s ease, transform .2s ease;
+}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08); transform:translateY(-1px)}
+
+/* Form grid */
+.row{display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4)}
+.row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--space-4)}
+@media (max-width:768px){ .row,.row3{grid-template-columns:1fr} }
+
+/* Verdict-First blocks */
+.benchmark-verdict{
+  margin:var(--space-6) 0; padding:var(--space-6); border-radius:var(--radius-xl);
+  background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.08); border:1px solid var(--gray-100);
+  border-left:4px solid var(--gray-200);
+}
+.benchmark-verdict.outside-target{border-left-color:var(--bad)}
+.benchmark-verdict.on-target{border-left-color:var(--good)}
+.benchmark-verdict.exceeds-target{border-left-color:var(--primary-600)}
+
+.primary-value{font-size:var(--text-3xl); font-weight:700; color:var(--fg); margin-top:var(--space-2)}
+.verdict-context{margin-bottom:var(--space-4); display:flex; flex-wrap:wrap; gap:var(--space-4); align-items:center}
+.delta-text{font-size:var(--text-sm); color:var(--gray-500)}
+.delta-text.negative{color:#059669}
+.delta-text.positive{color:#dc2626}
+.peer-context{font-size:13px; color:var(--gray-500); background:var(--gray-50); padding:4px 8px; border-radius:6px}
+
+/* Spotlight Marker Bar (unchanged semantics) */
+.bar-container{padding-top:28px; margin-bottom:8px}
+.bar-scale{position:relative; height:16px; margin-bottom:4px}
+.scale-point{position:absolute; transform:translateX(-50%); font-size:11px; font-weight:600; color:var(--gray-500)}
+.bar-scale .scale-point:first-child{left:0; transform:translateX(6px)}
+.bar-scale .scale-point:last-child{left:100%; transform:translateX(calc(-100% - 6px))}
+.bar-track{position:relative; height:20px; border-radius:10px; display:flex; overflow:visible; border:1px solid var(--gray-200)}
+.zone-bg{height:100%}
+.zone-bg.excellent,.zone-bg.needs-improvement{background:#f3f4f6}
+.zone-bg.target-range{background:#dcfce7}
+.user-marker{
+  position:absolute; top:50%; width:24px; height:24px; border-radius:50%; border:3px solid #fff;
+  transform:translate(-50%,-50%); box-shadow:0 2px 6px rgba(0,0,0,.3); z-index:3;
+  transition:left .8s cubic-bezier(.4,0,.2,1), background-color .3s;
+}
+.user-marker.excellent{background:#2563eb}
+.user-marker.target-range{background:#22c55e}
+.user-marker.needs-improvement{background:#ef4444}
+.user-label{
+  position:absolute; top:-36px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:700; color:#111;
+  background:#fff; padding:4px 8px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,.1); white-space:nowrap; z-index:5; text-align:center; pointer-events:none
+}
+.user-label .label-title{font-size:9px; font-weight:500; color:var(--gray-500); display:block}
+.bar-labels{display:flex; margin-top:10px; font-size:10px; font-weight:500}
+.bar-labels .label{ text-align:center; color:var(--gray-500); transition:all .3s ease; flex-shrink:0 }
+.bar-labels .label.active{font-weight:700}
+.bar-labels .label.active.excellent{color:#2563eb}
+.bar-labels .label.active.target-range{color:#166534}
+.bar-labels .label.active.needs-improvement{color:#ef4444}
+
+/* Mobile tweaks for verdict blocks */
+@media (max-width:768px){
+  .primary-value{font-size:var(--text-2xl)}
+  .verdict-context{flex-direction:column; align-items:flex-start; gap:var(--space-2)}
+  .bar-container{padding-top:32px}
 }
 
-/* Wrapper for adding currency/percent symbols */
-.numeric-input-wrapper {
-  position: relative;
+/* Goal CPL block (aligned to verdict style) */
+.primary-status-block{
+  background:#fff; border:1px solid var(--gray-200); border-left:4px solid var(--gray-200);
+  border-radius:var(--radius-lg); padding:var(--space-6); margin:var(--space-6) 0;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
-.numeric-input-wrapper .numeric-input {
-  background-color: #fff;
-  width: 90px;
+.primary-status-block.outside-target{border-left-color:var(--bad)}
+.primary-status-block.on-target{border-left-color:var(--good)}
+.status-header{font-size:var(--text-xl); font-weight:700; margin-bottom:var(--space-2); display:flex; align-items:center; gap:8px}
+.status-header.outside-target{color:#dc2626}
+.goal-comparison{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-3); margin:var(--space-3) 0}
+.goal-item{display:flex; flex-direction:column; gap:2px}
+.goal-k{font-size:var(--text-sm); color:var(--gray-500)}
+.goal-v{font-size:16px; font-weight:600; color:var(--fg)}
+.recommendation-chip{
+  display:inline-block; padding:6px 10px; border-radius:var(--radius-md);
+  background:#ecfdf3; border:1px solid #bbf7d0; color:#065f46; font-weight:600; margin-top:8px
 }
-.numeric-input-wrapper::before {
-  content: attr(data-symbol);
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: 10px;
-  color: var(--muted);
-  font-size: 14px;
+.context-text{color:var(--gray-500); font-size:var(--text-sm); margin:8px 0}
+
+/* Diagnosis */
+.diagnosis-card{padding:20px; border:2px solid var(--gray-200); border-radius:var(--radius-lg); margin:24px 0}
+.diagnosis-card .status-header{margin-bottom:8px}
+.diagnosis-card p{margin:4px 0 12px; font-size:14px; line-height:1.5}
+.diagnosis-card ul{margin:12px 0 12px 20px; padding:0; font-size:13px}
+.diagnosis-card li{margin-bottom:6px}
+.diag-kicker{font-size:12px; color:var(--gray-500); font-style:italic; margin-top:16px}
+
+/* Scenario Builder */
+.scenario-builder-input-grid{grid-template-columns:1fr; gap:var(--space-3)}
+@media (min-width:768px){ .scenario-builder-input-grid{grid-template-columns:1fr 1fr 1fr} }
+.scenario-builder-input-grid>div{background:var(--gray-50); padding:12px 16px; border:1px solid var(--gray-200); border-radius:var(--radius-md)}
+.scenario-builder-input-grid .label-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+.numeric-input-wrapper{position:relative}
+.numeric-input-wrapper .numeric-input{background:#fff; width:90px}
+.numeric-input-wrapper::before{content:attr(data-symbol); position:absolute; top:50%; transform:translateY(-50%); left:10px; color:var(--gray-500); font-size:14px}
+.numeric-input-wrapper.symbol-after::before{left:auto; right:10px}
+.numeric-input-wrapper.symbol-before .numeric-input{padding-left:24px}
+.numeric-input-wrapper.symbol-after .numeric-input{padding-right:24px}
+
+/* Range slider */
+input[type="range"]{
+  -webkit-appearance:none; appearance:none; width:100%; height:8px;
+  background:var(--gray-200); border-radius:4px; outline:none; --track-color: var(--primary-500);
+  background-image:linear-gradient(var(--track-color), var(--track-color));
+  background-size:var(--progress,0%) 100%; background-repeat:no-repeat;
 }
-.numeric-input-wrapper.symbol-after::before {
-  left: auto;
-  right: 10px;
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%;
+  background:var(--track-color); border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.2); cursor:pointer; margin-top:-6px
 }
-/* Add padding to input to avoid text overlap */
-.numeric-input-wrapper.symbol-before .numeric-input {
-  padding-left: 24px;
+input[type="range"]::-moz-range-thumb{
+  width:20px; height:20px; border-radius:50%; background:var(--track-color);
+  border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.2); cursor:pointer
 }
-.numeric-input-wrapper.symbol-after .numeric-input {
-  padding-right: 24px;
+.slider-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--gray-500); margin-top:4px}
+
+/* NL UI container + grids */
+.tool-section{padding:var(--space-12) var(--space-8); max-width:1200px; margin:0 auto}
+.tool-title{
+  font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-weight:700; font-size:36px; color:#2d3748; margin-bottom:var(--space-12); text-align:center
+}
+.form-container{
+  background:#fff; border-radius:var(--radius-xl); padding:48px;
+  box-shadow:0 4px 20px rgba(0,0,0,.08); border:1px solid var(--gray-100);
+  max-width:800px; margin:0 auto
+}
+.form-grid,.input-grid{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px
+}
+.form-grid{margin-bottom:40px}
+.input-grid{margin-bottom:48px}
+.form-group{display:flex; flex-direction:column; min-width:0}
+
+/* Inputs/selects */
+label{display:block; margin:var(--space-4) 0 var(--space-2); font-weight:600; font-size:var(--text-sm); color:var(--gray-700)}
+input,select{
+  font-family:'Inter',sans-serif; width:100%; padding:var(--space-4);
+  border:2px solid var(--gray-200); border-radius:var(--radius-md);
+  font-size:var(--text-base); background:#fff; transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+input:focus,select:focus{
+  outline:none; border-color:var(--primary-500);
+  box-shadow:0 0 0 3px rgba(59,130,246,.1); transform:translateY(-1px)
 }
 
-/* Enhanced Slider Styles */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  outline: none;
-  --track-color: #3b82f6; /* Blue for progress */
+/* Buttons */
+.button-container{display:flex; justify-content:center; gap:12px}
+.btn-primary{
+  background:linear-gradient(135deg,var(--primary-500),var(--primary-600)); color:#fff; border:none;
+  padding:12px 28px; border-radius:var(--radius-md);
+  font-weight:600; font-size:var(--text-base); cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  box-shadow:0 4px 14px rgba(59,130,246,.25)
+}
+.btn-primary:hover{transform:translateY(-1px); box-shadow:0 6px 20px rgba(59,130,246,.35)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:focus-visible{outline:3px solid rgba(59,130,246,.35); outline-offset:2px; border-radius:var(--radius-lg)}
+
+.btn-secondary{
+  background:#fff; color:var(--primary-600);
+  border:2px solid var(--gray-200);
+  padding:calc(var(--space-4) - 2px) calc(var(--space-6) - 2px);
+  border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:600; cursor:pointer
+}
+.btn-secondary:hover{border-color:var(--primary-500); background:var(--primary-50)}
+
+.btn-small{
+  background:none; color:var(--gray-700); border:1px solid var(--gray-200);
+  padding:var(--space-2) var(--space-4); border-radius:var(--radius-sm);
+  font-size:var(--text-sm); font-weight:600; cursor:pointer
+}
+.btn-small:hover{background:var(--gray-50); border-color:var(--gray-300)}
+
+/* Results container aligned with form width */
+#results{max-width:800px; margin:24px auto}
+
+/* Header (only logo uses Montserrat) */
+header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); background:rgba(255,255,255,.9);
+  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:relative}
+.header::after{content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent, #cbd5e0, transparent)}
+.header-content{display:grid; grid-template-columns:1fr 1fr; max-width:1200px; margin:0 auto; gap:20px}
+.brand-section{display:flex; flex-direction:column; justify-self:start}
+.brand-name{display:flex; align-items:baseline; margin-bottom:2px}
+.company-name{font-family:'Montserrat',sans-serif; font-weight:800; font-size:28px; color:#2d3748; letter-spacing:1px}
+.beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:4px; vertical-align:super}
+.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0; font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+
+.right-section{display:flex; flex-direction:column; justify-self:end; align-items:flex-end; gap:8px}
+.beta-row{display:flex; align-items:center; gap:8px}
+.beta-badge{
+  display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#ebf8ff,#dbeafe);
+  border:1px solid #60a5fa; padding:6px 12px; border-radius:16px;
+  font-weight:600; font-size:12px; color:#1e40af; box-shadow:0 2px 4px rgba(96,165,250,.15)
+}
+.beta-subtitle{font-weight:400; font-size:11px; color:#64748b; margin-top:2px}
+.feedback-row,.feedback-link{display:none!important}
+
+@media (max-width:768px){
+  .header{padding:16px 20px}
+  .header-content{grid-template-columns:1fr; gap:8px}
+  .right-section{align-items:flex-start; text-align:left}
+  .company-name{font-size:24px}
 }
 
-/* Track progress fill */
-input[type="range"] {
-  background-image: linear-gradient(var(--track-color), var(--track-color));
-  background-size: var(--progress, 0%) 100%;
-  background-repeat: no-repeat;
-}
+/* Section divider utility */
+.section-divider{margin:var(--space-12) 0; height:1px; background:linear-gradient(90deg,transparent,var(--gray-200),transparent)}
 
-/* Slider Thumb */
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--track-color);
-  border: 3px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  cursor: pointer;
-  margin-top: -6px; /* Center thumb on track */
-}
-input[type="range"]::-moz-range-thumb {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--track-color);
-  border: 3px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  cursor: pointer;
-}
+/* Footer */
+.site-footer{margin-top:64px; border-top:1px solid var(--gray-200); color:var(--gray-500); font-size:13px}
+.footer-inner{max-width:1200px; margin:0 auto; padding:16px 40px; display:flex; justify-content:space-between; align-items:center; gap:16px}
+.footer-links a{color:var(--gray-500); text-decoration:none; margin-right:16px}
+.footer-links a:hover{color:var(--gray-700); text-decoration:underline}
+.footer-right{display:flex; gap:12px; align-items:center}
+.muted{color:var(--gray-500)}
 
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 4px;
+/* Motion safety */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; scroll-behavior:auto!important}
 }
 </style>
-<!-- NL_HEADER_STYLES_START -->
-<style>
-  /* Scope reset + font strictly to the header to avoid site-wide changes */
-  header.header, header.header * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Montserrat', sans-serif;
-  }
-
-  .header {
-      padding: 16px 40px;
-      border-bottom: 1px solid #e2e8f0;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      position: relative;
-  }
-  .header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent 0%, #cbd5e0 50%, transparent 100%);
-  }
-  .header-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      max-width: 1200px;
-      margin: 0 auto;
-      gap: 20px;
-  }
-  .brand-section { display: flex; flex-direction: column; justify-self: start; }
-  .brand-name { display: flex; align-items: baseline; margin-bottom: 2px; }
-  .company-name { font-weight: 800; font-size: 28px; color: #2d3748; letter-spacing: 1px; }
-  .beta-label { font-weight: 500; font-size: 12px; color: #f6ad55; margin-left: 4px; vertical-align: super; }
-  .tagline { font-weight: 400; font-size: 14px; color: #718096; margin-top: 0; }
-  .right-section { display: flex; flex-direction: column; justify-self: end; align-items: flex-end; gap: 2px; }
-  .beta-row { display: flex; align-items: center; gap: 8px; }
-  .feedback-row { display: flex; justify-content: flex-end; }
-  .beta-badge {
-      display: flex; align-items: center; gap: 6px;
-      background: linear-gradient(135deg, #ebf8ff, #dbeafe);
-      border: 1px solid #60a5fa;
-      padding: 6px 12px;
-      border-radius: 16px;
-      font-weight: 600; font-size: 12px; color: #1e40af;
-      box-shadow: 0 2px 4px rgba(96, 165, 250, 0.15);
-  }
-  .beta-subtitle { font-weight: 400; font-size: 11px; color: #64748b; }
-  .feedback-link { font-weight: 500; font-size: 12px; color: #4299e1; text-decoration: none; transition: color 0.2s ease; }
-  .feedback-link:hover { color: #2b77cb; text-decoration: underline; }
-
-  @media (max-width: 768px) {
-      .header { padding: 16px 20px; }
-      .header-content { grid-template-columns: 1fr; gap: 8px; }
-      .right-section { align-items: flex-start; text-align: left; }
-      .company-name { font-size: 24px; }
-  }
-</style>
-<!-- NL_HEADER_STYLES_END -->
 </head>
 <body>
-<!-- NL_HEADER_START -->
+<!-- HEADER -->
 <header class="header">
   <div class="header-content">
     <div class="brand-section">
@@ -318,58 +321,107 @@ input[type="range"]::-moz-range-thumb {
         </div>
       </div>
       <div class="beta-subtitle">Free while we perfect things</div>
-      <div class="feedback-row">
-        <a href="mailto:erinrose451@gmail.com?subject=Northlight%20Beta%20Feedback" class="feedback-link">Send feedback</a>
-      </div>
     </div>
   </div>
 </header>
-<!-- NL_HEADER_END -->
 
-  <h1>Benchmark MVP</h1>
+<!-- MAIN -->
+<main class="tool-section">
+  <h1 class="tool-title">Benchmark Your Campaign</h1>
 
-  <div class="card">
-  <div class="row">
-    <div><label for="category">Category</label><select id="category"></select></div>
-    <div><label for="subcategory">Subcategory</label><select id="subcategory"></select></div>
+  <div class="form-container" id="formContainer">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="category" class="form-label">Category</label>
+        <select id="category" class="form-select"></select>
+      </div>
+      <div class="form-group">
+        <label for="subcategory" class="form-label">Subcategory</label>
+        <select id="subcategory" class="form-select"></select>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="goal_cpl" class="form-label">Goal CPL</label>
+        <input id="goal_cpl" type="number" step="0.01" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label for="budget" class="form-label">Budget</label>
+        <input id="budget" type="number" step="0.01" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label for="clicks" class="form-label">Clicks</label>
+        <input id="clicks" type="number" step="1" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label for="leads" class="form-label">Leads</label>
+        <input id="leads" type="number" step="1" class="form-input" />
+      </div>
+    </div>
+
+    <div class="button-container">
+      <button id="runBtn" class="btn-primary" type="button">Run Benchmark</button>
+      <button id="resetBtn" class="btn-secondary" type="button">Reset Inputs</button>
+    </div>
   </div>
 
-  <div class="row">
-    <div><label for="goal_cpl">Goal CPL</label><input id="goal_cpl" type="number" step="0.01" /></div>
-    <div><label for="budget">Budget (period)</label><input id="budget" type="number" step="0.01" /></div>
-  </div>
+  <div class="section-divider" aria-hidden="true"></div>
 
-  <div class="row">
-    <div><label for="clicks">Clicks</label><input id="clicks" type="number" step="1" /></div>
-    <div><label for="leads">Leads</label><input id="leads" type="number" step="1" /></div>
-  </div>
+  <!-- RESULTS region with ARIA live and heading for SRs -->
+  <section id="results" class="card" role="region" aria-live="polite" aria-busy="false" aria-labelledby="resultsHeading" style="display:none;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <h3 id="resultsHeading" style="margin:0;">Results</h3>
+      <div style="display:flex; gap:8px;">
+        <button id="copySummaryBtn" class="btn-small" type="button" disabled>Copy Summary</button>
+      </div>
+    </div>
 
-  <div style="margin-top:16px;"><button id="runBtn">Run Benchmark</button></div>
-</div>
-
-
-  <div id="results" class="card" style="display:none;">
-    <h3>Results</h3>
     <div id="primaryStatusBlock"></div>
     <div id="cpl-verdict-container"></div>
     <div id="cpc-verdict-container"></div>
     <div id="cr-verdict-container"></div>
-    
     <div id="diagnosisCard"></div>
-
     <div id="scenarioBuilder" class="card" style="display:none; margin-top:24px;"></div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="#" id="methodologyLink">Methodology</a>
+      <a href="#" id="dataFreshnessLink">Data Freshness</a>
+      <a href="#" id="termsLink">Terms</a>
+    </div>
+    <div class="footer-right muted">
+      © <span id="footerYear"></span> Northlight
+    </div>
   </div>
+</footer>
 
 <script>
-const API = "https://northlight-wsgw.onrender.com";
-let lastPayload = null;
+/* ===========================
+   ENV + STORAGE
+   =========================== */
+const PROD_API = 'https://northlight-wsgw.onrender.com';
+const DEV_API  = 'https://northlight-api-dev.onrender.com';
+const host = window.location.hostname;
+// localhost / develop / PR previews treated as dev
+const isDev = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('develop') || host.includes('pr-');
+const API = isDev ? DEV_API : PROD_API;
 
-// ---------- UI helpers ----------
+const STORAGE_KEY = 'northlight_inputs_v1';
+
+console.log(`API endpoint set to: ${API}`);
+
+/* ===========================
+   UTILITIES
+   =========================== */
 function fmtPct1(v) { return (v == null) ? "—" : (v*100).toFixed(1) + "%"; }
 function fmtMoney(v){ return (v == null) ? "—" : "$" + Number(v).toFixed(2); }
 function pill(text, cls) { return `<span class="pill ${cls}">${text}</span>`; }
 
-// ---------- Data handling helpers ----------
 function ensureTargetRange(metricData, unit, metricName) {
   if (metricData?.target_range?.low != null && metricData?.target_range?.high != null) {
     return metricData.target_range;
@@ -413,8 +465,9 @@ function roundUpToNicePercent(x) {
   return Math.min(1.00, Math.ceil(want * 20) / 20);
 }
 
-
-// ---------- Component Rendering ----------
+/* ===========================
+   BENCHMARK RENDERING
+   =========================== */
 function renderVerdictBenchmark(containerEl, metricData, metricName, metricUnit, direction, opts = {}) {
   const { hidePeer = false } = opts;
   const value = metricData?.value;
@@ -535,7 +588,7 @@ function generateBar(data) {
     <div class="bar-scale">${scaleHtml}</div>
     <div class="bar-track">
       ${sections.map(key => `<div class="zone-bg ${key}" style="flex-basis: ${(data.sectionWidths[key] || 0)}%"></div>`).join('')}
-      <div class="user-marker ${data.userSection}" style="left: ${data.userPosition}%; ">
+      <div class="user-marker ${data.userSection}" style="left: ${data.userPosition}%;">
         <div class="user-label">
           <span class="label-title">Your ${data.metricName}</span>
           ${data.valueFormatter(data.userValue)}
@@ -551,6 +604,9 @@ function generateBar(data) {
   `;
 }
 
+/* ===========================
+   PRIMARY STATUS / DIAGNOSIS / SCENARIO
+   =========================== */
 function renderPrimaryStatusBlock(d) {
   const container = document.getElementById("primaryStatusBlock");
   const ga = d.goal_analysis || {};
@@ -621,7 +677,6 @@ function statusFromBench(metric, metricName, unit, direction) {
   return (delta <= 15) ? 'AVG' : 'WEAK';
 }
 
-// Helper function to generate the diagnosis card HTML
 function createDiagnosisCard(status, title, message, listItems = [], kicker = '', provisionalInfo = '') {
   const listHtml = listItems.length ? `<ul>${listItems.map(item => `<li>${item}</li>`).join('')}</ul>` : '';
   return `
@@ -636,103 +691,100 @@ function createDiagnosisCard(status, title, message, listItems = [], kicker = ''
 }
 
 function renderDiagnosis(d) {
-    const el = document.getElementById("diagnosisCard");
-    const { input, goal_analysis: ga, benchmarks: bm, targets, overall } = d;
-    const status = overall?.goal_status;
+  const el = document.getElementById("diagnosisCard");
+  const { input, goal_analysis: ga, benchmarks: bm, targets, overall } = d;
+  const status = overall?.goal_status;
 
-    // --- Pre-checks (Guardrails) ---
-    if ((input.clicks || 0) === 0) {
-        el.innerHTML = createDiagnosisCard('bad', '🛑 No Traffic', 'There are no clicks recorded for this period. Expand coverage or bids before optimizing.', ['Broaden match types/targets; check ad eligibility and daily budgets.']);
-        return;
+  // --- Pre-checks ---
+  if ((input.clicks || 0) === 0) {
+    el.innerHTML = createDiagnosisCard('bad', '🛑 No Traffic',
+      'There are no clicks recorded for this period. Expand coverage or bids before optimizing.',
+      ['Broaden match types/targets; check ad eligibility and daily budgets.']);
+    return;
+  }
+
+  const crSuspicious = (() => {
+    const v = bm.cr?.value;
+    if (v == null) return false;
+    const tr = ensureTargetRange(bm.cr, '%', 'CR');
+    return v > Math.max(tr.high * 1.8, 0.15);
+  })();
+
+  if ((input.leads === 0 && (input.clicks || 0) >= 100) || crSuspicious) {
+    el.innerHTML = createDiagnosisCard('bad', '🚨 Verify Tracking',
+      (input.leads === 0) ? 'Clicks but zero conversions. Likely tracking failure.' : 'Suspiciously high CR. You may be counting non-lead events.',
+      ['Fire a test conversion; verify thank-you tag/pixel.', 'Confirm you’re counting qualified leads only.']);
+    return;
+  }
+
+  if (input.budget != null && input.budget < 500) {
+    el.innerHTML = createDiagnosisCard('bad', '💰 Budget Too Low',
+      'Under $500 isn’t enough signal. Increase budget or <strong>Run Grader</strong> to find the right budget.');
+    return;
+  }
+
+  let softBudgetBanner = (input.budget != null && input.budget < 1000)
+    ? `<div class="pill ok" style="margin-bottom:8px;">Budget constrained ($${input.budget}) — insights are provisional</div>`
+    : '';
+  const provisional = ((input.leads || 0) < 15 || (input.clicks || 0) < 300);
+  const provisionalTag = provisional ? '<div class="pill ok" style="margin-bottom:8px;">Provisional – low data volume</div>' : softBudgetBanner;
+
+  const cplStatus = statusFromBench(bm.cpl, 'CPL', '$', 'lower-is-better');
+  const cpcStatus = statusFromBench(bm.cpc, 'CPC', '$', 'lower-is-better');
+  const crStatus  = statusFromBench(bm.cr,  'CR',  '%', 'higher-is-better');
+  const goalScenario = ga.goal_scenario;
+  const performanceIsGood = cplStatus !== 'WEAK' && cpcStatus !== 'WEAK' && crStatus !== 'WEAK';
+
+  if (performanceIsGood) {
+    if (status === 'achieved' || status === 'on_track') {
+      el.innerHTML = createDiagnosisCard('good', '🚀 Ready to Scale',
+        `CPL is meeting or beating the goal. ${goalScenario === 'goal_conservative' ? 'Your goal is conservative — you can scale with confidence.' : 'Performance is solid.'}`,
+        ['Increase budget (start +30–50%).', 'Add adjacent ad groups / geos.'], '', provisionalTag);
+    } else {
+      const rec = ga.recommended_cpl;
+      const rng = ga.realistic_range;
+      el.innerHTML = createDiagnosisCard('ok', '🎯 Realign Goal Expectations',
+        `Your performance is good, but your goal is outside the typical range. A more realistic target is <strong>${fmtMoney(rec)}</strong> (Typical: ${fmtMoney(rng?.low)}–${fmtMoney(rng?.high)}).`,
+        ['<strong>Primary Action:</strong> Use this benchmark data to reset the CPL goal with your client.',
+         '<strong>Next Step:</strong> Run a deeper ROAS calculation to find the true breakeven CPL.'], '', provisionalTag);
     }
+    return;
+  }
 
-    const crSuspicious = (() => {
-        const v = bm.cr?.value;
-        if (v == null) return false;
-        const tr = ensureTargetRange(bm.cr, '%', 'CR');
-        return v > Math.max(tr.high * 1.8, 0.15);
-    })();
+  if (status === 'behind') {
+    const needCr = targets?.target_cr ?? ((bm.cpc?.value && input?.goal_cpl) ? (bm.cpc.value / input.goal_cpl) : null);
+    const needCpc = targets?.target_cpc ?? ((input?.goal_cpl != null && bm.cr?.value != null) ? input.goal_cpl * bm.cr.value : null);
+    const kicker = (goalScenario === 'goal_too_aggressive') ? `<div class="diag-kicker">*Note: Your CPL goal is also aggressive for this market. Re-evaluate it after improving performance.</div>` : '';
 
-    if ((input.leads === 0 && (input.clicks || 0) >= 100) || crSuspicious) {
-        el.innerHTML = createDiagnosisCard('bad', '🚨 Verify Tracking',
-            (input.leads === 0) ? 'Clicks but zero conversions. Likely tracking failure.' : 'Suspiciously high CR. You may be counting non-lead events.',
-            ['Fire a test conversion; verify thank-you tag/pixel.', 'Confirm you’re counting qualified leads only.']
-        );
-        return;
+    const trCPC = ensureTargetRange(bm.cpc, '$', 'CPC');
+    const trCR  = ensureTargetRange(bm.cr,  '%', 'CR');
+    const cpcExtreme = bm.cpc?.value > trCPC.high * 1.5;
+    const crDeep     = bm.cr?.value  < trCR.low  * 0.5;
+
+    if (crStatus === 'WEAK' && cpcStatus !== 'WEAK') {
+      el.innerHTML = createDiagnosisCard('bad', '🔧 Fix Conversion Rate',
+        `Your CR of ${fmtPct1(bm.cr?.value)} is the main bottleneck. You need ~<strong>${needCr != null ? fmtPct1(Math.max(0, needCr)) : '—'}</strong> to hit your CPL goal.`,
+        ['Audit page speed & mobile experience (aim &lt;2.5s LCP).', 'Ensure message match: ad → headline; CTA above fold.'], kicker, provisionalTag);
+    } else if (cpcStatus === 'WEAK' && crStatus !== 'WEAK') {
+      el.innerHTML = createDiagnosisCard('bad', '💰 Reduce Traffic Cost',
+        `Your pages convert well, but the CPC of ${fmtMoney(bm.cpc?.value)} is too high. You need ~<strong>${needCpc != null ? fmtMoney(Math.max(0, needCpc)) : '—'}</strong> to hit your goal.`,
+        ['Add negatives; cut waste by geo/device/daypart.', 'Tighten match types; refresh RSAs.'], kicker, provisionalTag);
+    } else {
+      if (cpcExtreme && !crDeep) {
+        el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CPC, then CR',
+          'Both levers need work, but your CPC is an extreme outlier. Start by fixing traffic cost.',
+          ['Aggressively prune queries and tighten targeting to control CPCs.', 'Once CPC is in a healthier range, shift focus to landing page optimization.'], kicker, provisionalTag);
+      } else {
+        el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CR, then CPC',
+          'Both levers need work. Start with CR for faster lift, then address CPC.',
+          ['Apply LP quick wins; verify tracking quality.', 'Then prune queries / restructure bids.'], kicker, provisionalTag);
+      }
     }
-    
-    if (input.budget != null && input.budget < 500) {
-        el.innerHTML = createDiagnosisCard('bad', '💰 Budget Too Low', 'Under $500 isn’t enough signal. Increase budget or <strong>Run Grader</strong> to find the right budget.');
-        return;
-    }
+    return;
+  }
 
-    let softBudgetBanner = (input.budget != null && input.budget < 1000)
-      ? `<div class="pill ok" style="margin-bottom:8px;">Budget constrained ($${input.budget}) — insights are provisional</div>`
-      : '';
-    const provisional = ((input.leads || 0) < 15 || (input.clicks || 0) < 300);
-    const provisionalTag = provisional ? '<div class="pill ok" style="margin-bottom:8px;">Provisional – low data volume</div>' : softBudgetBanner;
-    
-    // --- Main Diagnosis Logic ---
-    const cplStatus = statusFromBench(bm.cpl, 'CPL', '$', 'lower-is-better');
-    const cpcStatus = statusFromBench(bm.cpc, 'CPC', '$', 'lower-is-better');
-    const crStatus  = statusFromBench(bm.cr,  'CR',  '%', 'higher-is-better');
-    const goalScenario = ga.goal_scenario;
-    const performanceIsGood = cplStatus !== 'WEAK' && cpcStatus !== 'WEAK' && crStatus !== 'WEAK';
-
-    if (performanceIsGood) {
-        if (status === 'achieved' || status === 'on_track') {
-            el.innerHTML = createDiagnosisCard('good', '🚀 Ready to Scale',
-                `CPL is meeting or beating the goal. ${goalScenario === 'goal_conservative' ? 'Your goal is conservative — you can scale with confidence.' : 'Performance is solid.'}`,
-                ['Increase budget (start +30–50%).', 'Add adjacent ad groups / geos.'], '', provisionalTag
-            );
-        } else { // Performance is good, but goal is still missed -> Expectations problem.
-            const rec = ga.recommended_cpl;
-            const rng = ga.realistic_range;
-            el.innerHTML = createDiagnosisCard('ok', '🎯 Realign Goal Expectations',
-                `Your performance is good, but your goal is outside the typical range. A more realistic target is <strong>${fmtMoney(rec)}</strong> (Typical: ${fmtMoney(rng?.low)}–${fmtMoney(rng?.high)}).`,
-                ['<strong>Primary Action:</strong> Use this benchmark data to reset the CPL goal with your client.', '<strong>Next Step:</strong> Run a deeper ROAS calculation to find the true breakeven CPL.'], '', provisionalTag
-            );
-        }
-        return;
-    }
-
-    if (status === 'behind') {
-        const needCr = targets.target_cr ?? ((bm.cpc?.value && input?.goal_cpl) ? (bm.cpc.value / input.goal_cpl) : null);
-        const needCpc = targets.target_cpc ?? ((input?.goal_cpl != null && bm.cr?.value != null) ? input.goal_cpl * bm.cr.value : null);
-        const kicker = (goalScenario === 'goal_too_aggressive') ? `<div class="diag-kicker">*Note: Your CPL goal is also aggressive for this market. Re-evaluate it after improving performance.</div>` : '';
-        
-        const trCPC = ensureTargetRange(bm.cpc, '$', 'CPC');
-        const trCR  = ensureTargetRange(bm.cr,  '%', 'CR');
-        const cpcExtreme = bm.cpc?.value > trCPC.high * 1.5;
-        const crDeep     = bm.cr?.value  < trCR.low  * 0.5;
-
-        if (crStatus === 'WEAK' && cpcStatus !== 'WEAK') { // CR is the clear bottleneck
-            el.innerHTML = createDiagnosisCard('bad', '🔧 Fix Conversion Rate',
-                `Your CR of ${fmtPct1(bm.cr?.value)} is the main bottleneck. You need ~<strong>${needCr != null ? fmtPct1(Math.max(0, needCr)) : '—'}</strong> to hit your CPL goal.`,
-                ['Audit page speed & mobile experience (aim &lt;2.5s LCP).', 'Ensure message match: ad → headline; CTA above fold.'], kicker, provisionalTag
-            );
-        } else if (cpcStatus === 'WEAK' && crStatus !== 'WEAK') { // CPC is the clear bottleneck
-            el.innerHTML = createDiagnosisCard('bad', '💰 Reduce Traffic Cost',
-                `Your pages convert well, but the CPC of ${fmtMoney(bm.cpc?.value)} is too high. You need ~<strong>${needCpc != null ? fmtMoney(Math.max(0, needCpc)) : '—'}</strong> to hit your goal.`,
-                ['Add negatives; cut waste by geo/device/daypart.', 'Tighten match types; refresh RSAs.'], kicker, provisionalTag
-            );
-        } else { // Both are weak, use tie-breaker
-            if (cpcExtreme && !crDeep) { // CPC is extremely bad, CR is not as bad
-                el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CPC, then CR',
-                    'Both levers need work, but your CPC is an extreme outlier. Start by fixing traffic cost.',
-                    ['Aggressively prune queries and tighten targeting to control CPCs.', 'Once CPC is in a healthier range, shift focus to landing page optimization.'], kicker, provisionalTag
-                );
-            } else { // Default to CR first
-                el.innerHTML = createDiagnosisCard('bad', '🔥 Start with CR, then CPC',
-                    'Both levers need work. Start with CR for faster lift, then address CPC.',
-                    ['Apply LP quick wins; verify tracking quality.', 'Then prune queries / restructure bids.'], kicker, provisionalTag
-                );
-            }
-        }
-        return;
-    }
-
-    el.innerHTML = createDiagnosisCard('', '📊 Monitor Performance', 'Your campaign is performing within average ranges. Continue to test incremental CR and CPC improvements to increase efficiency.', [], '', provisionalTag);
+  el.innerHTML = createDiagnosisCard('', '📊 Monitor Performance',
+    'Your campaign is performing within average ranges. Continue to test incremental CR and CPC improvements to increase efficiency.', [], '', provisionalTag);
 }
 
 function renderScenarioBuilder(d) {
@@ -742,10 +794,7 @@ function renderScenarioBuilder(d) {
 
   const hasCPC = bm.cpc && (bm.cpc.value != null || bm.cpc.median != null);
   const hasCR  = bm.cr  && (bm.cr.value  != null || bm.cr.median  != null);
-  if (!hasCPC || !hasCR) {
-    el.style.display = 'none';
-    return;
-  }
+  if (!hasCPC || !hasCR) { el.style.display = 'none'; return; }
 
   let state = {
     budget: d.input?.budget ?? 5000,
@@ -753,7 +802,7 @@ function renderScenarioBuilder(d) {
     cr:     bm.cr?.value  ?? bm.cr?.median  ?? 0.04
   };
   const current = { ...state };
-  
+
   const p25cpc = bm.cpc?.p25, p75cpc = bm.cpc?.p75;
   const p25cr  = bm.cr?.p25,  p75cr  = bm.cr?.p75;
 
@@ -775,9 +824,8 @@ function renderScenarioBuilder(d) {
     const leads  = (state.cr > 0 && state.cpc > 0) ? state.budget * state.cr / state.cpc : 0;
     const cpl    = (state.cr > 0) ? state.cpc / state.cr : null;
     return { clicks, leads, cpl };
-  }
+  };
 
-  // --- Event Handling (attached once) ---
   const updateState = (key, rawValue, isFromNumeric) => {
     let num = parseFloat(rawValue);
     if (!isFinite(num)) return;
@@ -790,25 +838,14 @@ function renderScenarioBuilder(d) {
     const keyMap = { sb_budget: 'budget', sb_cpc: 'cpc', sb_cr: 'cr' };
     if (keyMap[e.target.id]) updateState(keyMap[e.target.id], e.target.value, false);
   };
-  
   el.onchange = (e) => {
     const keyMap = { sb_budget_n: 'budget', sb_cpc_n: 'cpc', sb_cr_n: 'cr' };
     if (keyMap[e.target.id]) updateState(keyMap[e.target.id], e.target.value, true);
   };
-
   el.onclick = (e) => {
-    if (e.target.id === 'sb_reset') {
-        state = { ...current };
-        render();
-    }
-    if (goal && e.target.id === 'sb_snap_cr' && goal > 0 && state.cpc > 0) {
-        state.cr = clamp(state.cpc / goal, bounds.crMin, bounds.crMax);
-        render();
-    }
-    if (goal && e.target.id === 'sb_snap_cpc' && goal > 0 && state.cr > 0) {
-        state.cpc = clamp(goal * state.cr, bounds.cpcMin, bounds.cpcMax);
-        render();
-    }
+    if (e.target.id === 'sb_reset') { state = { ...current }; render(); }
+    if (goal && e.target.id === 'sb_snap_cr' && goal > 0 && state.cpc > 0) { state.cr = clamp(state.cpc / goal, bounds.crMin, bounds.crMax); render(); }
+    if (goal && e.target.id === 'sb_snap_cpc' && goal > 0 && state.cr > 0) { state.cpc = clamp(goal * state.cr, bounds.cpcMin, bounds.cpcMax); render(); }
   };
 
   function render() {
@@ -817,7 +854,7 @@ function renderScenarioBuilder(d) {
     if (clicks < 300 || leads < 15) banners.push(`<span class="pill ok" style="margin-bottom:8px;">Provisional – low volume</span>`);
     if (state.budget >= 500 && state.budget < 1000) banners.push(`<span class="pill ok" style="margin-bottom:8px;">Budget constrained (${fmtMoney(state.budget)})</span>`);
 
-    // Calculate progress for slider tracks
+    // slider track progress
     const budgetProgress = (state.budget - bounds.budgetMin) / (bounds.budgetMax - bounds.budgetMin) * 100;
     const cpcProgress = (state.cpc - bounds.cpcMin) / (bounds.cpcMax - bounds.cpcMin) * 100;
     const crProgress = (state.cr - bounds.crMin) / (bounds.crMax - bounds.crMin) * 100;
@@ -880,31 +917,145 @@ function renderScenarioBuilder(d) {
         </div>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-        ${goal ? `<button id="sb_snap_cr" class="small">Solve for Goal via CR</button>
-                 <button id="sb_snap_cpc" class="small">Solve for Goal via CPC</button>` : ''}
-        <button id="sb_reset" class="small">Reset to Current</button>
+        ${goal ? `<button id="sb_snap_cr" class="btn-small" type="button">Solve for Goal via CR</button>
+                  <button id="sb_snap_cpc" class="btn-small" type="button">Solve for Goal via CPC</button>` : ''}
+        <button id="sb_reset" class="btn-secondary" type="button">Reset to Current</button>
       </div>
     `;
   }
-  render(); // Initial render
+  render(); // initial
 }
 
-// ---------- Main Execution ----------
-async function fetchMeta() {
-  const res = await fetch(`${API}/benchmarks/meta`);
-  const meta = await res.json();
-  const catSel = document.getElementById("category"), subSel = document.getElementById("subcategory");
-  const cats = [...new Set(meta.map(x => x.category))].sort();
-  catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
-  function buildSubcats(cat) {
-    const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
-    subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+/* ===========================
+   COPY SUMMARY
+   =========================== */
+function buildCopySummary(d) {
+  const bm = d.benchmarks || {};
+  const ga = d.goal_analysis || {};
+  const rng = ga.realistic_range || {};
+  const parts = [];
+
+  parts.push(`Northlight Benchmark Summary`);
+  parts.push(`Category: ${d.input?.category || '—'} / ${d.input?.subcategory || '—'}`);
+  if (d.input?.goal_cpl != null) {
+    parts.push(`Goal CPL: ${fmtMoney(d.input.goal_cpl)} ${rng.low!=null && rng.high!=null ? `(Typical: ${fmtMoney(rng.low)}–${fmtMoney(rng.high)})` : ''}`);
   }
-  buildSubcats(catSel.value);
-  catSel.addEventListener("change", e => buildSubcats(e.target.value));
+  if (ga?.recommended_cpl != null) parts.push(`Recommended Target: ${fmtMoney(ga.recommended_cpl)}`);
+
+  const linesFor = (name, obj, unit, dir) => {
+    if (!obj) return;
+    const tr = ensureTargetRange(obj, unit, name);
+    const verdict = deriveVerdict(obj.value, tr, dir);
+    const verdictText = verdict === 'exceeds_target' ? 'Excellent' :
+                        verdict === 'on_target' ? 'On Target' :
+                        verdict === 'outside_target' ? 'Outside Target' : '—';
+    const val = unit === '$' ? fmtMoney(obj.value) : fmtPct1(obj.value);
+    const low = unit === '$' ? fmtMoney(tr.low) : fmtPct1(tr.low);
+    const high = unit === '$' ? fmtMoney(tr.high) : fmtPct1(tr.high);
+    parts.push(`${name}: ${val} (Target Range: ${low}–${high}) – ${verdictText}`);
+  };
+
+  linesFor('CPL', bm.cpl, '$', 'lower-is-better');
+  linesFor('CPC', bm.cpc, '$', 'lower-is-better');
+  linesFor('CR',  bm.cr,  '%', 'higher-is-better');
+
+  return parts.join('\n');
 }
+
+/* ===========================
+   INPUT PERSISTENCE
+   =========================== */
+function loadInputsFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveInputsToStorage() {
+  const payload = {
+    category: document.getElementById("category").value || null,
+    subcategory: document.getElementById("subcategory").value || null,
+    goal_cpl: document.getElementById("goal_cpl").value ? parseFloat(document.getElementById("goal_cpl").value) : null,
+    budget: document.getElementById("budget").value ? parseFloat(document.getElementById("budget").value) : null,
+    clicks: document.getElementById("clicks").value ? parseFloat(document.getElementById("clicks").value) : null,
+    leads: document.getElementById("leads").value ? parseFloat(document.getElementById("leads").value) : null
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+function bindPersistence() {
+  ['goal_cpl','budget','clicks','leads'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', saveInputsToStorage);
+    el.addEventListener('change', saveInputsToStorage);
+  });
+  document.getElementById('category').addEventListener('change', () => { saveInputsToStorage(); });
+  document.getElementById('subcategory').addEventListener('change', () => { saveInputsToStorage(); });
+}
+
+/* ===========================
+   META FETCH + FORM BUILD
+   =========================== */
+async function fetchMeta() {
+  const resultsSection = document.getElementById('results');
+  const catSel = document.getElementById("category");
+  const subSel = document.getElementById("subcategory");
+  try {
+    const res = await fetch(`${API}/benchmarks/meta`);
+    if (!res.ok) throw new Error(`API request failed with status: ${res.status}`);
+    const meta = await res.json();
+    if (!Array.isArray(meta) || meta.length === 0) throw new Error("API returned empty or invalid category data.");
+
+    const cats = [...new Set(meta.map(x => x.category))].sort();
+    catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+
+    function buildSubcats(cat, preferred) {
+      const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
+      subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+      if (preferred && subs.includes(preferred)) subSel.value = preferred;
+    }
+
+    // Rehydrate saved inputs now that we have options
+    const saved = loadInputsFromStorage();
+    if (saved?.category && cats.includes(saved.category)) {
+      catSel.value = saved.category;
+      buildSubcats(saved.category, saved.subcategory);
+    } else {
+      buildSubcats(catSel.value);
+    }
+
+    if (saved) {
+      if (saved.goal_cpl != null) document.getElementById('goal_cpl').value = saved.goal_cpl;
+      if (saved.budget != null)   document.getElementById('budget').value   = saved.budget;
+      if (saved.clicks != null)   document.getElementById('clicks').value   = saved.clicks;
+      if (saved.leads != null)    document.getElementById('leads').value    = saved.leads;
+    }
+
+    // Keep subcats in sync when category changes
+    catSel.addEventListener("change", e => {
+      buildSubcats(e.target.value);
+      saveInputsToStorage();
+    });
+
+    // ARIA state
+    resultsSection.setAttribute('aria-busy','false');
+  } catch (err) {
+    console.error("Could not load benchmark categories:", err);
+    catSel.innerHTML = `<option disabled selected>Error: Data unavailable</option>`;
+    subSel.innerHTML = `<option disabled selected>-</option>`;
+    document.getElementById('results').setAttribute('aria-busy','false');
+  }
+}
+
+/* ===========================
+   EXECUTION
+   =========================== */
+let lastPayload = null;
 
 async function runDiag() {
+  const resultsEl = document.getElementById("results");
+  resultsEl.style.display = "block";
+  resultsEl.setAttribute('aria-busy','true');
+
   const payload = {
     category: document.getElementById("category").value,
     subcategory: document.getElementById("subcategory").value,
@@ -914,18 +1065,39 @@ async function runDiag() {
     goal_cpl: document.getElementById("goal_cpl").value ? parseFloat(document.getElementById("goal_cpl").value) : null
   };
   lastPayload = payload;
+  saveInputsToStorage();
 
-  const res = await fetch(`${API}/diagnose`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) { alert(`Error ${res.status}: ${await res.text()}`); return; }
-  renderResults(await res.json());
+  try {
+    const res = await fetch(`${API}/diagnose`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      alert(`Error ${res.status}: ${t}`);
+      resultsEl.setAttribute('aria-busy','false');
+      return;
+    }
+    const data = await res.json();
+    renderResults(data);
+
+    // Enable copy + auto-scroll to results top for UX polish
+    document.getElementById('copySummaryBtn').disabled = false;
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Also move keyboard focus for accessibility
+    resultsEl.setAttribute('tabindex','-1');
+    resultsEl.focus({ preventScroll: true });
+
+  } catch (e) {
+    console.error(e);
+    alert("Network error running diagnostics.");
+  } finally {
+    resultsEl.setAttribute('aria-busy','false');
+  }
 }
 
 function renderResults(d) {
-  document.getElementById("results").style.display = "block";
   const bm = d.benchmarks || {};
 
   const metricsToRender = [
@@ -940,13 +1112,40 @@ function renderResults(d) {
       metric.data, metric.name, metric.unit, metric.dir, { hidePeer: true }
     );
   });
-  
+
   renderPrimaryStatusBlock(d);
   renderDiagnosis(d);
   renderScenarioBuilder(d);
+
+  // Wire copy summary to current result
+  const copyBtn = document.getElementById('copySummaryBtn');
+  copyBtn.onclick = async () => {
+    const text = buildCopySummary(d);
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = 'Copied';
+      setTimeout(() => { copyBtn.textContent = 'Copy Summary'; }, 1200);
+    } catch {
+      // Fallback if clipboard blocked
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      copyBtn.textContent = 'Copied';
+      setTimeout(() => { copyBtn.textContent = 'Copy Summary'; }, 1200);
+    }
+  };
 }
 
+/* ===========================
+   BOOT
+   =========================== */
+document.getElementById("footerYear").textContent = new Date().getFullYear();
 document.getElementById("runBtn").addEventListener("click", runDiag);
+document.getElementById("resetBtn").addEventListener("click", () => {
+  ['goal_cpl','budget','clicks','leads'].forEach(id => document.getElementById(id).value = '');
+  saveInputsToStorage();
+});
+bindPersistence();
 fetchMeta();
 </script>
 </body>
