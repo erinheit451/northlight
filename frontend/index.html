@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Northlight – Benchmark MVP</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root { --fg:#111; --muted:#666; --line:#e5e5e5; --ok:#ffb020; --good:#2ea043; --bad:#d93f0b; }
   body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; max-width: 960px; color: var(--fg); }
@@ -234,8 +235,97 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 4px;
 }
 </style>
+<!-- NL_HEADER_STYLES_START -->
+<style>
+  /* Scope reset + font strictly to the header to avoid site-wide changes */
+  header.header, header.header * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+  }
+
+  .header {
+      padding: 16px 40px;
+      border-bottom: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      position: relative;
+  }
+  .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, #cbd5e0 50%, transparent 100%);
+  }
+  .header-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      max-width: 1200px;
+      margin: 0 auto;
+      gap: 20px;
+  }
+  .brand-section { display: flex; flex-direction: column; justify-self: start; }
+  .brand-name { display: flex; align-items: baseline; margin-bottom: 2px; }
+  .company-name { font-weight: 800; font-size: 28px; color: #2d3748; letter-spacing: 1px; }
+  .beta-label { font-weight: 500; font-size: 12px; color: #f6ad55; margin-left: 4px; vertical-align: super; }
+  .tagline { font-weight: 400; font-size: 14px; color: #718096; margin-top: 0; }
+  .right-section { display: flex; flex-direction: column; justify-self: end; align-items: flex-end; gap: 2px; }
+  .beta-row { display: flex; align-items: center; gap: 8px; }
+  .feedback-row { display: flex; justify-content: flex-end; }
+  .beta-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #ebf8ff, #dbeafe);
+      border: 1px solid #60a5fa;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-weight: 600; font-size: 12px; color: #1e40af;
+      box-shadow: 0 2px 4px rgba(96, 165, 250, 0.15);
+  }
+  .beta-subtitle { font-weight: 400; font-size: 11px; color: #64748b; }
+  .feedback-link { font-weight: 500; font-size: 12px; color: #4299e1; text-decoration: none; transition: color 0.2s ease; }
+  .feedback-link:hover { color: #2b77cb; text-decoration: underline; }
+
+  @media (max-width: 768px) {
+      .header { padding: 16px 20px; }
+      .header-content { grid-template-columns: 1fr; gap: 8px; }
+      .right-section { align-items: flex-start; text-align: left; }
+      .company-name { font-size: 24px; }
+  }
+</style>
+<!-- NL_HEADER_STYLES_END -->
 </head>
 <body>
+<!-- NL_HEADER_START -->
+<header class="header">
+  <div class="header-content">
+    <div class="brand-section">
+      <div class="brand-name">
+        <span class="company-name">NORTHLIGHT</span>
+        <span class="beta-label">beta</span>
+      </div>
+      <div class="tagline">Turn data into daylight</div>
+    </div>
+    <div class="right-section">
+      <div class="beta-row">
+        <div class="beta-badge">
+          <span>🧪</span>
+          <span>Beta Access</span>
+        </div>
+      </div>
+      <div class="beta-subtitle">Free while we perfect things</div>
+      <div class="feedback-row">
+        <a href="mailto:erinrose451@gmail.com?subject=Northlight%20Beta%20Feedback" class="feedback-link">Send feedback</a>
+      </div>
+    </div>
+  </div>
+</header>
+<!-- NL_HEADER_END -->
+
   <h1>Benchmark MVP</h1>
 
   <div class="card">
