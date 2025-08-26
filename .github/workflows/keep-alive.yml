@@ -1,0 +1,15 @@
+# .github/workflows/keep-alive.yml
+
+name: Keep Service Alive
+
+on:
+  schedule:
+    # This runs the job every 10 minutes
+    - cron: '*/10 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping service URL
+        run: curl -s "https://northlight-wsgw.onrender.com/benchmarks/meta" > /dev/null
