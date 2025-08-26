@@ -235,6 +235,41 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 4px;
 }
 </style>
+<!-- NL_UI_STYLES_START -->
+<style>
+  /* Primary CTA button (non-global, opt-in via class) */
+  .run-button {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    box-shadow: 0 4px 14px rgba(59,130,246,.25);
+  }
+  .run-button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,.35); }
+  .run-button:active { transform: translateY(0); }
+  .run-button:focus-visible { outline: 3px solid rgba(59,130,246,.35); outline-offset: 2px; border-radius: 12px; }
+
+  /* Light, opt-in form polish without changing global inputs */
+  .form-label { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 8px; }
+  .form-input, .form-select {
+    padding: 12px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    background: #fff;
+    color: #374151;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .form-input:focus, .form-select:focus { outline: none; border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.12); }
+</style>
+<!-- NL_UI_STYLES_END -->
 <!-- NL_HEADER_STYLES_START -->
 <style>
   /* Scope reset + font strictly to the header to avoid site-wide changes */
@@ -330,21 +365,21 @@ input[type="range"]::-moz-range-thumb {
 
   <div class="card">
   <div class="row">
-    <div><label for="category">Category</label><select id="category"></select></div>
-    <div><label for="subcategory">Subcategory</label><select id="subcategory"></select></div>
+    <div><label for="category" class="form-label">Category</label><select id="category" class="form-select"></select></div>
+    <div><label for="subcategory" class="form-label">Subcategory</label><select id="subcategory" class="form-select"></select></div>
   </div>
 
   <div class="row">
-    <div><label for="goal_cpl">Goal CPL</label><input id="goal_cpl" type="number" step="0.01" /></div>
-    <div><label for="budget">Budget (period)</label><input id="budget" type="number" step="0.01" /></div>
+    <div><label for="goal_cpl" class="form-label">Goal CPL</label><input id="goal_cpl" type="number" step="0.01" class="form-input" /></div>
+    <div><label for="budget" class="form-label">Budget (period)</label><input id="budget" type="number" step="0.01" class="form-input" /></div>
   </div>
 
   <div class="row">
-    <div><label for="clicks">Clicks</label><input id="clicks" type="number" step="1" /></div>
-    <div><label for="leads">Leads</label><input id="leads" type="number" step="1" /></div>
+    <div><label for="clicks" class="form-label">Clicks</label><input id="clicks" type="number" step="1" class="form-input" /></div>
+    <div><label for="leads" class="form-label">Leads</label><input id="leads" type="number" step="1" class="form-input" /></div>
   </div>
 
-  <div style="margin-top:16px;"><button id="runBtn">Run Benchmark</button></div>
+  <div style="margin-top:16px;"><button id="runBtn" class="run-button">Run Benchmark</button></div>
 </div>
 
 
