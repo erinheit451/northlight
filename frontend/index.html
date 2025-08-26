@@ -235,6 +235,101 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 4px;
 }
 </style>
+<!-- NL_UI_STYLES_START -->
+<style>
+  /* Primary CTA button (opt-in) */
+  .run-button {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    box-shadow: 0 4px 14px rgba(59,130,246,.25);
+  }
+  .run-button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,.35); }
+  .run-button:active { transform: translateY(0); }
+  .run-button:focus-visible { outline: 3px solid rgba(59,130,246,.35); outline-offset: 2px; border-radius: 12px; }
+
+  /* Page section + title (opt-in) */
+  .tool-section {
+    padding: 60px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .tool-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 36px;
+    color: #2d3748;
+    margin-bottom: 48px;
+    text-align: center;
+  }
+
+  /* Form container + grids (opt-in) */
+  .form-container {
+    background: #fff;
+    border-radius: 16px;
+    padding: 48px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #f1f5f9;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 40px;
+  }
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 48px;
+  }
+  .button-container {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Gentle polish for labels/inputs (opt-in classes only) */
+  .form-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 12px;
+  }
+  .form-select, .form-input {
+    padding: 16px 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    background: white;
+    color: #374151;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .form-select:focus, .form-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.10);
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .tool-section { padding: 40px 20px; }
+    .form-container { padding: 32px 24px; margin: 0 16px; }
+    .form-grid, .input-grid { grid-template-columns: 1fr; gap: 24px; }
+    .tool-title { font-size: 28px; margin-bottom: 32px; }
+  }
+</style>
+<!-- NL_UI_STYLES_END -->
 <!-- NL_HEADER_STYLES_START -->
 <style>
   /* Scope reset + font strictly to the header to avoid site-wide changes */
@@ -274,7 +369,7 @@ input[type="range"]::-moz-range-thumb {
   .company-name { font-weight: 800; font-size: 28px; color: #2d3748; letter-spacing: 1px; }
   .beta-label { font-weight: 500; font-size: 12px; color: #f6ad55; margin-left: 4px; vertical-align: super; }
   .tagline { font-weight: 400; font-size: 14px; color: #718096; margin-top: 0; }
-  .right-section { display: flex; flex-direction: column; justify-self: end; align-items: flex-end; gap: 2px; }
+  .right-section { display: flex; flex-direction: column; justify-self: end; align-items: flex-end; gap: 8px; }
   .beta-row { display: flex; align-items: center; gap: 8px; }
   .feedback-row { display: flex; justify-content: flex-end; }
   .beta-badge {
@@ -286,7 +381,7 @@ input[type="range"]::-moz-range-thumb {
       font-weight: 600; font-size: 12px; color: #1e40af;
       box-shadow: 0 2px 4px rgba(96, 165, 250, 0.15);
   }
-  .beta-subtitle { font-weight: 400; font-size: 11px; color: #64748b; }
+  .beta-subtitle { font-weight: 400; font-size: 11px; color: #64748b; margin-top: 2px; }
   .feedback-link { font-weight: 500; font-size: 12px; color: #4299e1; text-decoration: none; transition: color 0.2s ease; }
   .feedback-link:hover { color: #2b77cb; text-decoration: underline; }
 
@@ -326,26 +421,48 @@ input[type="range"]::-moz-range-thumb {
 </header>
 <!-- NL_HEADER_END -->
 
-  <h1>Benchmark MVP</h1>
+<main class="tool-section">
+  <h1 class="tool-title">Benchmark Your Campaign</h1>
 
-  <div class="card">
-  <div class="row">
-    <div><label for="category">Category</label><select id="category"></select></div>
-    <div><label for="subcategory">Subcategory</label><select id="subcategory"></select></div>
+  <div class="form-container">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="category" class="form-label">Category</label>
+        <select id="category" class="form-select"></select>
+      </div>
+      <div class="form-group">
+        <label for="subcategory" class="form-label">Subcategory</label>
+        <select id="subcategory" class="form-select"></select>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="goal_cpl" class="form-label">Goal CPL</label>
+        <input id="goal_cpl" type="number" step="0.01" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label for="budget" class="form-label">Budget (period)</label>
+        <input id="budget" type="number" step="0.01" class="form-input" />
+      </div>
+    </div>
+
+    <div class="input-grid">
+      <div class="form-group">
+        <label for="clicks" class="form-label">Clicks</label>
+        <input id="clicks" type="number" step="1" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label for="leads" class="form-label">Leads</label>
+        <input id="leads" type="number" step="1" class="form-input" />
+      </div>
+    </div>
+
+    <div class="button-container">
+      <button id="runBtn" class="run-button">Run Benchmark</button>
+    </div>
   </div>
-
-  <div class="row">
-    <div><label for="goal_cpl">Goal CPL</label><input id="goal_cpl" type="number" step="0.01" /></div>
-    <div><label for="budget">Budget (period)</label><input id="budget" type="number" step="0.01" /></div>
-  </div>
-
-  <div class="row">
-    <div><label for="clicks">Clicks</label><input id="clicks" type="number" step="1" /></div>
-    <div><label for="leads">Leads</label><input id="leads" type="number" step="1" /></div>
-  </div>
-
-  <div style="margin-top:16px;"><button id="runBtn">Run Benchmark</button></div>
-</div>
+</main>
 
 
   <div id="results" class="card" style="display:none;">
