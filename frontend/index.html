@@ -298,6 +298,7 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* Gentle polish for labels/inputs (opt-in classes only) */
+  .form-group { display: flex; flex-direction: column; }
   .form-label {
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
@@ -314,6 +315,7 @@ input[type="range"]::-moz-range-thumb {
     background: white;
     color: #374151;
     transition: border-color .2s ease, box-shadow .2s ease;
+    min-height: 44px;
   }
   .form-select:focus, .form-input:focus {
     outline: none;
@@ -334,8 +336,6 @@ input[type="range"]::-moz-range-thumb {
 <style>
   /* Scope reset + font strictly to the header to avoid site-wide changes */
   header.header, header.header * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
       font-family: 'Montserrat', sans-serif;
   }
@@ -382,6 +382,7 @@ input[type="range"]::-moz-range-thumb {
       box-shadow: 0 2px 4px rgba(96, 165, 250, 0.15);
   }
   .beta-subtitle { font-weight: 400; font-size: 11px; color: #64748b; margin-top: 2px; }
+  header.header .beta-subtitle { margin-top: 8px; }
   .feedback-link { font-weight: 500; font-size: 12px; color: #4299e1; text-decoration: none; transition: color 0.2s ease; }
   .feedback-link:hover { color: #2b77cb; text-decoration: underline; }
 
@@ -478,18 +479,13 @@ input[type="range"]::-moz-range-thumb {
   </div>
 
 <script>
-// Default to the production API URL
-let API_BASE = 'https://northlight-wsgw.onrender.com'; // <-- Your PRODUCTION API URL
-
-// Check if the website's hostname is for development
-if (window.location.hostname === 'develop.northlight.pages.dev') {
-  // If it is, switch to the development API URL
-  API_BASE = 'https://northlight-api-dev.onrender.com'; // <-- Your DEVELOPMENT API URL
-}
-
-console.log('API is set to:', API_BASE);
-
-const API = API_BASE; // Keep existing API variable for compatibility
+const PROD_API = 'https://northlight-wsgw.onrender.com';
+const DEV_API  = 'https://northlight-api-dev.onrender.com';
+const host = window.location.hostname;
+// Treat develop.* and PR previews as dev
+const usingDevHost = host.includes('develop') || host.includes('pr-') || host.endsWith('.onrender.com');
+const API = usingDevHost ? DEV_API : PROD_API;
+console.log('API is set to:', API);
 let lastPayload = null;
 
 // ---------- UI helpers ----------
@@ -1019,17 +1015,31 @@ function renderScenarioBuilder(d) {
 
 // ---------- Main Execution ----------
 async function fetchMeta() {
-  const res = await fetch(`${API}/benchmarks/meta`);
-  const meta = await res.json();
-  const catSel = document.getElementById("category"), subSel = document.getElementById("subcategory");
-  const cats = [...new Set(meta.map(x => x.category))].sort();
-  catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
-  function buildSubcats(cat) {
-    const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
-    subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+  const catSel = document.getElementById("category");
+  const subSel = document.getElementById("subcategory");
+  try {
+    const res = await fetch(`${API}/benchmarks/meta`, { credentials: 'omit' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const meta = await res.json();
+    console.log('meta size:', Array.isArray(meta) ? meta.length : meta);
+
+    if (!Array.isArray(meta) || meta.length === 0) throw new Error('Empty meta');
+
+    const cats = [...new Set(meta.map(x => x.category))].sort();
+    catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+
+    function buildSubcats(cat) {
+      const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
+      subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+    }
+    buildSubcats(catSel.value || cats[0]);
+    catSel.addEventListener("change", e => buildSubcats(e.target.value));
+  } catch (err) {
+    console.error('fetchMeta failed:', err);
+    catSel.innerHTML = `<option disabled selected>— unavailable —</option>`;
+    subSel.innerHTML = `<option disabled selected>—</option>`;
+    // Optional: surface a small banner/toast here if you want.
   }
-  buildSubcats(catSel.value);
-  catSel.addEventListener("change", e => buildSubcats(e.target.value));
 }
 
 async function runDiag() {
