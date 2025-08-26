@@ -6,6 +6,9 @@ on:
   schedule:
     # This runs the job every 10 minutes
     - cron: '*/10 * * * *'
+  
+  # ADD THIS LINE TO ENABLE MANUAL RUNS
+  workflow_dispatch:
 
 jobs:
   ping:
