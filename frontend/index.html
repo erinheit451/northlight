@@ -361,7 +361,18 @@ input[type="range"]::-moz-range-thumb {
   </div>
 
 <script>
-const API = "https://northlight-wsgw.onrender.com";
+// Default to the production API URL
+let API_BASE = 'https://northlight-wsgw.onrender.com'; // <-- Your PRODUCTION API URL
+
+// Check if the website's hostname is for development
+if (window.location.hostname === 'develop.northlight.pages.dev') {
+  // If it is, switch to the development API URL
+  API_BASE = 'https://northlight-api-dev.onrender.com'; // <-- Your DEVELOPMENT API URL
+}
+
+console.log('API is set to:', API_BASE);
+
+const API = API_BASE; // Keep existing API variable for compatibility
 let lastPayload = null;
 
 // ---------- UI helpers ----------
