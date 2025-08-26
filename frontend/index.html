@@ -482,10 +482,11 @@ input[type="range"]::-moz-range-thumb {
 const PROD_API = 'https://northlight-wsgw.onrender.com';
 const DEV_API  = 'https://northlight-api-dev.onrender.com';
 const host = window.location.hostname;
-// Treat develop.* and PR previews as dev
-const usingDevHost = host.includes('develop') || host.includes('pr-') || host.endsWith('.onrender.com');
-const API = usingDevHost ? DEV_API : PROD_API;
-console.log('API is set to:', API);
+
+// This logic correctly identifies localhost, develop, and PR preview URLs as "development"
+const isDev = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('develop') || host.includes('pr-');
+const API = isDev ? DEV_API : PROD_API;
+console.log(`API endpoint set to: ${API}`);
 let lastPayload = null;
 
 // ---------- UI helpers ----------
@@ -1018,27 +1019,29 @@ async function fetchMeta() {
   const catSel = document.getElementById("category");
   const subSel = document.getElementById("subcategory");
   try {
-    const res = await fetch(`${API}/benchmarks/meta`, { credentials: 'omit' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(`${API}/benchmarks/meta`);
+    if (!res.ok) {
+        // This provides a clear error in the console if the API call fails
+        throw new Error(`API request failed with status: ${res.status}`);
+    }
     const meta = await res.json();
-    console.log('meta size:', Array.isArray(meta) ? meta.length : meta);
-
-    if (!Array.isArray(meta) || meta.length === 0) throw new Error('Empty meta');
-
+    if (!Array.isArray(meta) || meta.length === 0) {
+        throw new Error("API returned empty or invalid category data.");
+    }
     const cats = [...new Set(meta.map(x => x.category))].sort();
     catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
 
     function buildSubcats(cat) {
-      const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
-      subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
+        const subs = meta.filter(x => x.category === cat).map(x => x.subcategory).sort();
+        subSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join("");
     }
-    buildSubcats(catSel.value || cats[0]);
+    buildSubcats(catSel.value);
     catSel.addEventListener("change", e => buildSubcats(e.target.value));
   } catch (err) {
-    console.error('fetchMeta failed:', err);
-    catSel.innerHTML = `<option disabled selected>— unavailable —</option>`;
-    subSel.innerHTML = `<option disabled selected>—</option>`;
-    // Optional: surface a small banner/toast here if you want.
+    // This will log the error and update the UI to show that the data failed to load
+    console.error("Could not load benchmark categories:", err);
+    catSel.innerHTML = `<option disabled selected>Error: Data unavailable</option>`;
+    subSel.innerHTML = `<option disabled selected>-</option>`;
   }
 }
 
