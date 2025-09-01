@@ -10,13 +10,21 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
+from starlette.staticfiles import StaticFiles
 
+# --- Import ALL your routers ---
+# These were missing from your previous version
+from backend.routers import diagnose, export 
+# This is your new one
+from backend.routers.book import router as book_router
+
+# --- App Setup ---
 ROOT = Path(__file__).resolve().parent
 DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
 
 app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
-# Define the frontend URLs that are allowed to make requests
+# --- Middleware (CORS) ---
 ALLOWED_ORIGINS = [
     "https://northlight.pages.dev",         # Production frontend
     "https://develop.northlight.pages.dev", # Development frontend
@@ -27,10 +35,21 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,  # This MUST be True
+    allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# --- Include ALL API Routers ---
+app.include_router(diagnose.router) # Your original router
+app.include_router(export.router)   # Your original router
+app.include_router(book_router)     # Your new Book Health router
+
+# --- Static File Mounting ---
+# Mount the more specific path FIRST
+app.mount("/book", StaticFiles(directory=str(ROOT.parent / "frontend" / "book"), html=True), name="book")
+# Mount the general root path LAST
+app.mount("/", StaticFiles(directory=str(ROOT.parent / "frontend"), html=True), name="static")
 
 BENCH: Dict[str, Any] = {}
 TOL = 0.10  # 10% tolerance for banding

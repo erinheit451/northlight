@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m \"fix: implement P50→P75 bands and clamped recommendations\n\n- Add clamp() helper function\n- Change CPL/CPC bands to P50→P75 (median → bot25)  \n- Change CR band to P50→P75 (median → top25)\n- Clamp recommended CPL to realistic range\n- Add target_range to all metric evaluations (CPL/CPC/CR)\n- Replace old band_rate with band_rate_p50_p75 for CR\n\nThis ensures recommended CPL stays within typical range\nand provides consistent P50→P75 target bands for UI.\")"
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []
