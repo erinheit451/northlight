@@ -15,16 +15,16 @@ try:
     print(f"Found {len(snaps)} snapshot(s): {[d for d, _ in snaps]}")
     df = load_latest()
     snap_date = df["snapshot_date"].iloc[0] if len(df) else "n/a"
-    print(f"✅ Loaded {len(df)} rows from snapshot {snap_date}")
+    print(f"[OK] Loaded {len(df)} rows from snapshot {snap_date}")
 
     # Mark first campaign as open (safe demo)
     if len(df):
         sample_id = str(df["campaign_id"].iloc[0])
         upsert(sample_id, status="open")
-        print(f"✅ Ensured state exists for campaign {sample_id}")
+        print(f"[OK] Ensured state exists for campaign {sample_id}")
 
     print("Smoke test passed!")
 
 except Exception as e:
-    print(f"❌ Smoke test failed: {e}")
+    print(f"[FAIL] Smoke test failed: {e}")
     raise

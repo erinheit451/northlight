@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Health - Northlight</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+/* ===========================
+   NORTHLIGHT – Design System v1
+   (Inter for UI, Montserrat for logo)
+   =========================== */
+
+/* ---- Core tokens ---- */
+:root{
+  /* Legacy aliases (don't remove) */
+  --fg:#111;
+  --muted:#666;
+  --line:#e5e5e5;
+  --ok:#ffb020;
+  --good:#2ea043;
+  --bad:#d93f0b;
+
+  /* Grays */
+  --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0; --gray-300:#cbd5e1;
+  --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155; --gray-900:#0f172a;
+
+  /* Primary */
+  --primary-50:#eff6ff; --primary-500:#3b82f6; --primary-600:#2563eb; --primary-700:#1d4ed8;
+
+  /* Typography scale */
+  --text-xs:12px; --text-sm:14px; --text-base:16px; --text-lg:18px;
+  --text-xl:20px; --text-2xl:24px; --text-3xl:30px;
+
+  /* Spacing (8px base) */
+  --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-6:24px; --space-8:32px; --space-12:48px;
+
+  /* Radii */
+  --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
+}
+
+/* ---- Base ---- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  line-height:1.5; color:var(--fg); background:white;
+  margin:24px; max-width:1200px; margin:24px auto;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+
+/* Titles */
+h1{margin:0 0 var(--space-3)}
+h3{margin:0 0 var(--space-2)}
+
+/* Small utility text */
+.small{color:var(--gray-500); font-size:var(--text-xs)}
+
+/* Pills (preserve current look) */
+.pill{
+  display:inline-block; padding:4px var(--space-2); border-radius:999px;
+  font-size:var(--text-xs); font-weight:500; border:1px solid var(--line); margin-right:var(--space-2);
+}
+.pill.good{background:#ecfdf3;border-color:#bbf7d0;color:#065f46}
+.pill.ok{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.pill.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.pill.red{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.pill.green{background:#ecfdf3;border-color:#bbf7d0;color:#065f46}
+
+/* Cards */
+.card{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-6); margin:var(--space-4) 0;
+  box-shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);
+  transition:box-shadow .2s ease, transform .2s ease;
+}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08); transform:translateY(-1px)}
+
+/* Header (only logo uses Montserrat) */
+header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); background:rgba(255,255,255,.9);
+  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:relative}
+.header::after{content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent, #cbd5e0, transparent)}
+.header-content{display:flex; justify-content:space-between; align-items:center; max-width:1200px; margin:0 auto;}
+.brand-section{display:flex; flex-direction:column;}
+.brand-name{display:flex; align-items:baseline; margin-bottom:2px}
+.company-name{font-family:'Montserrat',sans-serif; font-weight:800; font-size:28px; color:#2d3748; letter-spacing:1px}
+.beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:4px; vertical-align:super}
+.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0; font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+
+/* Navigation */
+.nav-tabs{display:flex; gap:var(--space-2)}
+.nav-tab{
+  padding:var(--space-2) var(--space-4); border-radius:var(--radius-md);
+  font-size:var(--text-sm); font-weight:600; text-decoration:none; color:var(--gray-700);
+  border:1px solid var(--gray-200); background:#fff; cursor:pointer;
+}
+.nav-tab:hover{background:var(--gray-50)}
+.nav-tab.active{background:var(--primary-500); color:#fff; border-color:var(--primary-500)}
+
+/* Summary Cards */
+.summary-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--space-4); margin:var(--space-6) 0}
+.summary-card{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-5); text-align:center;
+}
+.summary-card.red{border-left:4px solid var(--bad)}
+.summary-card.green{border-left:4px solid var(--good)}
+.summary-number{font-size:var(--text-3xl); font-weight:700; margin-bottom:var(--space-2)}
+.summary-number.red{color:var(--bad)}
+.summary-number.green{color:var(--good)}
+.summary-label{font-size:var(--text-sm); color:var(--gray-600); font-weight:500}
+
+/* Filter Bar */
+.filter-bar{
+  background:var(--gray-50); border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-4); margin:var(--space-6) 0; display:flex; gap:var(--space-4); align-items:center; flex-wrap:wrap;
+}
+.filter-group{display:flex; flex-direction:column; gap:var(--space-2)}
+.filter-label{font-size:var(--text-xs); color:var(--gray-600); font-weight:600; text-transform:uppercase}
+.filter-select{
+  border:1px solid var(--gray-300); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3);
+  font-size:var(--text-sm); background:#fff; min-width:150px;
+}
+
+/* Table Styles */
+.campaign-table{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.campaign-table th{background:var(--gray-50); padding:var(--space-3) var(--space-4); text-align:left; font-weight:600; font-size:var(--text-sm); color:var(--gray-700); border-bottom:1px solid var(--gray-200)}
+.campaign-table td{padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--gray-100); font-size:var(--text-sm); vertical-align:middle;}
+.campaign-table tbody tr:hover{background:var(--gray-50)}
+
+.status-select{
+  border:1px solid var(--gray-300); border-radius:var(--radius-sm); padding:4px var(--space-2);
+  font-size:var(--text-xs); background:#fff; cursor:pointer;
+}
+
+/* Utility classes */
+.mt-6{margin-top:var(--space-6)}
+.mb-4{margin-bottom:var(--space-4)}
+.text-center{text-align:center}
+.font-bold{font-weight:700}
+
+/* Campaign row styling */
+.campaign-row{cursor:pointer; transition:all 0.2s ease}
+.campaign-row:hover{background:var(--gray-50)}
+.campaign-row.red{border-left:3px solid var(--bad)}
+.campaign-row.green{border-left:3px solid var(--good)}
+
+/* Expand/collapse */
+.expand-btn{
+  background:none; border:1px solid var(--gray-300); padding:var(--space-2) var(--space-4);
+  border-radius:var(--radius-md); cursor:pointer; font-size:var(--text-sm);
+}
+.expand-btn:hover{background:var(--gray-50)}
+
+/* Cell Component Styling */
+.cell-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.cell-main {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--gray-900);
+}
+.cell-subtext {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+}
+.badge.ok { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.badge.err { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* Gap display styling */
+.gap-display {
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+.gap-display.red { color: var(--bad); }
+.gap-display.green { color: var(--good); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="brand-section">
+                <div class="brand-name">
+                    <span class="company-name">NORTHLIGHT</span>
+                    <span class="beta-label">beta</span>
+                </div>
+                <p class="tagline">Turn data into daylight</p>
+            </div>
+            <nav class="nav-tabs">
+                <a href="/benchmark" class="nav-tab">Benchmark MVP</a>
+                <a href="/campaigns" class="nav-tab active">Campaign Health</a>
+            </nav>
+        </div>
+    </header>
+
+    <main style="margin-top: var(--space-8);">
+        <div style="text-align: center; margin-bottom: var(--space-8);">
+            <h1 style="font-size: 36px; font-weight: 700; color: #2d3748;">Campaign Health</h1>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-number" id="totalCampaigns">—</div>
+                <div class="summary-label">Total Campaigns</div>
+            </div>
+            <div class="summary-card red">
+                <div class="summary-number red" id="redCampaigns">—</div>
+                <div class="summary-label">Red Band</div>
+            </div>
+            <div class="summary-card green">
+                <div class="summary-number green" id="greenCampaigns">—</div>
+                <div class="summary-label">Green Band</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-number" id="budgetAtRisk">—</div>
+                <div class="summary-label">Budget at Risk</div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <div class="filter-label">Optimizer</div>
+                <select id="optimizerFilter" class="filter-select">
+                    <option value="">All Optimizers</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">Partner</div>
+                <select id="partnerFilter" class="filter-select">
+                    <option value="">All Partners</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">Status</div>
+                <select id="statusFilter" class="filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="diagnosing">Diagnosing</option>
+                    <option value="action_proposed">Action Proposed</option>
+                    <option value="client_review">Client Review</option>
+                    <option value="approved">Approved</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">Band</div>
+                <select id="bandFilter" class="filter-select">
+                    <option value="">All Bands</option>
+                    <option value="red">Red Only</option>
+                    <option value="green">Green Only</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Priority Queue Card -->
+        <div class="card">
+            <h3>Priority Queue <span class="pill red" id="priorityCount">Top 10</span></h3>
+            <p class="small mb-4">Highest priority red campaigns ranked by spend and urgency</p>
+            
+            <table class="campaign-table">
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th>Partner</th>
+                        <th>Optimizer</th>
+                        <th>Goal Status</th>
+                        <th>Target</th>
+                        <th>Current CPL</th>
+                        <th>Gap</th>
+                        <th>Budget</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="priorityTableBody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+            
+            <div class="text-center mt-6">
+                <button id="expandPriorityBtn" class="expand-btn">Show All Red Campaigns</button>
+            </div>
+        </div>
+    </main>
+
+<script>
+/* ============================
+ * Northlight – Campaign Health Production
+ * ============================ */
+
+const API = {
+  summary: () => fetch('/api/book/summary').then(r => r.json()),
+  all: () => fetch('/api/book/all').then(r => r.json()),
+  updateStatus: (campaign_id, status) =>
+    fetch(`/api/book/campaign/${campaign_id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_status: status })
+    }).then(r => r.json())
+};
+
+// State
+let allCampaigns = [];
+let facets = {};
+let currentView = 'priority';
+
+// Formatters
+const fmtMoney0 = x => (x == null || isNaN(x)) ? '—'
+  : '$' + Number(x).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmtMoney2 = x => (x == null || isNaN(x)) ? '—'
+  : '$' + Number(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtPct0 = x => (x == null || isNaN(x)) ? '—'
+  : (Number(x) * 100).toFixed(0) + '%';
+
+// Goal/Target Logic
+const GOAL_TOL = 0.05;
+
+function getOriginalGoal(row) {
+  return row.goal_cpl_original ?? row.goal_cpl ?? null;
+}
+
+function computeWorkingTarget(row) {
+  if (row.functional_target != null) return row.functional_target;
+  if (row.working_target != null) return row.working_target;
+  if (row.recommended_goal != null) return row.recommended_goal;
+  if (row.effective_target != null) return row.effective_target;
+  if (row.bsc_cpl_avg != null) return row.bsc_cpl_avg;
+  if (row.goal_valid && row.goal_cpl != null) return row.goal_cpl;
+  return null;
+}
+
+function withinTol(a, b, tol = GOAL_TOL) {
+  if (a == null || b == null || !isFinite(a) || !isFinite(b) || b <= 0) return false;
+  return Math.abs(Number(a) - Number(b)) / Number(b) <= tol;
+}
+
+function isSubstitution(row) {
+  const og = Number(getOriginalGoal(row));
+  const tgt = Number(computeWorkingTarget(row));
+  if (!isFinite(tgt) || tgt <= 0) return false;
+  if (!isFinite(og) || og <= 0) return true;
+  return !withinTol(og, tgt, GOAL_TOL);
+}
+
+function isGoalInvalid(row) {
+  if (typeof row.goal_valid === 'boolean') return !row.goal_valid;
+  const og = Number(getOriginalGoal(row));
+  const tgt = Number(computeWorkingTarget(row));
+  if (!isFinite(og) || og <= 0) return true;
+  if (!isFinite(tgt) || tgt <= 0) return false;
+  return !withinTol(og, tgt, GOAL_TOL);
+}
+
+function computeOverTargetPct(row) {
+  const target = Number(computeWorkingTarget(row));
+  const cpl = Number(row.running_cid_cpl);
+  if (!isFinite(target) || target <= 0 || !isFinite(cpl)) return null;
+  return (cpl / target) - 1;
+}
+
+// Cell renderers
+function renderCampaignCell(row) {
+  return `
+    <div class="cell-content">
+      <div class="cell-main">${row.campaign_id}</div>
+      <div class="cell-subtext">${row.advertiser_name || '—'}</div>
+    </div>`;
+}
+
+function renderGoalCell(row) {
+  return isGoalInvalid(row)
+    ? `<span class="badge err">✖ Needs Repair</span>`
+    : `<span class="badge ok">✓ Valid</span>`;
+}
+
+function renderTargetCell(row) {
+  const tgt = computeWorkingTarget(row);
+  const og = getOriginalGoal(row);
+  let sub = '';
+
+  if ((og == null || !isFinite(Number(og)) || Number(og) <= 0) &&
+      (row.functional_target != null || row.recommended_goal != null || row.bsc_cpl_avg != null)) {
+    sub = `<div class="cell-subtext">(using 66th Percentile)</div>`;
+  } else if (isSubstitution(row)) {
+    sub = `<div class="cell-subtext">Subbed (was ${fmtMoney0(og)})</div>`;
+  }
+
+  return `
+    <div class="cell-content">
+      <div class="cell-main">${fmtMoney0(tgt)}</div>
+      ${sub}
+    </div>`;
+}
+
+function renderCplCell(row) {
+  return `<div class="cell-main">${fmtMoney2(row.running_cid_cpl)}</div>`;
+}
+
+function renderGapCell(row) {
+  const pct = computeOverTargetPct(row);
+  if (pct === null) return '—';
+  const isOver = pct > 0;
+  const cls = isOver ? 'red' : 'green';
+  const dir = isOver ? 'over' : 'under';
+  return `<div class="gap-display ${cls}">${fmtPct0(Math.abs(pct))} ${dir}</div>`;
+}
+
+function renderBudgetCell(row) {
+  const budget = row.campaign_budget ?? row.amount_spent ?? null;
+  return `<div class="cell-main">${fmtMoney0(budget)}</div>`;
+}
+
+function createStatusDropdown(c) {
+  const statuses = ["new", "diagnosing", "action_proposed", "client_review", "approved", "monitoring"];
+  const opts = statuses.map(s =>
+    `<option value="${s}" ${((c.status||'new')===s)?'selected':''}>${s.replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase())}</option>`
+  ).join('');
+  return `<select class="status-select" data-campaign-id="${c.campaign_id}">${opts}</select>`;
+}
+
+// Table rendering
+function renderPriorityTable() {
+  const filters = {
+    optimizer: document.getElementById('optimizerFilter').value,
+    partner: document.getElementById('partnerFilter').value,
+    status: document.getElementById('statusFilter').value,
+    band: document.getElementById('bandFilter').value,
+  };
+
+  const filtered = allCampaigns.filter(c =>
+    (!filters.optimizer || c.optimizer === filters.optimizer) &&
+    (!filters.partner || c.bid_name === filters.partner) &&
+    (!filters.status || (c.status || 'new') === filters.status) &&
+    (!filters.band || (String(c.band||'').toLowerCase() === filters.band))
+  );
+
+  const limit = currentView === 'priority' ? 10 : filtered.length;
+  const rows = filtered.slice(0, limit);
+
+  const tbody = document.getElementById('priorityTableBody');
+  tbody.innerHTML = rows.map(row => `
+    <tr class="campaign-row ${String(row.band || '').toLowerCase()}">
+      <td>${renderCampaignCell(row)}</td>
+      <td>${row.bid_name || '—'}</td>
+      <td>${row.optimizer || '—'}</td>
+      <td>${renderGoalCell(row)}</td>
+      <td>${renderTargetCell(row)}</td>
+      <td>${renderCplCell(row)}</td>
+      <td>${renderGapCell(row)}</td>
+      <td>${renderBudgetCell(row)}</td>
+      <td>${createStatusDropdown(row)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('priorityCount').textContent =
+    currentView === 'priority' ? `Top ${rows.length}` : `${filtered.length} Campaigns`;
+}
+
+async function refreshAll() {
+  try {
+    const [summary, allData] = await Promise.all([API.summary(), API.all()]);
+
+    allCampaigns = allData.sort((a,b) => (b.priority_score || 0) - (a.priority_score || 0));
+    facets = summary.facets || {};
+
+    document.getElementById('totalCampaigns').textContent = summary.counts.total_scored;
+    document.getElementById('redCampaigns').textContent = summary.counts.red;
+    document.getElementById('greenCampaigns').textContent = summary.counts.green;
+    document.getElementById('budgetAtRisk').textContent = fmtMoney0(summary.budget_at_risk);
+
+    const redPct = summary.counts.total_scored ? Math.round((summary.counts.red / summary.counts.total_scored) * 100) : 0;
+    document.querySelector('#redCampaigns + .summary-label').textContent = `Red Band (${redPct}%)`;
+
+    populateFilters();
+    renderPriorityTable();
+  } catch (e) {
+    console.error('Failed to refresh data:', e);
+  }
+}
+
+function populateFilters() {
+  const optSel = document.getElementById('optimizerFilter');
+  const parSel = document.getElementById('partnerFilter');
+  if (optSel.dataset.filled) return;
+
+  const fill = (sel, items, label) => {
+    sel.innerHTML = `<option value="">All ${label}</option>` +
+      (items || []).map(x => `<option value="${x}">${x}</option>`).join('');
+  };
+  fill(optSel, facets.optimizers, 'Optimizers');
+  fill(parSel, facets.partners, 'Partners');
+
+  optSel.dataset.filled = '1';
+}
+
+function setupEventListeners() {
+  document.querySelectorAll('.filter-select').forEach(sel =>
+    sel.addEventListener('change', renderPriorityTable)
+  );
+
+  document.getElementById('expandPriorityBtn').addEventListener('click', (e) => {
+    currentView = (currentView === 'priority') ? 'full' : 'priority';
+    e.target.textContent = currentView === 'priority' ? 'Show All Red Campaigns' : 'Show Top 10 Only';
+    renderPriorityTable();
+  });
+
+  document.getElementById('priorityTableBody').addEventListener('change', async (e) => {
+    if (!e.target.matches('.status-select')) return;
+    const id = e.target.dataset.campaignId;
+    const val = e.target.value;
+    try {
+      await API.updateStatus(id, val);
+      const row = allCampaigns.find(r => String(r.campaign_id) === String(id));
+      if (row) row.status = val;
+      e.target.style.background = 'var(--primary-50)';
+      setTimeout(() => e.target.style.background = '#fff', 450);
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    }
+  });
+}
+
+function initialize() {
+  setupEventListeners();
+  refreshAll();
+}
+
+initialize();
+</script>
+
+</body>
+</html>
