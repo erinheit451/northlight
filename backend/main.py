@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 import math, json
 from io import BytesIO
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
@@ -13,10 +13,9 @@ from pptx.dml.color import RGBColor
 from starlette.staticfiles import StaticFiles
 
 # --- Import ALL your routers ---
-# These were missing from your previous version
-from backend.routers import diagnose, export 
-# This is your new one
+from backend.routers import diagnose, export
 from backend.routers.book import router as book_router
+from backend.routers.sales import router as sales_router # <-- 1. ADD THIS LINE
 
 # --- App Setup ---
 ROOT = Path(__file__).resolve().parent
@@ -26,10 +25,11 @@ app = FastAPI(title="Northlight Benchmarks API", version="0.6.0")
 
 # --- Middleware (CORS) ---
 ALLOWED_ORIGINS = [
-    "https://northlight.pages.dev",         # Production frontend
+    "https://northlight.pages.dev",       # Production frontend
     "https://develop.northlight.pages.dev", # Development frontend
     "http://localhost",
-    "http://127.0.0.1:5500"                  # For local testing
+    "http://127.0.0.1:8000",             # Add this for uvicorn
+    "http://127.0.0.1:5500"                # For local testing
 ]
 
 app.add_middleware(
@@ -41,13 +41,15 @@ app.add_middleware(
 )
 
 # --- Include ALL API Routers ---
-app.include_router(diagnose.router) # Your original router
-app.include_router(export.router)   # Your original router
-app.include_router(book_router)     # Your new Book Health router
+app.include_router(diagnose.router)
+app.include_router(export.router)
+app.include_router(book_router)
+app.include_router(sales_router)   # <-- 2. ADD THIS LINE
 
 # --- Static File Mounting ---
-# Mount the more specific path FIRST
+# Mount the most specific paths FIRST
 app.mount("/book", StaticFiles(directory=str(ROOT.parent / "frontend" / "book"), html=True), name="book")
+app.mount("/growth", StaticFiles(directory=str(ROOT.parent / "frontend" / "growth"), html=True), name="growth") # <-- 3. ADD THIS LINE
 # Mount the general root path LAST
 app.mount("/", StaticFiles(directory=str(ROOT.parent / "frontend"), html=True), name="static")
 

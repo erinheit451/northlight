@@ -1,0 +1,51 @@
+[
+  {
+    "playbook_id": "PB_S1_DASH",
+    "name": "Add Dash/Chat",
+    "type": "UPSELL",
+    "triggers": {
+      "all": [
+        { "product": { "has_any": ["SEARCH"], "missing_all": ["DASH"] } },
+        { "account": { "saturation_count_lte": 1 } },
+        { "performance": { "any_product_green": true } }
+      ]
+    },
+    "pitch": { "headline": "Add Dash to capture and convert inbound calls/texts from SEM." }
+  },
+  {
+    "playbook_id": "PB_S1_SEO",
+    "name": "Add SEO",
+    "type": "UPSELL",
+    "triggers": {
+      "all": [
+        { "product": { "has_any": ["SEARCH"], "missing_all": ["SEO"] } },
+        { "account": { "saturation_count_lte": 1 } },
+        { "performance": { "any_product_green": true } }
+      ]
+    },
+    "pitch": { "headline": "Add SEO to build a durable, non-paid lead source." }
+  },
+  {
+    "playbook_id": "PB_LSA_HS",
+    "name": "Add Local Service Ads",
+    "type": "UPSELL",
+    "triggers": {
+      "all": [
+        { "product": { "missing_all": ["LSA"] } },
+        { "vertical": { "category_in": ["Home Services"] } }
+      ]
+    },
+    "pitch": { "headline": "Capture high-intent local jobs with Google's LSA program." }
+  },
+  {
+    "playbook_id": "PB_BUDGET_UP",
+    "name": "Increase Budget",
+    "type": "UPSELL",
+    "triggers": {
+      "all": [
+        { "performance": { "cpl_under_goal_pct_gte": 0.30 } }
+      ]
+    },
+    "pitch": { "headline": "Increase budget on campaigns with CPL 30%+ better than the goal." }
+  }
+]

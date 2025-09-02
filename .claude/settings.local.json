@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(mv:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

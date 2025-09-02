@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growth Opportunities - Northlight</title>
+    <!-- Your main stylesheet and the growth-specific styles will be loaded by the app -->
+    <link rel="stylesheet" href="../styles.css"> 
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="brand-section">
+                <div class="brand-name">
+                    <span class="company-name">NORTHLIGHT</span>
+                    <span class="beta-label">beta</span>
+                </div>
+                <p class="tagline">Turn data into daylight</p>
+            </div>
+            <nav class="nav-tabs">
+                <a href="/benchmark" class="nav-tab">Benchmark MVP</a>
+                <a href="/book" class="nav-tab">Campaign Health</a>
+                <a href="/growth" class="nav-tab active">Growth Opportunities</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="app-container" style="margin-top: var(--space-8);">
+        <div id="loadingState" class="centered-message">
+            <p>Loading Growth Opportunities...</p>
+        </div>
+        <div id="errorState" class="hidden centered-message">
+            <p>Could not load data. Please check the backend service and try again.</p>
+        </div>
+
+        <div id="overviewPage" class="hidden">
+            <div style="text-align: center; margin-bottom: var(--space-8);">
+                <h1 style="font-size: 36px; font-weight: 700; color: #2d3748;">Growth Opportunities</h1>
+            </div>
+
+            <!-- Filter: View As (GM selector) -->
+            <div class="filter-bar" style="margin-bottom: 1rem; text-align: center;">
+                <label for="gmSelector" style="font-weight: bold; margin-right: 0.5rem;">View As:</label>
+                <select id="gmSelector">
+                    <option value="all">All GMs</option>
+                </select>
+            </div>
+
+            <!-- Summary section -->
+            <div class="new-summary-container">
+                <div class="summary-main-metrics">
+                    <div class="summary-card">
+                        <div class="summary-number" id="activePartners">—</div>
+                        <div class="summary-label">Active Partners</div>
+                        <div class="small">Agencies managing advertisers</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-number" id="totalAdvertisers">—</div>
+                        <div class="summary-label">Total Advertisers</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-number" id="totalCampaigns">—</div>
+                        <div class="summary-label">Total Campaigns</div>
+                    </div>
+                    <div class="summary-card high">
+                        <div class="summary-number high" id="greenCampaigns">—</div>
+                        <div class="summary-label">Green Band Campaigns</div>
+                    </div>
+                    <div class="summary-card opportunity">
+                        <div class="summary-number opportunity" id="saturationRate">—</div>
+                        <div class="summary-label">Saturation Rate</div>
+                        <div class="small">Multi-product advertisers</div>
+                    </div>
+                </div>
+                <div class="summary-product-breakdown card">
+                    <h3>Product Composition</h3>
+                    <div id="productBreakdown">
+                        <!-- Product list will be populated by script.js -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Partner Expansion Targets</h3>
+                <p class="small" style="margin-bottom: var(--space-6);">Partners are sorted by expansion opportunity. Click a partner to see advertiser details.</p>
+                <div id="partnerGrid" class="partner-grid"></div>
+            </div>
+        </div>
+
+        <div id="partnerDetailPage" class="hidden">
+            <button class="back-btn" id="backButton">← Back to All Partners</button>
+            <div class="breadcrumb">
+                <a href="#" id="breadcrumbHome">Growth Opportunities</a> / <span id="partnerBreadcrumb"></span>
+            </div>
+            <div style="margin-bottom: var(--space-6);">
+                <h1 style="font-size: 32px; font-weight: 700; color: #2d3748;" id="partnerTitle"></h1>
+            </div>
+            <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-6);">
+                <div class="summary-card"><div class="summary-number" id="partnerTotalAdvertisers">—</div><div class="summary-label">Total Advertisers</div></div>
+                <div class="summary-card opportunity"><div class="summary-number opportunity" id="partnerSingleProduct">—</div><div class="summary-label">Single Product</div></div>
+                <div class="summary-card high"><div class="summary-number high" id="partnerGreenSingles">—</div><div class="summary-label">Green Singles</div></div>
+                <div class="summary-card"><div class="summary-number" id="partnerTotalSpend">—</div><div class="summary-label">Monthly Spend</div></div>
+            </div>
+            <div class="card">
+                <h3>Advertiser Breakdown</h3>
+                <p class="small" style="margin-bottom: var(--space-6);">Advertisers sorted by expansion opportunity score.</p>
+                <table class="advertiser-table">
+                    <thead>
+                        <tr>
+                            <th>Advertiser</th>
+                            <th>Active Products</th>
+                            <th>Monthly Spend</th>
+                            <th>Recommended Plays</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="advertiserTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- This links to the external JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
