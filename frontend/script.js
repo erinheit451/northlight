@@ -310,13 +310,13 @@ function renderDiagnosis(d) {
   if ((input.leads === 0 && (input.clicks || 0) >= 100) || crSuspicious) {
     el.innerHTML = createDiagnosisCard('bad', '🚨 Verify Tracking',
       (input.leads === 0) ? 'Clicks but zero conversions. Likely tracking failure.' : 'Suspiciously high CR. You may be counting non-lead events.',
-      ['Fire a test conversion; verify thank-you tag/pixel.', 'Confirm you're counting qualified leads only.']);
+      ['Fire a test conversion; verify thank-you tag/pixel.', 'Confirm you are counting qualified leads only.']);
     return;
   }
 
   if (input.budget != null && input.budget < 500) {
     el.innerHTML = createDiagnosisCard('bad', '💰 Budget Too Low',
-      'Under $500 isn't enough signal. Increase budget or <strong>Run Grader</strong> to find the right budget.');
+      'Under $500 is not enough signal. Increase budget or <strong>Run Grader</strong> to find the right budget.');
     return;
   }
 
