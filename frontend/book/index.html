@@ -192,6 +192,29 @@ header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); backgr
 }
 .gap-display.red { color: var(--bad); }
 .gap-display.green { color: var(--good); }
+
+/* Debug styling */
+.debug-info {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    z-index: 1000;
+    max-width: 300px;
+}
+.debug-success {
+    background: #ecfdf3;
+    color: #065f46;
+    border: 1px solid #bbf7d0;
+}
+.debug-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
     </style>
 </head>
 <body>
@@ -205,11 +228,14 @@ header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); backgr
                 <p class="tagline">Turn data into daylight</p>
             </div>
             <nav class="nav-tabs">
-                <a href="/benchmark" class="nav-tab">Benchmark MVP</a>
-                <a href="/campaigns" class="nav-tab active">Campaign Health</a>
+                <a href="/" class="nav-tab">Benchmark MVP</a>
+                <a href="/book" class="nav-tab active">Campaign Health</a>
             </nav>
         </div>
     </header>
+
+    <!-- Debug info -->
+    <div class="debug-info" id="debugInfo">Loading environment...</div>
 
     <main style="margin-top: var(--space-8);">
         <div style="text-align: center; margin-bottom: var(--space-8);">
@@ -303,18 +329,125 @@ header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); backgr
 
 <script>
 /* ============================
- * Northlight – Campaign Health Production
+ * Northlight – Campaign Health with Full Environment Detection
  * ============================ */
 
+// Environment Detection
+const host = window.location.hostname;
+const protocol = window.location.protocol;
+const port = window.location.port;
+
+// API Configuration for different environments
+let API_BASE;
+let environment;
+
+if (host.includes('localhost') || host.includes('127.0.0.1')) {
+  // Local development - use same host to avoid CORS
+  API_BASE = `${protocol}//${host}${port ? ':' + port : ''}`;
+  environment = 'LOCAL';
+} else if (host.includes('develop') || host.includes('pr-')) {
+  // Development/staging environment
+  API_BASE = 'https://northlight-api-dev.onrender.com';
+  environment = 'DEVELOP';
+} else if (host.includes('northlight.pages.dev')) {
+  // Production environment
+  API_BASE = 'https://northlight-wsgw.onrender.com';
+  environment = 'PRODUCTION';
+} else {
+  // Fallback to production
+  API_BASE = 'https://northlight-wsgw.onrender.com';
+  environment = 'FALLBACK';
+}
+
+// Debug info update
+const debugEl = document.getElementById('debugInfo');
+debugEl.innerHTML = `
+  <strong>Environment:</strong> ${environment}<br>
+  <strong>Host:</strong> ${host}<br>
+  <strong>API:</strong> ${API_BASE}<br>
+  <strong>Status:</strong> Connecting...
+`;
+
+console.log(`Campaign Health Environment Detection:`);
+console.log(`- Host: ${host}`);
+console.log(`- Environment: ${environment}`);
+console.log(`- API Base: ${API_BASE}`);
+
+// API Configuration with improved error handling
 const API = {
-  summary: () => fetch('/api/book/summary').then(r => r.json()),
-  all: () => fetch('/api/book/all').then(r => r.json()),
-  updateStatus: (campaign_id, status) =>
-    fetch(`/api/book/campaign/${campaign_id}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ new_status: status })
-    }).then(r => r.json())
+  summary: async () => {
+    const url = `${API_BASE}/api/book/summary`;
+    console.log('Fetching summary from:', url);
+    
+    try {
+      const response = await fetch(url);
+      console.log('Summary response status:', response.status);
+      console.log('Summary response headers:', response.headers);
+      
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('Summary API error response:', responseText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const responseText = await response.text();
+      console.log('Summary raw response:', responseText.substring(0, 200));
+      
+      const data = JSON.parse(responseText);
+      console.log('Summary data received:', data);
+      return data;
+    } catch (error) {
+      console.error('Summary API error:', error);
+      throw error;
+    }
+  },
+  
+  all: async () => {
+    const url = `${API_BASE}/api/book/all`;
+    console.log('Fetching all campaigns from:', url);
+    
+    try {
+      const response = await fetch(url);
+      console.log('All campaigns response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('All campaigns data received, count:', data.length);
+      return data;
+    } catch (error) {
+      console.error('All campaigns API error:', error);
+      throw error;
+    }
+  },
+  
+  updateStatus: async (campaign_id, status) => {
+    const url = `${API_BASE}/api/book/campaign/${campaign_id}/status`;
+    console.log('Updating status:', { campaign_id, status, url });
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_status: status })
+      });
+      
+      console.log('Update status response:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Status updated successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Update status error:', error);
+      throw error;
+    }
+  }
 };
 
 // State
@@ -476,7 +609,14 @@ function renderPriorityTable() {
 
 async function refreshAll() {
   try {
+    console.log('Starting data refresh...');
+    debugEl.innerHTML = debugEl.innerHTML.replace('Connecting...', 'Loading data...');
+    
     const [summary, allData] = await Promise.all([API.summary(), API.all()]);
+
+    console.log('Data received successfully');
+    console.log('Summary:', summary);
+    console.log('All campaigns count:', allData.length);
 
     allCampaigns = allData.sort((a,b) => (b.priority_score || 0) - (a.priority_score || 0));
     facets = summary.facets || {};
@@ -491,60 +631,115 @@ async function refreshAll() {
 
     populateFilters();
     renderPriorityTable();
-  } catch (e) {
-    console.error('Failed to refresh data:', e);
+    
+    // Success feedback
+    debugEl.innerHTML = `
+      <strong>✓ Connected Successfully</strong><br>
+      <strong>Environment:</strong> ${environment}<br>
+      <strong>API:</strong> ${API_BASE}<br>
+      <strong>Campaigns:</strong> ${allData.length}
+    `;
+    debugEl.className = 'debug-info debug-success';
+    
+    // Hide debug info after successful load
+    setTimeout(() => {
+      debugEl.style.display = 'none';
+    }, 5000);
+    
+  } catch (error) {
+    console.error('Failed to refresh data:', error);
+    
+    debugEl.innerHTML = `
+      <strong>✗ Connection Failed</strong><br>
+      <strong>Environment:</strong> ${environment}<br>
+      <strong>API:</strong> ${API_BASE}<br>
+      <strong>Error:</strong> ${error.message}<br>
+      <small>Check console for details</small>
+    `;
+    debugEl.className = 'debug-info debug-error';
   }
 }
 
 function populateFilters() {
-  const optSel = document.getElementById('optimizerFilter');
-  const parSel = document.getElementById('partnerFilter');
-  if (optSel.dataset.filled) return;
-
-  const fill = (sel, items, label) => {
-    sel.innerHTML = `<option value="">All ${label}</option>` +
-      (items || []).map(x => `<option value="${x}">${x}</option>`).join('');
-  };
-  fill(optSel, facets.optimizers, 'Optimizers');
-  fill(parSel, facets.partners, 'Partners');
-
-  optSel.dataset.filled = '1';
+  // Populate filter dropdowns
+  const optimizerSelect = document.getElementById('optimizerFilter');
+  const partnerSelect = document.getElementById('partnerFilter');
+  
+  // Clear existing options (except "All" option)
+  optimizerSelect.innerHTML = '<option value="">All Optimizers</option>';
+  partnerSelect.innerHTML = '<option value="">All Partners</option>';
+  
+  if (facets.optimizers) {
+    facets.optimizers.forEach(opt => {
+      if (opt && opt !== 'Unassigned') {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        optimizerSelect.appendChild(option);
+      }
+    });
+  }
+  
+  if (facets.partners) {
+    facets.partners.forEach(partner => {
+      if (partner) {
+        const option = document.createElement('option');
+        option.value = partner;
+        option.textContent = partner;
+        partnerSelect.appendChild(option);
+      }
+    });
+  }
 }
 
-function setupEventListeners() {
-  document.querySelectorAll('.filter-select').forEach(sel =>
-    sel.addEventListener('change', renderPriorityTable)
-  );
-
-  document.getElementById('expandPriorityBtn').addEventListener('click', (e) => {
-    currentView = (currentView === 'priority') ? 'full' : 'priority';
-    e.target.textContent = currentView === 'priority' ? 'Show All Red Campaigns' : 'Show Top 10 Only';
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Filter change handlers
+  document.getElementById('optimizerFilter').addEventListener('change', renderPriorityTable);
+  document.getElementById('partnerFilter').addEventListener('change', renderPriorityTable);
+  document.getElementById('statusFilter').addEventListener('change', renderPriorityTable);
+  document.getElementById('bandFilter').addEventListener('change', renderPriorityTable);
+  
+  // Expand button handler
+  document.getElementById('expandPriorityBtn').addEventListener('click', () => {
+    if (currentView === 'priority') {
+      currentView = 'all';
+      document.getElementById('expandPriorityBtn').textContent = 'Show Top 10 Only';
+    } else {
+      currentView = 'priority';
+      document.getElementById('expandPriorityBtn').textContent = 'Show All Red Campaigns';
+    }
     renderPriorityTable();
   });
-
-  document.getElementById('priorityTableBody').addEventListener('change', async (e) => {
-    if (!e.target.matches('.status-select')) return;
-    const id = e.target.dataset.campaignId;
-    const val = e.target.value;
-    try {
-      await API.updateStatus(id, val);
-      const row = allCampaigns.find(r => String(r.campaign_id) === String(id));
-      if (row) row.status = val;
-      e.target.style.background = 'var(--primary-50)';
-      setTimeout(() => e.target.style.background = '#fff', 450);
-    } catch (err) {
-      console.error('Failed to update status:', err);
+  
+  // Status dropdown change handler (using event delegation)
+  document.addEventListener('change', async (e) => {
+    if (e.target.classList.contains('status-select')) {
+      const campaignId = e.target.dataset.campaignId;
+      const newStatus = e.target.value;
+      
+      try {
+        await API.updateStatus(campaignId, newStatus);
+        console.log(`Updated campaign ${campaignId} status to ${newStatus}`);
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        // Revert the dropdown to previous value
+        e.target.value = e.target.dataset.previousValue || 'new';
+      }
     }
   });
-}
-
-function initialize() {
-  setupEventListeners();
+  
+  // Store previous values for status dropdowns
+  document.addEventListener('focus', (e) => {
+    if (e.target.classList.contains('status-select')) {
+      e.target.dataset.previousValue = e.target.value;
+    }
+  });
+  
+  // Initialize the application
   refreshAll();
-}
+});
 
-initialize();
 </script>
-
 </body>
 </html>
