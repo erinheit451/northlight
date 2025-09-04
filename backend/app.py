@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import APP_TITLE, APP_VERSION, ALLOW_ORIGINS
 from backend.routers import diagnose, export
+from backend.routers.book import router as book_router
 from backend.data.loader import init_data, data_meta, get_bench
 
 # Anchors cache is optional (Phase 2). Import defensively so Phase 1 still runs.
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     # API routes
     app.include_router(diagnose.router)
     app.include_router(export.router)
+    app.include_router(book_router)
 
     return app
 
