@@ -6,7 +6,7 @@ import numpy as np
 from functools import lru_cache
 import time
 
-from backend.book.ingest import load_latest
+from backend.book.ingest import load_health_data
 from backend.book import rules
 from backend.book import state
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/book", tags=["book"])
 @lru_cache(maxsize=1)
 def get_cached_data(view: str, timestamp: int) -> pd.DataFrame:
     """Cache MAID-level scored accounts; timestamp forces a refresh every 10 min."""
-    campaign_df = load_latest()
+    campaign_df = load_health_data()
 
     # Merge campaign workflow state
     all_states = state._load()
@@ -41,7 +41,7 @@ def get_cached_data(view: str, timestamp: int) -> pd.DataFrame:
         'age_risk','lead_risk','lead_risk_reason','cpl_risk','util_risk','structure_risk',
         'total_risk_score','value_score','final_priority_score','priority_tier',
         'primary_issue','business_category','bid_name','campaign_name','campaign_id',
-        'running_cid_cpl','effective_cpl_goal','is_cpl_goal_missing'
+        'running_cid_cpl','effective_cpl_goal','is_cpl_goal_missing','true_product_count'
     ]
     for c in want_cols:
         if c not in accounts_df.columns:

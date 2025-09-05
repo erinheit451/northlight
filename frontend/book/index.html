@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // This function will contain the existing metrics list logic
         const cplMetric = formatCpl(c.running_cid_cpl, c.effective_cpl_goal);
         const leadsMetric = formatLeads(c.lead_risk_reason, c.running_cid_leads);
-        const productMetric = formatProductCount(c.advertiser_product_count);
+        const productMetric = formatProductCount(c.true_product_count);
         const pacingMetric = formatPacing(c.utilization);
         const ageMetric = formatAge(c.io_cycle);
         // ... add any other metric formatters here as we build them ...
