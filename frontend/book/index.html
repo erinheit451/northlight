@@ -155,6 +155,10 @@ header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); backgr
                 <div class="filter-label">Partner</div>
                 <select id="partnerFilter" class="filter-select"><option value="">All Partners</option></select>
             </div>
+            <div class="filter-group">
+                <div class="filter-label">GM</div>
+                <select id="gmFilter" class="filter-select"><option value="">All GMs</option></select>
+            </div>
         </div>
 
         <div class="content-card">
@@ -178,11 +182,14 @@ header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); backgr
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎉 Page loaded, initializing dropdown debug system...');
+    
     const API_BASES = [
         window.location.origin,
         'https://northlight-wsgw.onrender.com',
         'https://northlight-api-dev.onrender.com'
     ];
+    console.log('🌐 API bases configured:', API_BASES);
 
     const elements = {
         totalAccounts: document.getElementById('totalAccounts'),
@@ -193,8 +200,14 @@ document.addEventListener('DOMContentLoaded', () => {
         optimizerFilter: document.getElementById('optimizerFilter'),
         partnerFilter: document.getElementById('partnerFilter'),
         amFilter: document.getElementById('amFilter'),
+        gmFilter: document.getElementById('gmFilter'),
         tableBody: document.getElementById('accountTableBody'),
     };
+    
+    console.log('🔍 Element check:');
+    Object.entries(elements).forEach(([key, el]) => {
+        console.log(`   ${key}: ${el ? '✅ Found' : '❌ Missing'}`);
+    });
 
     const fmtMoney0 = x => (x == null || isNaN(x)) ? '—' : '$' + Math.round(x).toLocaleString('en-US');
     const fmtScore  = x => (x == null || isNaN(x)) ? '—' : Number(x).toFixed(1);
@@ -303,13 +316,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchFromAny(path, params = {}) {
         const qs = new URLSearchParams(params).toString();
+        console.log(`🔍 Trying to fetch: ${path} with params:`, params);
         for (const base of API_BASES) {
             try {
-                const response = await fetch(`${base}${path}?${qs}`);
+                const url = `${base}${path}?${qs}`;
+                console.log(`   🌐 Attempting: ${url}`);
+                const response = await fetch(url);
                 if (!response.ok) throw new Error(`${response.status}`);
-                return await response.json();
+                const data = await response.json();
+                console.log(`   ✅ Success from ${base}`);
+                return data;
             } catch (e) {
-                console.warn(`API base ${base} failed:`, e.message);
+                console.warn(`   ❌ API base ${base} failed:`, e.message);
             }
         }
         throw new Error('All API bases failed');
@@ -346,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populate(elements.optimizerFilter, facets?.optimizers, 'Optimizers');
         populate(elements.partnerFilter,   facets?.partners,   'Partners');
         populate(elements.amFilter,         facets?.ams,        'AMs');
+        populate(elements.gmFilter,         facets?.gms,        'GMs');
     }
 
     function renderTable(accounts) {
@@ -374,7 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>
                         <div class="cell-content">
                             <div class="cell-main">${acc.optimizer || '—'}</div>
-                            <div class="cell-subtext">${acc.am || 'No AM'}</div>
+                            <div class="cell-subtext">AM: ${acc.am || 'No AM'}</div>
+                            <div class="cell-subtext">GM: ${acc.gm || 'No GM'}</div>
                         </div>
                     </td>
                     <td>
@@ -400,20 +420,45 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.tableBody.innerHTML = rows;
     }
 
-    async function handleFilterChange() {
-        const params = {
-            view: elements.viewFilter.value,
-            optimizer: elements.optimizerFilter.value || undefined,
-            partner: elements.partnerFilter.value   || undefined,
-            am: elements.amFilter.value             || undefined,
+    async function handleFilterChange(event) {
+        console.log('🔍 DROPDOWN CHANGE DETECTED:', event?.target?.id, '=', event?.target?.value);
+        
+        const filterValue = (element) => {
+            const val = element.value?.trim();
+            const isValid = val && val !== '' && val.toLowerCase() !== 'undefined' && val.toLowerCase() !== 'null';
+            const result = isValid ? val : null;
+            console.log(`   ${element.id}: raw='${element.value}' -> filtered='${result}'`);
+            return result;
         };
+        
+        console.log('📋 Building filter parameters...');
+        const rawParams = {
+            view: elements.viewFilter.value,
+            optimizer: filterValue(elements.optimizerFilter),
+            partner: filterValue(elements.partnerFilter),
+            am: filterValue(elements.amFilter),
+            gm: filterValue(elements.gmFilter),
+        };
+        
+        // Remove null/undefined params to avoid sending them to API
+        const params = {};
+        Object.entries(rawParams).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                params[key] = value;
+            }
+        });
+        console.log('📤 API params (cleaned):', JSON.stringify(params, null, 2));
+        
         elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px;">Loading...</td></tr>`;
         try {
+            console.log('🌐 Making API call...');
             const { summary, accounts } = await fetchData(params);
+            console.log('📥 API response - Summary:', summary.counts, 'Accounts:', accounts.length);
             renderSummary(summary);
             renderTable(accounts);
+            console.log('✅ UI updated successfully');
         } catch(err) {
-            console.error('Failed to fetch data on filter change:', err);
+            console.error('❌ Failed to fetch data on filter change:', err);
             elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API.</td></tr>`;
         }
     }
@@ -425,8 +470,16 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSummary(summary);
             populateFilters(summary.facets || {});
             renderTable(accounts);
-            [elements.viewFilter, elements.optimizerFilter, elements.partnerFilter, elements.amFilter]
-                .forEach(el => el.addEventListener('change', handleFilterChange));
+            console.log('🎯 Attaching event listeners to dropdowns...');
+            [elements.viewFilter, elements.optimizerFilter, elements.partnerFilter, elements.amFilter, elements.gmFilter]
+                .forEach(el => {
+                    if (el) {
+                        console.log(`   ✅ Attached listener to ${el.id}`);
+                        el.addEventListener('change', handleFilterChange);
+                    } else {
+                        console.error(`   ❌ Element not found for listener attachment`);
+                    }
+                });
         } catch (err) {
             console.error('Failed to initialize page:', err);
             elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API. Check console/network.</td></tr>`;
