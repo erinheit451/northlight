@@ -1,141 +1,228 @@
-# backend/book/rules.py
 from __future__ import annotations
 import pandas as pd
 import numpy as np
 from typing import Dict, Any
 
-# ---- Tunable constants ----
-LEADS_MIN = 5
-DAYS_MIN  = 14
-SPEND_MIN = 150.0
+from backend.book.ingest import load_health_data, load_breakout_data
 
-# "Unrealistic" goal thresholds
-GOAL_TOO_AGGRESSIVE_FLOOR = 0.90   # goal < 90% of top25 -> too aggressive (too LOW vs best)
-GOAL_TOO_LOW_VS_AVG       = 0.80   # goal < 80% of average -> sandbag (too LOW vs typical)
-GOAL_TOO_HIGH_VS_P66      = 2.50   # goal > 250% of bottom25 (P66) -> sandbag (too HIGH) - Your value
+# --- Configuration for Risk Scoring ---
 
-RED_VS_GOAL_MULT   = 1.25          # 25% over target => RED
-SAFETY_VS_AVG_MULT = 1.20          # 20% over average => RED regardless of target
+CATEGORY_LTV_MAP = {
+    'Attorneys & Legal Services': 149000, 'Physicians & Surgeons': 99000,
+    'Automotive -- For Sale': 98000, 'Industrial & Commercial': 92000,
+    'Home & Home Improvement': 88000, 'Health & Fitness': 84000,
+    'Career & Employment': 81000, 'Finance & Insurance': 79000,
+    'Business Services': 65000, 'Real Estate': 62000,
+    'Education & Instruction': 55000, 'Sports & Recreation': 49000,
+    'Automotive -- Repair, Service & Parts': 45000, 'Travel': 39000,
+    'Personal Services (Weddings, Cleaners, etc.)': 31000,
+    'Computers, Telephony & Internet': 29000, 'Farming & Agriculture': 25000,
+    'Restaurants & Food': 12000, 'Beauty & Personal Care': 11000,
+    'Community/Garage Sales': 11000, 'Animals & Pets': 10000,
+    'Apparel / Fashion & Jewelry': 10000, 'Arts & Entertainment': 9000,
+    'Religion & Spirituality': 8000, 'Government & Politics': 8000,
+    'Toys & Hobbies': 8000, 'z - Other (Specify Keywords Below)': 40000
+}
+AVERAGE_LTV = float(np.mean(list(CATEGORY_LTV_MAP.values())))
 
-PRIORITY_WEIGHT_SPEND = 0.7
-PRIORITY_WEIGHT_GAP   = 0.3
-PROJECTION_DAYS = 14
+def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
+    product = df.get("product", pd.Series(dtype=str)).astype(str).str.upper().str.strip()
+    fprod   = df.get("finance_product", pd.Series(dtype=str)).astype(str).str.upper().str.strip()
 
-# Column aliases
-COL_RUN_CPL = "running_cid_cpl"
-COL_GOAL    = "cpl_goal"
-COL_TOP25   = "bsc_cpl_top_25pct"
-COL_AVG     = "bsc_cpl_avg"
-COL_BOT25   = "bsc_cpl_bottom_25pct"
-COL_LEADS   = "mcid_leads"
-COL_DAYS    = "days_elapsed"
-COL_SPEND   = "amount_spent"
+    def is_search(s: pd.Series) -> pd.Series:
+        return (s.eq("SEARCH") | s.eq("SEM") | s.str.contains("SEARCH", na=False) | s.str.contains("SEM", na=False))
+    def is_xmo(s: pd.Series) -> pd.Series:
+        return s.eq("XMO") | s.str.contains("XMO", na=False)
 
-def _num(s):
-    return pd.to_numeric(s, errors="coerce")
+    return is_search(product) | is_search(fprod) | is_xmo(fprod)
 
-def compute_bands_and_target(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Enrich for Triage UI:
-    - goal_cpl_original (preserve input)
-    - goal_valid (bool)
-    - working_target (goal if valid else P66/bottom25)
-    - recommended_goal (P66)
-    - over_target_pct (vs working_target)
-    - band (RED/GREEN)
-    - goal_misaligned_low / goal_misaligned_high (for summary)
-    """
-    d = df.copy()
-
-    # Preserve original goal for UI "Subbed (was $X)"
-    d["goal_cpl_original"] = _num(d.get(COL_GOAL))
-
-    run_cpl = _num(d.get(COL_RUN_CPL))
-    goal    = _num(d.get(COL_GOAL))
-    top25   = _num(d.get(COL_TOP25))
-    avg     = _num(d.get(COL_AVG))
-    p66     = _num(d.get(COL_BOT25))  # bottom 25% column is the 66th percentile
-
-    # ---- Goal validity rules ----
-    too_aggressive = (goal.notna() & top25.notna() & (goal < GOAL_TOO_AGGRESSIVE_FLOOR * top25))
-    too_low_vs_avg = (goal.notna() & avg.notna()   & (goal < GOAL_TOO_LOW_VS_AVG       * avg))
-    too_high_vs_p66= (goal.notna() & p66.notna()   & (goal > GOAL_TOO_HIGH_VS_P66      * p66))
-
-    d["goal_misaligned_low"]  = (too_aggressive | too_low_vs_avg).fillna(False)
-    d["goal_misaligned_high"] = (too_high_vs_p66).fillna(False)
-    invalid = d["goal_misaligned_low"] | d["goal_misaligned_high"]
-    d["goal_valid"] = ~invalid
-
-    # ---- Targets ----
-    d["working_target"] = goal.where(d["goal_valid"] & goal.notna(), p66)
-    d["recommended_goal"] = p66
-
-    # ---- Gap vs working target ----
-    d["over_target_pct"] = (run_cpl / d["working_target"]) - 1.0
-
-    # ---- Banding ----
-    is_over_threshold = (run_cpl.notna() & d["working_target"].notna() &
-                         (run_cpl > d["working_target"] * RED_VS_GOAL_MULT))
-
-    red_safety = (avg.notna() & run_cpl.notna() & (run_cpl > SAFETY_VS_AVG_MULT * avg))
-
-    is_under_target = (run_cpl <= d["working_target"])
-
-    is_red = is_over_threshold | (red_safety & ~is_under_target)
-    
-    d["band"] = np.where(is_red, "RED", "GREEN")
-
-    return d
-
-def include_row(df: pd.DataFrame) -> pd.Series:
-    """
-    Includes rows that have sufficient data AND are Search/XMO campaigns.
-    """
-    # Check for sufficient data
-    leads = _num(df.get(COL_LEADS)).fillna(0)
-    days  = _num(df.get(COL_DAYS)).fillna(0)
-    spend = _num(df.get(COL_SPEND)).fillna(0.0)
-    insufficient = ((leads < LEADS_MIN) & (days < DAYS_MIN)) | (spend < SPEND_MIN)
-    
-    # Check for correct campaign type based on your specific columns
-    product = df.get("product", pd.Series(dtype=str)).astype(str).str.upper()
-    finance_product = df.get("finance_product", pd.Series(dtype=str)).astype(str).str.upper()
-    
-    is_search_campaign = (
-        (product == "SEARCH") | 
-        (finance_product == "SEARCH") | 
-        (finance_product == "XMO")
+def _priority_from_score(score: pd.Series) -> pd.Series:
+    s = pd.to_numeric(score, errors="coerce").fillna(0.0)
+    return np.select(
+        [s >= 20, s >= 10, s >= 5],
+        ['P1 - CRITICAL', 'P2 - HIGH', 'P3 - MODERATE'],
+        default='P4 - MONITOR'
     )
-    
-    # Return True only for rows that meet BOTH conditions
-    return ~insufficient & is_search_campaign
 
-def compute_priority(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_campaign_risk(campaign_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculates a priority score based on spend velocity and performance gap.
-    Only RED campaigns should get meaningful priority scores.
+    Processes each campaign row to calculate its individual risk and value score.
+    This now operates at the CAMPAIGN level, not the MAID level.
     """
-    d = df.copy()
-    spend  = _num(d.get(COL_SPEND)).fillna(0.0)
-    days   = _num(d.get(COL_DAYS)).replace(0, 1).fillna(1.0)
-    gap_ratio = d["over_target_pct"].clip(lower=0).fillna(0.0)
-    
-    spend_velocity = spend / days
-    d["projected_spend_2w"] = spend_velocity * PROJECTION_DAYS
+    df = campaign_df.copy()
 
-    def norm(s: pd.Series) -> pd.Series:
-        s = s.fillna(0.0)
-        mn, mx = s.min(), s.max()
-        if mx <= mn: return pd.Series(0.0, index=s.index)
-        return (s - mn) / (mx - mn)
+    # Add is_cpl_goal_missing flag for Pre-Flight Checklist
+    df['is_cpl_goal_missing'] = df['cpl_goal'].isnull() | (df['cpl_goal'] == 0)
 
-    p = PRIORITY_WEIGHT_SPEND * norm(d["projected_spend_2w"]) + PRIORITY_WEIGHT_GAP * norm(gap_ratio)
+    # --- Data Coercion ---
+    for col in ['io_cycle','campaign_budget','running_cid_leads','cpl_mcid','utilization','bsc_cpl_avg','running_cid_cpl','amount_spent','days_elapsed','bsc_cpc_average']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    # KEY FIX: Set priority score to 0 for GREEN campaigns
-    d["priority_score"] = np.where(d["band"] == "GREEN", 0.0, p)
+    # Sanitize original utilization value
+    sanitized_util = df['utilization'].apply(lambda x: x / 100 if pd.notna(x) and x > 3 else x)
+
+    # Calculate fallback utilization based on ideal spend rate vs actual spend
+    # Replace zeros or NaNs to avoid division errors, filling with a neutral 1.0
+    total_days_in_cycle = df['io_cycle'] * 30.4
+    ideal_spend_to_date = (df['campaign_budget'] / total_days_in_cycle.replace(0, np.nan)) * df['days_elapsed']
+
+    # Calculate the fallback, handling cases where ideal spend is zero to avoid errors
+    fallback_util = df['amount_spent'] / ideal_spend_to_date.replace(0, np.nan)
+
+    # Use the sanitized utilization if it's a valid number > 0, otherwise use the fallback.
+    # If fallback is also invalid (e.g., due to missing data), default to 0.
+    df['utilization'] = pd.Series(np.where(sanitized_util > 0, sanitized_util, fallback_util), index=df.index).fillna(0)
+
+    # --- Risk Component Calculation (per campaign) ---
+    df['age_risk'] = np.select([df['io_cycle'] <= 3, df['io_cycle'] <= 12], [4, 2], default=0)
+    df['util_risk'] = np.select([df['utilization'] < 0.50, df['utilization'] < 0.75, df['utilization'] > 1.25], [3, 1, 2], default=0)
+
+    # Add the sophisticated CPL Risk logic
+    df['effective_cpl_goal'] = df['cpl_goal'].fillna(df['bsc_cpl_avg'])
+    df['cpl_delta'] = df['running_cid_cpl'] - df['effective_cpl_goal']
+    df['cpl_risk'] = np.select([df['cpl_delta'] > 300, df['cpl_delta'] > 100], [5, 3], default=np.where(df['cpl_delta'] > 0, 2, 0))
+
+    # Add the sophisticated Lead Risk logic
+    benchmark_cr = (df['bsc_cpc_average'] / df['bsc_cpl_avg']).clip(0.01, 0.20)
+    expected_clicks = df['campaign_budget'] / df['bsc_cpc_average']
+    expected_leads = expected_clicks * benchmark_cr
+    pacing_factor = df['days_elapsed'].replace(0, 1) / 30.4
+    pacing_adjusted_expected_leads = expected_leads * pacing_factor
+    lead_performance_ratio = df['running_cid_leads'] / pacing_adjusted_expected_leads.replace(0, np.nan)
     
-    # Add placeholder trend/days data
-    d["trend_running_cpl"] = None
-    d["days_in_state"] = 0
+    conditions = [
+        (df['running_cid_leads'] == 0) & (pacing_adjusted_expected_leads >= 1),
+        lead_performance_ratio < 0.25,
+        lead_performance_ratio < 0.50
+    ]
+    scores = [5, 4, 3]
+    reasons = ['Hyper Critical', 'Critical Underperformance', 'Concerning Underperformance']
     
-    return d
+    df['lead_risk'] = np.select(conditions, scores, default=0)
+    df['lead_risk_reason'] = np.select(conditions, reasons, default='Healthy')
+    
+    # NOTE: 'structure_risk' is removed as it is a MAID-level concept.
+    # We now use the more accurate 'true_product_count' for product risk.
+    df['product_risk'] = np.where(df['advertiser_product_count'] == 1, 3, 0)
+    
+    # Add the Budget Risk logic
+    df['daily_budget'] = df['campaign_budget'] / 30.4
+    df['potential_daily_clicks'] = df['daily_budget'] / df['bsc_cpc_average']
+    df['budget_risk'] = np.where(df['potential_daily_clicks'] < 3, 4, 0)
+
+    # --- Total Risk Score ---
+    df['total_risk_score'] = (
+        df['age_risk'] + df['lead_risk'] + df['cpl_risk'] + 
+        df['util_risk'] + df['product_risk'] + df['budget_risk']
+    ).fillna(0).astype(float)
+
+    # --- Value Multiplier (now per campaign) ---
+    budget = df['campaign_budget'].fillna(0.0)
+    df['budget_multiplier'] = np.select([budget < 2000, budget < 5000, budget < 10000], [0.5, 1.0, 1.5], default=2.0)
+    cat = df['business_category'].astype(str)
+    cat_ltv = cat.map(CATEGORY_LTV_MAP).fillna(AVERAGE_LTV)
+    df['category_multiplier'] = np.clip((cat_ltv / AVERAGE_LTV), 0.5, 2.0)
+    df['value_score'] = (df['budget_multiplier'] * df['category_multiplier'])
+
+    # --- Final Score & Tier ---
+    df['final_priority_score'] = (df['total_risk_score'] * df['value_score']).fillna(0.0)
+    df['priority_tier'] = _priority_from_score(df['final_priority_score'])
+
+    # --- Primary Issue Detection ---
+    conditions = [
+        df['lead_risk'].ge(5),
+        df['cpl_risk'].ge(5),
+        df['age_risk'].ge(4),
+        df['util_risk'].ge(3),
+        df['product_risk'].ge(3),
+    ]
+    choices = [
+        'ZERO LEADS - Emergency',
+        'CPL CRISIS',
+        'NEW ACCOUNT - High Risk',
+        'UNDERPACING - Check Paused',
+        'Single Product Vulnerability',
+    ]
+    df['primary_issue'] = np.select(conditions, choices, default='Multiple Issues')
+
+    return df
+
+def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
+    # Step 1: Load the Master Roster (our source of truth)
+    master_roster = load_breakout_data()
+
+    # Step 2: Load the Performance Data
+    health_data = load_health_data()
+
+    # Step 3: Calculate True Product Count from the Master Roster
+    product_counts = master_roster.groupby('maid')['product_type'].nunique().reset_index()
+    product_counts = product_counts.rename(columns={'product_type': 'true_product_count'})
+
+    # Add the true product count to our master roster
+    master_roster = pd.merge(master_roster, product_counts, on='maid', how='left')
+
+    # Step 4: Enrich the Master Roster with Performance Data
+    # We perform a LEFT join from the roster to the health data.
+    # This keeps all campaigns from the roster, even if they have no performance data yet.
+    # We need to ensure campaign_id is the same type for a successful merge
+    master_roster['campaign_id'] = master_roster['campaign_id'].astype(str)
+    health_data['campaign_id'] = health_data['campaign_id'].astype(str)
+
+    # Select only the necessary columns from health_data to avoid conflicts
+    health_cols = [
+        'campaign_id', 'am', 'optimizer', 'io_cycle', 'campaign_budget', 
+        'running_cid_leads', 'utilization', 'cpl_goal', 'bsc_cpl_avg', 
+        'running_cid_cpl', 'amount_spent', 'days_elapsed', 'bsc_cpc_average',
+        'business_category', 'bid_name', 'cpl_mcid' # Adding cpl_mcid and using bid_name as Partner Name
+    ]
+    enriched_df = pd.merge(
+        master_roster,
+        health_data[health_cols],
+        on='campaign_id',
+        how='left'
+    )
+
+    # Step 5: Split into Pre-Flight and Active campaigns
+    pre_flight_mask = enriched_df['days_elapsed'].isnull() | (enriched_df['days_elapsed'] == 0)
+    pre_flight_campaigns = enriched_df[pre_flight_mask].copy()
+    active_campaigns = enriched_df[~pre_flight_mask].copy()
+
+    # Step 6: Process both groups
+    if not pre_flight_campaigns.empty:
+        pre_flight_campaigns['primary_issue'] = 'Pre-Flight Check'
+        pre_flight_campaigns['final_priority_score'] = 8.0 
+        pre_flight_campaigns['priority_tier'] = 'P3 - MODERATE'
+        pre_flight_campaigns['is_cpl_goal_missing'] = pre_flight_campaigns['cpl_goal'].isnull() | (pre_flight_campaigns['cpl_goal'] == 0)
+        # Ensure pre-flight campaigns also have true_product_count (they should already have it from the enriched_df)
+
+    if not active_campaigns.empty:
+        # The 'advertiser_product_count' column is now 'true_product_count'
+        active_campaigns = active_campaigns.rename(columns={'true_product_count': 'advertiser_product_count'})
+        active_campaigns = calculate_campaign_risk(active_campaigns)
+        # Rename back to true_product_count for API response
+        active_campaigns = active_campaigns.rename(columns={'advertiser_product_count': 'true_product_count'})
+
+    # Step 7: Combine and return
+    final_df = pd.concat([pre_flight_campaigns, active_campaigns], ignore_index=True)
+    
+    # Step 8: Filter to show only actionable campaigns (teams can take action on these)
+    # Keep product counts accurate by filtering AFTER they're calculated
+    def _is_actionable_campaign(df: pd.DataFrame) -> pd.Series:
+        """
+        Filter to campaigns that teams can actually take action on.
+        Excludes historical/inactive campaigns from display.
+        """
+        # Campaign is actionable if it has performance data (exists in health data)
+        # This means: active campaigns OR true pre-flight campaigns with setup
+        has_performance_data = (
+            df['am'].notna() |                    # Has AM assigned
+            df['optimizer'].notna() |             # Has Optimizer assigned  
+            df['campaign_budget'].notna() |       # Has budget set
+            df['days_elapsed'].notna()            # Has activity/performance data
+        )
+        return has_performance_data
+    
+    # Apply the filter before returning
+    actionable_campaigns = final_df[_is_actionable_campaign(final_df)].copy()
+    return actionable_campaigns.sort_values(by="final_priority_score", ascending=False).reset_index(drop=True)

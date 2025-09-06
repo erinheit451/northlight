@@ -3,743 +3,492 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campaign Health - Northlight</title>
+    <title>Account Priority Queue - Northlight</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
 /* ===========================
-   NORTHLIGHT – Design System v1
-   (Inter for UI, Montserrat for logo)
+    NORTHLIGHT – Design System v1
    =========================== */
-
-/* ---- Core tokens ---- */
 :root{
-  /* Legacy aliases (don't remove) */
-  --fg:#111;
-  --muted:#666;
-  --line:#e5e5e5;
-  --ok:#ffb020;
-  --good:#2ea043;
-  --bad:#d93f0b;
-
-  /* Grays */
   --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0; --gray-300:#cbd5e1;
   --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155; --gray-900:#0f172a;
-
-  /* Primary */
   --primary-50:#eff6ff; --primary-500:#3b82f6; --primary-600:#2563eb; --primary-700:#1d4ed8;
-
-  /* Typography scale */
+  --red-50: #fef2f2; --red-100: #fee2e2; --red-500: #ef4444; --red-600: #dc2626; --red-700: #b91c1c; --red-800: #991b1b;
+  --orange-50: #fff7ed; --orange-100: #ffedd5; --orange-500: #f97316; --orange-600: #ea580c;
+  --green-100: #dcfce7; --green-700: #15803d;
   --text-xs:12px; --text-sm:14px; --text-base:16px; --text-lg:18px;
   --text-xl:20px; --text-2xl:24px; --text-3xl:30px;
-
-  /* Spacing (8px base) */
-  --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
   --space-6:24px; --space-8:32px; --space-12:48px;
-
-  /* Radii */
   --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
 }
-
-/* ---- Base ---- */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  line-height:1.5; color:var(--fg); background:white;
-  margin:24px; max-width:1200px; margin:24px auto;
+  line-height:1.5; color:var(--gray-900); background:var(--gray-50);
+  margin:0; padding: 0;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
+main {max-width:1400px; margin: 0 auto; padding: var(--space-8);}
+h1,h2,h3{margin:0; font-weight:700}
+p {margin: 0 0 var(--space-4)}
+.subtext{color:var(--gray-500); font-size:var(--text-sm)}
 
-/* Titles */
-h1{margin:0 0 var(--space-3)}
-h3{margin:0 0 var(--space-2)}
-
-/* Small utility text */
-.small{color:var(--gray-500); font-size:var(--text-xs)}
-
-/* Pills (preserve current look) */
-.pill{
-  display:inline-block; padding:4px var(--space-2); border-radius:999px;
-  font-size:var(--text-xs); font-weight:500; border:1px solid var(--line); margin-right:var(--space-2);
-}
-.pill.good{background:#ecfdf3;border-color:#bbf7d0;color:#065f46}
-.pill.ok{background:#fffbeb;border-color:#fde68a;color:#92400e}
-.pill.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-.pill.red{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-.pill.green{background:#ecfdf3;border-color:#bbf7d0;color:#065f46}
-
-/* Cards */
-.card{
-  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
-  padding:var(--space-6); margin:var(--space-4) 0;
-  box-shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);
-  transition:box-shadow .2s ease, transform .2s ease;
-}
-.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08); transform:translateY(-1px)}
-
-/* Header (only logo uses Montserrat) */
 header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); background:rgba(255,255,255,.9);
-  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:relative}
-.header::after{content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent, #cbd5e0, transparent)}
-.header-content{display:flex; justify-content:space-between; align-items:center; max-width:1200px; margin:0 auto;}
+  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:sticky; top:0; z-index:10;}
+.header-content{display:flex; justify-content:space-between; align-items:center; max-width:1400px; margin:0 auto;}
 .brand-section{display:flex; flex-direction:column;}
 .brand-name{display:flex; align-items:baseline; margin-bottom:2px}
 .company-name{font-family:'Montserrat',sans-serif; font-weight:800; font-size:28px; color:#2d3748; letter-spacing:1px}
 .beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:4px; vertical-align:super}
-.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0; font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-
-/* Navigation */
+.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0; font-family:'Inter',system-ui}
 .nav-tabs{display:flex; gap:var(--space-2)}
-.nav-tab{
-  padding:var(--space-2) var(--space-4); border-radius:var(--radius-md);
-  font-size:var(--text-sm); font-weight:600; text-decoration:none; color:var(--gray-700);
-  border:1px solid var(--gray-200); background:#fff; cursor:pointer;
-}
+.nav-tab{padding:var(--space-2) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:600; text-decoration:none; color:var(--gray-700); border:1px solid var(--gray-200); background:#fff; cursor:pointer;}
 .nav-tab:hover{background:var(--gray-50)}
 .nav-tab.active{background:var(--primary-500); color:#fff; border-color:var(--primary-500)}
 
-/* Summary Cards */
-.summary-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--space-4); margin:var(--space-6) 0}
-.summary-card{
-  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
-  padding:var(--space-5); text-align:center;
-}
-.summary-card.red{border-left:4px solid var(--bad)}
-.summary-card.green{border-left:4px solid var(--good)}
+.summary-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--space-6); margin:var(--space-6) 0}
+.summary-card{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-5); text-align:center;}
+.summary-card.critical{border-left:4px solid var(--red-500)}
+.summary-card.high{border-left:4px solid var(--orange-500)}
 .summary-number{font-size:var(--text-3xl); font-weight:700; margin-bottom:var(--space-2)}
-.summary-number.red{color:var(--bad)}
-.summary-number.green{color:var(--good)}
-.summary-label{font-size:var(--text-sm); color:var(--gray-600); font-weight:500}
+.summary-number.critical{color:var(--red-600)}
+.summary-number.high{color:var(--orange-600)}
+.summary-label{font-size:var(--text-sm); color:var(--gray-500); font-weight:500}
 
-/* Filter Bar */
-.filter-bar{
-  background:var(--gray-50); border:1px solid var(--gray-200); border-radius:var(--radius-lg);
-  padding:var(--space-4); margin:var(--space-6) 0; display:flex; gap:var(--space-4); align-items:center; flex-wrap:wrap;
-}
+.filter-bar{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-4); margin:var(--space-6) 0; display:flex; gap:var(--space-4); align-items:center; flex-wrap:wrap;}
 .filter-group{display:flex; flex-direction:column; gap:var(--space-2)}
-.filter-label{font-size:var(--text-xs); color:var(--gray-600); font-weight:600; text-transform:uppercase}
-.filter-select{
-  border:1px solid var(--gray-300); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3);
-  font-size:var(--text-sm); background:#fff; min-width:150px;
-}
+.filter-label{font-size:var(--text-xs); color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;}
+.filter-select{border:1px solid var(--gray-300); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); font-size:var(--text-sm); background:#fff; min-width:180px;}
 
-/* Table Styles */
-.campaign-table{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.campaign-table th{background:var(--gray-50); padding:var(--space-3) var(--space-4); text-align:left; font-weight:600; font-size:var(--text-sm); color:var(--gray-700); border-bottom:1px solid var(--gray-200)}
-.campaign-table td{padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--gray-100); font-size:var(--text-sm); vertical-align:middle;}
-.campaign-table tbody tr:hover{background:var(--gray-50)}
+.content-card{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-6); margin:var(--space-6) 0;}
 
-.status-select{
-  border:1px solid var(--gray-300); border-radius:var(--radius-sm); padding:4px var(--space-2);
-  font-size:var(--text-xs); background:#fff; cursor:pointer;
-}
+.account-table{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius-lg); overflow:hidden;}
+.account-table th{background:var(--gray-100); padding:var(--space-3) var(--space-4); text-align:left; font-weight:600; font-size:var(--text-sm); color:var(--gray-600); border-bottom:2px solid var(--gray-200)}
+.account-table td{padding:var(--space-4); border-bottom:1px solid var(--gray-100); font-size:var(--text-sm); vertical-align:middle;}
+.account-table tbody tr:hover{background:var(--gray-50)}
+.cell-content {display: flex; flex-direction: column; gap: 2px;}
+.cell-main {font-weight: 600; color: var(--gray-900);}
+.cell-subtext {font-size: var(--text-xs); color: var(--gray-500);}
 
-/* Utility classes */
-.mt-6{margin-top:var(--space-6)}
-.mb-4{margin-bottom:var(--space-4)}
-.text-center{text-align:center}
-.font-bold{font-weight:700}
+.priority-badge {display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;}
+.priority-badge.p1 {background: var(--red-100); color: var(--red-700);}
+.priority-badge.p2 {background: var(--orange-100); color: var(--orange-600);}
+.priority-badge.p3 {background: var(--gray-200); color: var(--gray-700);}
+.priority-badge.p4 {background: var(--gray-100); color: var(--gray-500);}
 
-/* Campaign row styling */
-.campaign-row{cursor:pointer; transition:all 0.2s ease}
-.campaign-row:hover{background:var(--gray-50)}
-.campaign-row.red{border-left:3px solid var(--bad)}
-.campaign-row.green{border-left:3px solid var(--good)}
+/* --- NEW METRICS STYLES --- */
+.metrics-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.metric-item { display: flex; justify-content: space-between; font-size: var(--text-xs); }
+.metric-label { color: var(--gray-500); }
+.metric-value { font-weight: 600; }
+.metric-critical-strong { color: var(--red-800); }
+.metric-critical { color: var(--red-600); }
+.metric-warning { color: var(--orange-600); }
+.metric-good { color: var(--green-700); }
+.metric-neutral { color: var(--gray-700); }
 
-/* Expand/collapse */
-.expand-btn{
-  background:none; border:1px solid var(--gray-300); padding:var(--space-2) var(--space-4);
-  border-radius:var(--radius-md); cursor:pointer; font-size:var(--text-sm);
+.action-button {
+  padding: 6px 14px; border-radius: var(--radius-md); font-size: var(--text-sm);
+  font-weight: 600; border: 1px solid var(--gray-300); background: #fff;
+  color: var(--gray-700); cursor: pointer; transition: all 0.2s;
 }
-.expand-btn:hover{background:var(--gray-50)}
-
-/* Cell Component Styling */
-.cell-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-}
-
-.cell-main {
-    font-weight: 600;
-    font-size: var(--text-sm);
-    color: var(--gray-900);
-}
-.cell-subtext {
-    font-size: var(--text-xs);
-    color: var(--gray-500);
-}
-
-/* Badges */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    border: 1px solid;
-}
-.badge.ok { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
-.badge.err { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
-
-/* Gap display styling */
-.gap-display {
-    font-weight: 600;
-    font-size: var(--text-sm);
-}
-.gap-display.red { color: var(--bad); }
-.gap-display.green { color: var(--good); }
-
-/* Debug styling */
-.debug-info {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: #f0f0f0;
-    padding: 10px;
-    border-radius: 5px;
-    font-size: 12px;
-    z-index: 1000;
-    max-width: 300px;
-}
-.debug-success {
-    background: #ecfdf3;
-    color: #065f46;
-    border: 1px solid #bbf7d0;
-}
-.debug-error {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
+.action-button:hover { background: var(--gray-100); border-color: var(--gray-400); }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
             <div class="brand-section">
-                <div class="brand-name">
-                    <span class="company-name">NORTHLIGHT</span>
-                    <span class="beta-label">beta</span>
-                </div>
+                <div class="brand-name"><span class="company-name">NORTHLIGHT</span><span class="beta-label">beta</span></div>
                 <p class="tagline">Turn data into daylight</p>
             </div>
             <nav class="nav-tabs">
                 <a href="/" class="nav-tab">Benchmark MVP</a>
-                <a href="/book" class="nav-tab active">Campaign Health</a>
+                <a href="/book" class="nav-tab active">Account Priority</a>
             </nav>
         </div>
     </header>
 
-    <!-- Debug info -->
-    <div class="debug-info" id="debugInfo">Loading environment...</div>
-
-    <main style="margin-top: var(--space-8);">
-        <div style="text-align: center; margin-bottom: var(--space-8);">
-            <h1 style="font-size: 36px; font-weight: 700; color: #2d3748;">Campaign Health</h1>
+    <main>
+        <div style="margin-bottom: var(--space-8);">
+            <h1 style="font-size: 36px;">Account Priority Queue</h1>
+            <p class="subtext">Accounts are scored and prioritized based on retention risk and business value.</p>
         </div>
 
-        <!-- Executive Summary -->
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-number" id="totalCampaigns">—</div>
-                <div class="summary-label">Total Campaigns</div>
+                <div class="summary-number" id="totalAccounts">—</div>
+                <div class="summary-label">Scored Accounts</div>
             </div>
-            <div class="summary-card red">
-                <div class="summary-number red" id="redCampaigns">—</div>
-                <div class="summary-label">Red Band</div>
+            <div class="summary-card critical">
+                <div class="summary-number critical" id="p1Critical">—</div>
+                <div class="summary-label">P1 Critical</div>
             </div>
-            <div class="summary-card green">
-                <div class="summary-number green" id="greenCampaigns">—</div>
-                <div class="summary-label">Green Band</div>
+            <div class="summary-card high">
+                <div class="summary-number high" id="p2High">—</div>
+                <div class="summary-label">P2 High Priority</div>
             </div>
             <div class="summary-card">
                 <div class="summary-number" id="budgetAtRisk">—</div>
-                <div class="summary-label">Budget at Risk</div>
+                <div class="summary-label">Budget at Risk (P1/P2)</div>
             </div>
         </div>
 
-        <!-- Filter Bar -->
         <div class="filter-bar">
+             <div class="filter-group">
+                <div class="filter-label">View</div>
+                <select id="viewFilter" class="filter-select">
+                    <option value="optimizer">Optimizer View</option>
+                </select>
+            </div>
             <div class="filter-group">
                 <div class="filter-label">Optimizer</div>
-                <select id="optimizerFilter" class="filter-select">
-                    <option value="">All Optimizers</option>
-                </select>
+                <select id="optimizerFilter" class="filter-select"><option value="">All Optimizers</option></select>
             </div>
             <div class="filter-group">
+                <div class="filter-label">Account Manager</div>
+                <select id="amFilter" class="filter-select"><option value="">All AMs</option></select>
+            </div>
+             <div class="filter-group">
                 <div class="filter-label">Partner</div>
-                <select id="partnerFilter" class="filter-select">
-                    <option value="">All Partners</option>
-                </select>
+                <select id="partnerFilter" class="filter-select"><option value="">All Partners</option></select>
             </div>
             <div class="filter-group">
-                <div class="filter-label">Status</div>
-                <select id="statusFilter" class="filter-select">
-                    <option value="">All Statuses</option>
-                    <option value="new">New</option>
-                    <option value="diagnosing">Diagnosing</option>
-                    <option value="action_proposed">Action Proposed</option>
-                    <option value="client_review">Client Review</option>
-                    <option value="approved">Approved</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <div class="filter-label">Band</div>
-                <select id="bandFilter" class="filter-select">
-                    <option value="">All Bands</option>
-                    <option value="red">Red Only</option>
-                    <option value="green">Green Only</option>
-                </select>
+                <div class="filter-label">GM</div>
+                <select id="gmFilter" class="filter-select"><option value="">All GMs</option></select>
             </div>
         </div>
 
-        <!-- Priority Queue Card -->
-        <div class="card">
-            <h3>Priority Queue <span class="pill red" id="priorityCount">Top 10</span></h3>
-            <p class="small mb-4">Highest priority red campaigns ranked by spend and urgency</p>
-            
-            <table class="campaign-table">
+        <div class="content-card">
+            <table class="account-table">
                 <thead>
                     <tr>
-                        <th>Campaign</th>
-                        <th>Partner</th>
-                        <th>Optimizer</th>
-                        <th>Goal Status</th>
-                        <th>Target</th>
-                        <th>Current CPL</th>
-                        <th>Gap</th>
-                        <th>Budget</th>
-                        <th>Status</th>
+                        <th style="width: 25%;">Account</th>
+                        <th style="width: 15%;">Owner</th>
+                        <th style="width: 15%;">Priority</th>
+                        <th style="width: 25%;">Key Metrics</th>
+                        <th style="width: 10%;">Budget</th>
+                        <th style="width: 10%;">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="priorityTableBody">
-                    <!-- Dynamic content -->
+                <tbody id="accountTableBody">
+                    <tr><td colspan="6" style="text-align:center; padding: 48px;">Loading accounts...</td></tr>
                 </tbody>
             </table>
-            
-            <div class="text-center mt-6">
-                <button id="expandPriorityBtn" class="expand-btn">Show All Red Campaigns</button>
-            </div>
         </div>
     </main>
 
 <script>
-/* ============================
- * Northlight – Campaign Health with Full Environment Detection
- * ============================ */
-
-// Environment Detection
-const host = window.location.hostname;
-const protocol = window.location.protocol;
-const port = window.location.port;
-
-// API Configuration for different environments
-let API_BASE;
-let environment;
-
-if (host.includes('localhost') || host.includes('127.0.0.1')) {
-  // Local development - use same host to avoid CORS
-  API_BASE = `${protocol}//${host}${port ? ':' + port : ''}`;
-  environment = 'LOCAL';
-} else if (host.includes('develop') || host.includes('pr-')) {
-  // Development/staging environment
-  API_BASE = 'https://northlight-api-dev.onrender.com';
-  environment = 'DEVELOP';
-} else if (host.includes('northlight.pages.dev')) {
-  // Production environment
-  API_BASE = 'https://northlight-wsgw.onrender.com';
-  environment = 'PRODUCTION';
-} else {
-  // Fallback to production
-  API_BASE = 'https://northlight-wsgw.onrender.com';
-  environment = 'FALLBACK';
-}
-
-// Debug info update
-const debugEl = document.getElementById('debugInfo');
-debugEl.innerHTML = `
-  <strong>Environment:</strong> ${environment}<br>
-  <strong>Host:</strong> ${host}<br>
-  <strong>API:</strong> ${API_BASE}<br>
-  <strong>Status:</strong> Connecting...
-`;
-
-console.log(`Campaign Health Environment Detection:`);
-console.log(`- Host: ${host}`);
-console.log(`- Environment: ${environment}`);
-console.log(`- API Base: ${API_BASE}`);
-
-// API Configuration with improved error handling
-const API = {
-  summary: async () => {
-    const url = `${API_BASE}/api/book/summary`;
-    console.log('Fetching summary from:', url);
-    
-    try {
-      const response = await fetch(url);
-      console.log('Summary response status:', response.status);
-      console.log('Summary response headers:', response.headers);
-      
-      if (!response.ok) {
-        const responseText = await response.text();
-        console.error('Summary API error response:', responseText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseText = await response.text();
-      console.log('Summary raw response:', responseText.substring(0, 200));
-      
-      const data = JSON.parse(responseText);
-      console.log('Summary data received:', data);
-      return data;
-    } catch (error) {
-      console.error('Summary API error:', error);
-      throw error;
-    }
-  },
-  
-  all: async () => {
-    const url = `${API_BASE}/api/book/all`;
-    console.log('Fetching all campaigns from:', url);
-    
-    try {
-      const response = await fetch(url);
-      console.log('All campaigns response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('All campaigns data received, count:', data.length);
-      return data;
-    } catch (error) {
-      console.error('All campaigns API error:', error);
-      throw error;
-    }
-  },
-  
-  updateStatus: async (campaign_id, status) => {
-    const url = `${API_BASE}/api/book/campaign/${campaign_id}/status`;
-    console.log('Updating status:', { campaign_id, status, url });
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_status: status })
-      });
-      
-      console.log('Update status response:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Status updated successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('Update status error:', error);
-      throw error;
-    }
-  }
-};
-
-// State
-let allCampaigns = [];
-let facets = {};
-let currentView = 'priority';
-
-// Formatters
-const fmtMoney0 = x => (x == null || isNaN(x)) ? '—'
-  : '$' + Number(x).toLocaleString('en-US', { maximumFractionDigits: 0 });
-const fmtMoney2 = x => (x == null || isNaN(x)) ? '—'
-  : '$' + Number(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtPct0 = x => (x == null || isNaN(x)) ? '—'
-  : (Number(x) * 100).toFixed(0) + '%';
-
-// Goal/Target Logic
-const GOAL_TOL = 0.05;
-
-function getOriginalGoal(row) {
-  return row.goal_cpl_original ?? row.goal_cpl ?? null;
-}
-
-function computeWorkingTarget(row) {
-  if (row.functional_target != null) return row.functional_target;
-  if (row.working_target != null) return row.working_target;
-  if (row.recommended_goal != null) return row.recommended_goal;
-  if (row.effective_target != null) return row.effective_target;
-  if (row.bsc_cpl_avg != null) return row.bsc_cpl_avg;
-  if (row.goal_valid && row.goal_cpl != null) return row.goal_cpl;
-  return null;
-}
-
-function withinTol(a, b, tol = GOAL_TOL) {
-  if (a == null || b == null || !isFinite(a) || !isFinite(b) || b <= 0) return false;
-  return Math.abs(Number(a) - Number(b)) / Number(b) <= tol;
-}
-
-function isSubstitution(row) {
-  const og = Number(getOriginalGoal(row));
-  const tgt = Number(computeWorkingTarget(row));
-  if (!isFinite(tgt) || tgt <= 0) return false;
-  if (!isFinite(og) || og <= 0) return true;
-  return !withinTol(og, tgt, GOAL_TOL);
-}
-
-function isGoalInvalid(row) {
-  if (typeof row.goal_valid === 'boolean') return !row.goal_valid;
-  const og = Number(getOriginalGoal(row));
-  const tgt = Number(computeWorkingTarget(row));
-  if (!isFinite(og) || og <= 0) return true;
-  if (!isFinite(tgt) || tgt <= 0) return false;
-  return !withinTol(og, tgt, GOAL_TOL);
-}
-
-function computeOverTargetPct(row) {
-  const target = Number(computeWorkingTarget(row));
-  const cpl = Number(row.running_cid_cpl);
-  if (!isFinite(target) || target <= 0 || !isFinite(cpl)) return null;
-  return (cpl / target) - 1;
-}
-
-// Cell renderers
-function renderCampaignCell(row) {
-  return `
-    <div class="cell-content">
-      <div class="cell-main">${row.campaign_id}</div>
-      <div class="cell-subtext">${row.advertiser_name || '—'}</div>
-    </div>`;
-}
-
-function renderGoalCell(row) {
-  return isGoalInvalid(row)
-    ? `<span class="badge err">✖ Needs Repair</span>`
-    : `<span class="badge ok">✓ Valid</span>`;
-}
-
-function renderTargetCell(row) {
-  const tgt = computeWorkingTarget(row);
-  const og = getOriginalGoal(row);
-  let sub = '';
-
-  if ((og == null || !isFinite(Number(og)) || Number(og) <= 0) &&
-      (row.functional_target != null || row.recommended_goal != null || row.bsc_cpl_avg != null)) {
-    sub = `<div class="cell-subtext">(using 66th Percentile)</div>`;
-  } else if (isSubstitution(row)) {
-    sub = `<div class="cell-subtext">Subbed (was ${fmtMoney0(og)})</div>`;
-  }
-
-  return `
-    <div class="cell-content">
-      <div class="cell-main">${fmtMoney0(tgt)}</div>
-      ${sub}
-    </div>`;
-}
-
-function renderCplCell(row) {
-  return `<div class="cell-main">${fmtMoney2(row.running_cid_cpl)}</div>`;
-}
-
-function renderGapCell(row) {
-  const pct = computeOverTargetPct(row);
-  if (pct === null) return '—';
-  const isOver = pct > 0;
-  const cls = isOver ? 'red' : 'green';
-  const dir = isOver ? 'over' : 'under';
-  return `<div class="gap-display ${cls}">${fmtPct0(Math.abs(pct))} ${dir}</div>`;
-}
-
-function renderBudgetCell(row) {
-  const budget = row.campaign_budget ?? row.amount_spent ?? null;
-  return `<div class="cell-main">${fmtMoney0(budget)}</div>`;
-}
-
-function createStatusDropdown(c) {
-  const statuses = ["new", "diagnosing", "action_proposed", "client_review", "approved", "monitoring"];
-  const opts = statuses.map(s =>
-    `<option value="${s}" ${((c.status||'new')===s)?'selected':''}>${s.replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase())}</option>`
-  ).join('');
-  return `<select class="status-select" data-campaign-id="${c.campaign_id}">${opts}</select>`;
-}
-
-// Table rendering
-function renderPriorityTable() {
-  const filters = {
-    optimizer: document.getElementById('optimizerFilter').value,
-    partner: document.getElementById('partnerFilter').value,
-    status: document.getElementById('statusFilter').value,
-    band: document.getElementById('bandFilter').value,
-  };
-
-  const filtered = allCampaigns.filter(c =>
-    (!filters.optimizer || c.optimizer === filters.optimizer) &&
-    (!filters.partner || c.bid_name === filters.partner) &&
-    (!filters.status || (c.status || 'new') === filters.status) &&
-    (!filters.band || (String(c.band||'').toLowerCase() === filters.band))
-  );
-
-  const limit = currentView === 'priority' ? 10 : filtered.length;
-  const rows = filtered.slice(0, limit);
-
-  const tbody = document.getElementById('priorityTableBody');
-  tbody.innerHTML = rows.map(row => `
-    <tr class="campaign-row ${String(row.band || '').toLowerCase()}">
-      <td>${renderCampaignCell(row)}</td>
-      <td>${row.bid_name || '—'}</td>
-      <td>${row.optimizer || '—'}</td>
-      <td>${renderGoalCell(row)}</td>
-      <td>${renderTargetCell(row)}</td>
-      <td>${renderCplCell(row)}</td>
-      <td>${renderGapCell(row)}</td>
-      <td>${renderBudgetCell(row)}</td>
-      <td>${createStatusDropdown(row)}</td>
-    </tr>
-  `).join('');
-
-  document.getElementById('priorityCount').textContent =
-    currentView === 'priority' ? `Top ${rows.length}` : `${filtered.length} Campaigns`;
-}
-
-async function refreshAll() {
-  try {
-    console.log('Starting data refresh...');
-    debugEl.innerHTML = debugEl.innerHTML.replace('Connecting...', 'Loading data...');
-    
-    const [summary, allData] = await Promise.all([API.summary(), API.all()]);
-
-    console.log('Data received successfully');
-    console.log('Summary:', summary);
-    console.log('All campaigns count:', allData.length);
-
-    allCampaigns = allData.sort((a,b) => (b.priority_score || 0) - (a.priority_score || 0));
-    facets = summary.facets || {};
-
-    document.getElementById('totalCampaigns').textContent = summary.counts.total_scored;
-    document.getElementById('redCampaigns').textContent = summary.counts.red;
-    document.getElementById('greenCampaigns').textContent = summary.counts.green;
-    document.getElementById('budgetAtRisk').textContent = fmtMoney0(summary.budget_at_risk);
-
-    const redPct = summary.counts.total_scored ? Math.round((summary.counts.red / summary.counts.total_scored) * 100) : 0;
-    document.querySelector('#redCampaigns + .summary-label').textContent = `Red Band (${redPct}%)`;
-
-    populateFilters();
-    renderPriorityTable();
-    
-    // Success feedback
-    debugEl.innerHTML = `
-      <strong>✓ Connected Successfully</strong><br>
-      <strong>Environment:</strong> ${environment}<br>
-      <strong>API:</strong> ${API_BASE}<br>
-      <strong>Campaigns:</strong> ${allData.length}
-    `;
-    debugEl.className = 'debug-info debug-success';
-    
-    // Hide debug info after successful load
-    setTimeout(() => {
-      debugEl.style.display = 'none';
-    }, 5000);
-    
-  } catch (error) {
-    console.error('Failed to refresh data:', error);
-    
-    debugEl.innerHTML = `
-      <strong>✗ Connection Failed</strong><br>
-      <strong>Environment:</strong> ${environment}<br>
-      <strong>API:</strong> ${API_BASE}<br>
-      <strong>Error:</strong> ${error.message}<br>
-      <small>Check console for details</small>
-    `;
-    debugEl.className = 'debug-info debug-error';
-  }
-}
-
-function populateFilters() {
-  // Populate filter dropdowns
-  const optimizerSelect = document.getElementById('optimizerFilter');
-  const partnerSelect = document.getElementById('partnerFilter');
-  
-  // Clear existing options (except "All" option)
-  optimizerSelect.innerHTML = '<option value="">All Optimizers</option>';
-  partnerSelect.innerHTML = '<option value="">All Partners</option>';
-  
-  if (facets.optimizers) {
-    facets.optimizers.forEach(opt => {
-      if (opt && opt !== 'Unassigned') {
-        const option = document.createElement('option');
-        option.value = opt;
-        option.textContent = opt;
-        optimizerSelect.appendChild(option);
-      }
-    });
-  }
-  
-  if (facets.partners) {
-    facets.partners.forEach(partner => {
-      if (partner) {
-        const option = document.createElement('option');
-        option.value = partner;
-        option.textContent = partner;
-        partnerSelect.appendChild(option);
-      }
-    });
-  }
-}
-
-// Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-  // Filter change handlers
-  document.getElementById('optimizerFilter').addEventListener('change', renderPriorityTable);
-  document.getElementById('partnerFilter').addEventListener('change', renderPriorityTable);
-  document.getElementById('statusFilter').addEventListener('change', renderPriorityTable);
-  document.getElementById('bandFilter').addEventListener('change', renderPriorityTable);
-  
-  // Expand button handler
-  document.getElementById('expandPriorityBtn').addEventListener('click', () => {
-    if (currentView === 'priority') {
-      currentView = 'all';
-      document.getElementById('expandPriorityBtn').textContent = 'Show Top 10 Only';
-    } else {
-      currentView = 'priority';
-      document.getElementById('expandPriorityBtn').textContent = 'Show All Red Campaigns';
-    }
-    renderPriorityTable();
-  });
-  
-  // Status dropdown change handler (using event delegation)
-  document.addEventListener('change', async (e) => {
-    if (e.target.classList.contains('status-select')) {
-      const campaignId = e.target.dataset.campaignId;
-      const newStatus = e.target.value;
-      
-      try {
-        await API.updateStatus(campaignId, newStatus);
-        console.log(`Updated campaign ${campaignId} status to ${newStatus}`);
-      } catch (error) {
-        console.error('Failed to update status:', error);
-        // Revert the dropdown to previous value
-        e.target.value = e.target.dataset.previousValue || 'new';
-      }
-    }
-  });
-  
-  // Store previous values for status dropdowns
-  document.addEventListener('focus', (e) => {
-    if (e.target.classList.contains('status-select')) {
-      e.target.dataset.previousValue = e.target.value;
-    }
-  });
-  
-  // Initialize the application
-  refreshAll();
-});
+    console.log('🎉 Page loaded, initializing dropdown debug system...');
+    
+    const API_BASES = [
+        window.location.origin,
+        'https://northlight-wsgw.onrender.com',
+        'https://northlight-api-dev.onrender.com'
+    ];
+    console.log('🌐 API bases configured:', API_BASES);
 
+    const elements = {
+        totalAccounts: document.getElementById('totalAccounts'),
+        p1Critical: document.getElementById('p1Critical'),
+        p2High: document.getElementById('p2High'),
+        budgetAtRisk: document.getElementById('budgetAtRisk'),
+        viewFilter: document.getElementById('viewFilter'),
+        optimizerFilter: document.getElementById('optimizerFilter'),
+        partnerFilter: document.getElementById('partnerFilter'),
+        amFilter: document.getElementById('amFilter'),
+        gmFilter: document.getElementById('gmFilter'),
+        tableBody: document.getElementById('accountTableBody'),
+    };
+    
+    console.log('🔍 Element check:');
+    Object.entries(elements).forEach(([key, el]) => {
+        console.log(`   ${key}: ${el ? '✅ Found' : '❌ Missing'}`);
+    });
+
+    const fmtMoney0 = x => (x == null || isNaN(x)) ? '—' : '$' + Math.round(x).toLocaleString('en-US');
+    const fmtScore  = x => (x == null || isNaN(x)) ? '—' : Number(x).toFixed(1);
+
+    // --- PRE-FLIGHT AND METRICS RENDERING FUNCTIONS ---
+
+    function renderMetrics(c) {
+        // This function will contain the existing metrics list logic
+        const cplMetric = formatCpl(c.running_cid_cpl, c.effective_cpl_goal);
+        const leadsMetric = formatLeads(c.lead_risk_reason, c.running_cid_leads);
+        const productMetric = formatProductCount(c.true_product_count);
+        const pacingMetric = formatPacing(c.utilization);
+        const ageMetric = formatAge(c.io_cycle);
+        // ... add any other metric formatters here as we build them ...
+
+        return `
+            <ul class="metrics-list">
+                <li class="metric-item"><span class="metric-label">Lead Performance</span><span class="metric-value ${leadsMetric.className}">${leadsMetric.text}</span></li>
+                <li class="metric-item"><span class="metric-label">Pacing</span><span class="metric-value ${pacingMetric.className}">${pacingMetric.text}</span></li>
+                <li class="metric-item"><span class="metric-label">CPL vs Goal</span><span class="metric-value ${cplMetric.className}">${cplMetric.text}</span></li>
+                <li class="metric-item"><span class="metric-label">Product Mix</span><span class="metric-value ${productMetric.className}">${productMetric.text}</span></li>
+                <li class="metric-item">
+                    <span class="metric-label">Age</span>
+                    <span class="metric-value ${ageMetric.className}">${ageMetric.text}</span>
+                </li>
+            </ul>
+        `;
+    }
+
+    function renderChecklist(c) {
+        // This function builds the HTML for the new Pre-Flight Checklist
+        const goalStatus = c.is_cpl_goal_missing 
+            ? `<span class="metric-value metric-warning">Pending</span>`
+            : `<span class="metric-value metric-good">Set</span>`;
+
+        return `
+            <ul class="metrics-list">
+                <li class="metric-item"><span class="metric-label">Status</span><span class="metric-value metric-neutral">Pending Launch</span></li>
+                <li class="metric-item"><span class="metric-label">CPL Goal</span>${goalStatus}</li>
+                <li class="metric-item"><span class="metric-label">Spend Activity</span><span class="metric-value metric-neutral">No Spend</span></li>
+            </ul>
+        `;
+    }
+
+    // --- NEW METRIC FORMATTING HELPERS ---
+    
+    function formatCpl(actualCpl, goalCpl) {
+        if (actualCpl == null || goalCpl == null || goalCpl === 0) {
+            return { text: 'No Goal', className: 'metric-neutral' };
+        }
+        const pct = ((actualCpl / goalCpl) - 1) * 100;
+        if (pct > 0) {
+            const className = pct >= 100 ? 'metric-critical-strong' : (pct >= 50 ? 'metric-critical' : 'metric-warning');
+            return { text: `${pct.toFixed(0)}% over`, className };
+        } else {
+            return { text: `${Math.abs(pct).toFixed(0)}% under`, className: 'metric-good' };
+        }
+    }
+
+    function formatPacing(utilization) {
+        if (utilization == null) {
+            return { text: '—', className: 'metric-neutral' };
+        }
+        const deviation = (utilization - 1) * 100;
+        
+        if (deviation < -50) return { text: `${Math.abs(deviation).toFixed(0)}% under`, className: 'metric-critical' };
+        if (deviation < -25) return { text: `${Math.abs(deviation).toFixed(0)}% under`, className: 'metric-warning' };
+        if (deviation > 25)  return { text: `${deviation.toFixed(0)}% over`, className: 'metric-warning' };
+        
+        return { text: 'On Pace', className: 'metric-good' };
+    }
+
+    function formatLeads(reason, leads) {
+        if (leads == null) {
+            return { text: '—', className: 'metric-neutral' };
+        }
+
+        switch (reason) {
+            case 'Hyper Critical':
+                return { text: 'Zero Leads (Behind Pace)', className: 'metric-critical-strong' };
+            case 'Critical Underperformance':
+                return { text: `Critically Low (${leads})`, className: 'metric-critical' };
+            case 'Concerning Underperformance':
+                return { text: `Low Volume (${leads})`, className: 'metric-warning' };
+            case 'Healthy':
+            default:
+                return { text: `Healthy (${leads})`, className: 'metric-good' };
+        }
+    }
+
+    function formatAge(months) {
+        if (months == null) return { text: '—', className: 'metric-neutral' };
+        if (months <= 1) return { text: 'Brand New', className: 'metric-warning' };
+        if (months <= 3) return { text: 'First 90 Days', className: 'metric-warning' };
+        if (months <= 12) return { text: 'First Year', className: 'metric-neutral' };
+        return { text: 'Established', className: 'metric-good' };
+    }
+
+    function formatProductCount(count) {
+        if (count == null) return { text: '—', className: 'metric-neutral' };
+        const className = count === 1 ? 'metric-warning' : 'metric-good';
+        return { text: `${count} products`, className };
+    }
+
+    // --- API & RENDERING LOGIC ---
+
+    async function fetchFromAny(path, params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        console.log(`🔍 Trying to fetch: ${path} with params:`, params);
+        for (const base of API_BASES) {
+            try {
+                const url = `${base}${path}?${qs}`;
+                console.log(`   🌐 Attempting: ${url}`);
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`${response.status}`);
+                const data = await response.json();
+                console.log(`   ✅ Success from ${base}`);
+                return data;
+            } catch (e) {
+                console.warn(`   ❌ API base ${base} failed:`, e.message);
+            }
+        }
+        throw new Error('All API bases failed');
+    }
+
+    async function fetchData(params = {}) {
+        const [summary, accounts] = await Promise.all([
+            fetchFromAny('/api/book/summary', params),
+            fetchFromAny('/api/book/all', params)
+        ]);
+        return { summary, accounts };
+    }
+
+    function renderSummary(summary) {
+        const counts = summary.counts || {};
+        elements.totalAccounts.textContent = counts.total_accounts ?? '0';
+        elements.p1Critical.textContent    = counts.p1_critical ?? '0';
+        elements.p2High.textContent        = counts.p2_high ?? '0';
+        elements.budgetAtRisk.textContent  = fmtMoney0(summary.budget_at_risk ?? 0);
+    }
+
+    function populateFilters(facets) {
+        const populate = (select, options, label) => {
+            const currentVal = select.value;
+            select.innerHTML = `<option value="">All ${label}</option>`;
+            (options || []).forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                select.appendChild(option);
+            });
+            select.value = currentVal;
+        };
+        populate(elements.optimizerFilter, facets?.optimizers, 'Optimizers');
+        populate(elements.partnerFilter,   facets?.partners,   'Partners');
+        populate(elements.amFilter,         facets?.ams,        'AMs');
+        populate(elements.gmFilter,         facets?.gms,        'GMs');
+    }
+
+    function renderTable(accounts) {
+        if (!accounts || accounts.length === 0) {
+            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px;">No accounts match the selected filters.</td></tr>`;
+            return;
+        }
+
+        const rows = accounts.map(acc => {
+            const tierClass = (acc.priority_tier || 'P4').split(' ')[0].toLowerCase();
+            const cplMetric = formatCpl(acc.running_cid_cpl, acc.effective_cpl_goal);
+            const pacingMetric = formatPacing(acc.utilization);
+            const leadsMetric = formatLeads(acc.lead_risk_reason, acc.running_cid_leads);
+            const ageMetric = formatAge(acc.io_cycle);
+
+            return `
+                <tr>
+                    <td>
+                        <div class="cell-content">
+                            <div class="cell-main">${acc.advertiser_name || 'N/A'}</div>
+                            <div class="cell-subtext" style="font-weight: 500;">${acc.campaign_name || 'No Name'}</div>
+                            <div class="cell-subtext">Partner: ${acc.bid_name || 'N/A'}</div>
+                            <div class="cell-subtext">CID: ${acc.campaign_id || 'N/A'}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div class="cell-main">${acc.optimizer || '—'}</div>
+                            <div class="cell-subtext">AM: ${acc.am || 'No AM'}</div>
+                            <div class="cell-subtext">GM: ${acc.gm || 'No GM'}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div class="cell-main">${fmtScore(acc.final_priority_score)}</div>
+                            <div><span class="priority-badge ${tierClass}">${acc.priority_tier}</span></div>
+                        </div>
+                    </td>
+                    <td>
+                        ${acc.primary_issue === 'Pre-Flight Check'
+                            ? renderChecklist(acc)
+                            : renderMetrics(acc)
+                        }
+                    </td>
+                    <td>${fmtMoney0(acc.campaign_budget)}</td>
+                    <td>
+                        <button class="action-button" data-maid="${acc.maid}">Diagnose</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        elements.tableBody.innerHTML = rows;
+    }
+
+    async function handleFilterChange(event) {
+        console.log('🔍 DROPDOWN CHANGE DETECTED:', event?.target?.id, '=', event?.target?.value);
+        
+        const filterValue = (element) => {
+            const val = element.value?.trim();
+            const isValid = val && val !== '' && val.toLowerCase() !== 'undefined' && val.toLowerCase() !== 'null';
+            const result = isValid ? val : null;
+            console.log(`   ${element.id}: raw='${element.value}' -> filtered='${result}'`);
+            return result;
+        };
+        
+        console.log('📋 Building filter parameters...');
+        const rawParams = {
+            view: elements.viewFilter.value,
+            optimizer: filterValue(elements.optimizerFilter),
+            partner: filterValue(elements.partnerFilter),
+            am: filterValue(elements.amFilter),
+            gm: filterValue(elements.gmFilter),
+        };
+        
+        // Remove null/undefined params to avoid sending them to API
+        const params = {};
+        Object.entries(rawParams).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                params[key] = value;
+            }
+        });
+        console.log('📤 API params (cleaned):', JSON.stringify(params, null, 2));
+        
+        elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px;">Loading...</td></tr>`;
+        try {
+            console.log('🌐 Making API call...');
+            const { summary, accounts } = await fetchData(params);
+            console.log('📥 API response - Summary:', summary.counts, 'Accounts:', accounts.length);
+            renderSummary(summary);
+            renderTable(accounts);
+            console.log('✅ UI updated successfully');
+        } catch(err) {
+            console.error('❌ Failed to fetch data on filter change:', err);
+            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API.</td></tr>`;
+        }
+    }
+
+    async function init() {
+        try {
+            const initialParams = { view: elements.viewFilter.value };
+            const { summary, accounts } = await fetchData(initialParams);
+            renderSummary(summary);
+            populateFilters(summary.facets || {});
+            renderTable(accounts);
+            console.log('🎯 Attaching event listeners to dropdowns...');
+            [elements.viewFilter, elements.optimizerFilter, elements.partnerFilter, elements.amFilter, elements.gmFilter]
+                .forEach(el => {
+                    if (el) {
+                        console.log(`   ✅ Attached listener to ${el.id}`);
+                        el.addEventListener('change', handleFilterChange);
+                    } else {
+                        console.error(`   ❌ Element not found for listener attachment`);
+                    }
+                });
+        } catch (err) {
+            console.error('Failed to initialize page:', err);
+            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API. Check console/network.</td></tr>`;
+        }
+    }
+
+    init();
+});
 </script>
+
 </body>
 </html>

@@ -5,14 +5,10 @@ from pathlib import Path
 from typing import List, Tuple
 import pandas as pd
 
-# Folder holding your weekly CSVs
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "book"
-
-# Matches: 2025-08-31-campaign-health.csv  (your chosen convention)
 FNAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-campaign-health\.csv$", re.I)
 
 def list_snapshots() -> List[Tuple[str, Path]]:
-    """Return [(date_str, path)] sorted oldest→newest."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     items: List[Tuple[str, Path]] = []
     for p in DATA_DIR.glob("*-campaign-health.csv"):
@@ -29,117 +25,138 @@ def latest_snapshot_path() -> Path:
     return snaps[-1][1]
 
 def _snake(name: str) -> str:
-    return (
-        name.strip()
-            .replace("/", " ")
-            .replace("%", "pct")
-            .replace("-", " ")
-            .replace("&", "and")
-    ).lower().replace(" ", "_")
+    return (name.strip().replace("/", " ").replace("%", "pct").replace("-", " ").replace("&", "and")).lower().replace(" ", " ")
+
+# A set of all strings that should be treated as null, case-insensitive.
+# You can add any other words you find in your data here (e.g., "PENDING").
+NULL_STRINGS = {"N/A", "NA", "NONE", "—", "-", "NOT ENTERED"}
 
 def _to_float(x):
-    if pd.isna(x): return None
-    if isinstance(x, (int, float)): return float(x)
+    """A hardened function to safely convert a value to a float."""
+    if pd.isna(x):
+        return None
+    if isinstance(x, (int, float)):
+        return float(x)
+    
     s = str(x).strip()
-    if s == "": return None
-    s = s.replace("$", "").replace(",", "")
+    
+    # Check for empty or null-like strings
+    if s == "" or s.upper() in NULL_STRINGS:
+        return None
+    
+    # Handle currency and percentage signs
+    had_pct = "%" in s
+    s = s.replace("$", "").replace(",", "").replace("%", "")
+    
     try:
-        return float(s)
+        val = float(s)
+        return val / 100.0 if had_pct else val
     except ValueError:
+        # If conversion still fails, return None
         return None
 
-# Columns we’ll coerce to float when present
 NUMERIC_HINTS = {
-    "mcid_clicks", "mcid_leads", "amount_spent", "days_elapsed",
-    "cpl_goal", "running_cid_cpl", "cpl_last_15_days",
-    "bsc_cpl_top_10pct", "bsc_cpl_top_25pct", "bsc_cpl_avg",
-    "bsc_cpl_bottom_25pct", "bsc_cpl_bottom_10pct",
-    "mcid_avg_cpc", "bsc_cpc_top_10pct", "bsc_cpc_top_25pct",
-    "bsc_cpc_average", "bsc_cpc_bottom_25pct", "bsc_cpc_bottom_10pct",
+    "io_cycle", "campaign_budget", "running_cid_leads", "cpl_mcid", "utilization",
+    "mcid_clicks", "mcid_leads", "amount_spent", "days_elapsed", "cpl_goal", 
+    "running_cid_cpl", "cpl_last_15_days", "bsc_cpl_top_10pct", "bsc_cpl_top_25pct",
+    "bsc_cpl_avg", "bsc_cpl_bottom_25pct", "bsc_cpl_bottom_10pct", "mcid_avg_cpc",
+    "bsc_cpc_top_10pct", "bsc_cpc_top_25pct", "bsc_cpc_average", "bsc_cpc_bottom_25pct",
+    "bsc_cpc_bottom_10pct",
 }
 
-# Map the raw headers from your sample to stable snake_case
 RENAMES = {
-    "Last Active": "last_active",
-    "Channel": "channel",
-    "BID Name": "bid_name",
-    "BID": "bid",
-    "Advertiser Name": "advertiser_name",
-    "Primary User Name": "primary_user_name",
-    "AM": "am",
-    "AM Manager": "am_manager",
-    "Optimizer 1 Manager": "optimizer_1_manager",
-    "Optimizer 1": "optimizer",
-    "Optimizer 2 Manager": "optimizer_2_manager",
-    "Optimizer 2": "optimizer_2",
-    "MAID": "maid",
-    "MCID Clicks": "mcid_clicks",
-    "MCID Leads": "mcid_leads",
-    "MCID": "mcid",
-    "Campaign Name": "campaign_name",
-    "Campaign ID": "campaign_id",
-    "Product": "product",
-    "Offer Name": "offer_name",
-    "Finance Product": "finance_product",
-    "Tracking Method Name": "tracking_method_name",
-    "SEM Reviews P30": "sem_reviews_p30",
-    "IO Cycle": "io_cycle",
-    "Avg Cycle Length": "avg_cycle_length",
-    "Running CID Leads": "running_cid_leads",
-    "Amount Spent": "amount_spent",
-    "Days Elapsed": "days_elapsed",
-    "Utilization": "utilization",
-    "Campaign Performance Rating": "campaign_performance_rating",
-    "BC": "bc",
-    "BSC": "bsc",
-    "Campaign Budget": "campaign_budget",
-    "BSC Budget Bottom 10%": "bsc_budget_bottom_10pct",
-    "BSC Budget Bottom 25%": "bsc_budget_bottom_25pct",
-    "BSC Budget Average": "bsc_budget_average",
-    "BSC Budget Top 25%": "bsc_budget_top_25pct",
-    "BSC Budget Top 10%": "bsc_budget_top_10pct",
-    "CPL Goal": "cpl_goal",
-    "Running CID CPL": "running_cid_cpl",
-    "CPL MCID": "cpl_mcid",
-    "CPL Last 15 Days": "cpl_last_15_days",
-    "CPL 15 to 30 Days": "cpl_15_to_30_days",
-    "BSC CPL Top 10%": "bsc_cpl_top_10pct",
-    "BSC CPL Top 25%": "bsc_cpl_top_25pct",
-    "BSC CPL Avg": "bsc_cpl_avg",
-    "BSC CPL Bottom 25%": "bsc_cpl_bottom_25pct",
-    "BSC CPL Bottom 10%": "bsc_cpl_bottom_10pct",
-    "MCID Avg CPC": "mcid_avg_cpc",
-    "BSC CPC Top 10%": "bsc_cpc_top_10pct",
-    "BSC CPC Top 25%": "bsc_cpc_top_25pct",
-    "BSC CPC Average": "bsc_cpc_average",
-    "BSC CPC Bottom 25%": "bsc_cpc_bottom_25pct",
-    "BSC CPC Bottom 10%": "bsc_cpc_bottom_10pct",
+    "Last Active": "last_active", "Channel": "channel", "BID Name": "bid_name",
+    "BID": "bid", "Advertiser Name": "advertiser_name", "Primary User Name": "primary_user_name",
+    "AM": "am", "AM Manager": "am_manager", "Optimizer 1 Manager": "optimizer_1_manager",
+    "Optimizer 1": "optimizer", "Optimizer 2 Manager": "optimizer_2_manager",
+    "Optimizer 2": "optimizer_2", "MAID": "maid", "MCID Clicks": "mcid_clicks",
+    "MCID Leads": "mcid_leads", "MCID": "mcid", "Campaign Name": "campaign_name",
+    "Campaign ID": "campaign_id", "Product": "product", "Offer Name": "offer_name",
+    "Tracking Method Name": "tracking_method_name", "SEM Reviews P30": "sem_reviews_p30",
+    "IO Cycle": "io_cycle", "Avg Cycle Length": "avg_cycle_length",
+    "Running CID Leads": "running_cid_leads", "Amount Spent": "amount_spent",
+    "Days Elapsed": "days_elapsed", "Campaign Performance Rating": "campaign_performance_rating",
+    "BSC": "bsc", "BSC Budget Bottom 10%": "bsc_budget_bottom_10pct",
+    "BSC Budget Bottom 25%": "bsc_budget_bottom_25pct", "BSC Budget Average": "bsc_budget_average",
+    "BSC Budget Top 25%": "bsc_budget_top_25pct", "BSC Budget Top 10%": "bsc_budget_top_10pct",
+    "CPL Goal": "cpl_goal", "CPL MCID": "cpl_mcid", "CPL Last 15 Days": "cpl_last_15_days",
+    "CPL 15 to 30 Days": "cpl_15_to_30_days", "BSC CPL Top 10%": "bsc_cpl_top_10pct",
+    "BSC CPL Top 25%": "bsc_cpl_top_25pct", "BSC CPL Avg": "bsc_cpl_avg",
+    "BSC CPL Bottom 25%": "bsc_cpl_bottom_25pct", "BSC CPL Bottom 10%": "bsc_cpl_bottom_10pct",
+    "MCID Avg CPC": "mcid_avg_cpc", "BSC CPC Top 10%": "bsc_cpl_top_10pct",
+    "BSC CPC Top 25%": "bsc_cpc_top_25pct", "BSC CPC Average": "bsc_cpc_average",
+    "BSC CPC Bottom 25%": "bsc_cpc_bottom_25pct", "BSC CPC Bottom 10%": "bsc_cpc_bottom_10pct",
+    "Utilization": "utilization", "Utilization %": "utilization", "Utilization Pct": "utilization",
+    "Campaign Budget": "campaign_budget", "Campaign Budget (USD)": "campaign_budget",
+    "BC": "business_category", "BC Name": "business_category", "Business Category": "business_category",
+    "Finance Product": "finance_product", "FinanceProduct": "finance_product",
+    "IOCycle": "io_cycle", "Running CID CPL": "running_cid_cpl", "CPL vs Goal": "cpl_mcid",
 }
 
-def load_latest() -> pd.DataFrame:
-    """Load newest CSV → normalized DataFrame with types & snapshot_date."""
+def load_health_data() -> pd.DataFrame:
     path = latest_snapshot_path()
-    df = pd.read_csv(path, dtype=str)  # read as strings first
-    # normalize headers
+    df = pd.read_csv(path, dtype=str)
     cols = {c: RENAMES.get(c, _snake(c)) for c in df.columns}
     df = df.rename(columns=cols)
 
-    # numeric coercion
+    # Standardize campaign_id to be a clean string to ensure reliable merges
+    if 'campaign_id' in df.columns:
+        df['campaign_id'] = pd.to_numeric(df['campaign_id'], errors='coerce').fillna(0).astype(int).astype(str)
+
     for col in NUMERIC_HINTS:
         if col in df.columns:
             df[col] = df[col].map(_to_float)
 
-    # sanity: key and ownership columns
-    if "campaign_id" not in df.columns:
-        raise ValueError("CSV missing 'Campaign ID' column")
+    alias_pairs = [
+        ("utilization_pct", "utilization"), ("cpl_vs_goal", "cpl_mcid"),
+        ("bc", "business_category"), ("budget", "campaign_budget"),
+    ]
+    for src, dst in alias_pairs:
+        if dst not in df.columns and src in df.columns:
+            df[dst] = df[src]
+
+    if "campaign_id" not in df.columns: raise ValueError("CSV missing 'Campaign ID' column")
+    if "maid" not in df.columns: raise ValueError("CSV missing required 'MAID' column")
+    df['maid'] = df['maid'].astype(str).str.strip()
+    df = df[df['maid'] != ""]
     if "optimizer" not in df.columns:
-        # fall back: use any 'optimizer' column present
         for c in df.columns:
             if c.lower().startswith("optimizer"):
-                df = df.rename(columns={c: "optimizer"})
-                break
-
-    # attach snapshot date from filename
+                df = df.rename(columns={c: "optimizer"}); break
+    
     m = FNAME_RE.match(path.name)
     df["snapshot_date"] = m.group(1) if m else None
     return df
+
+def load_breakout_data() -> pd.DataFrame:
+    """Loads the comprehensive breakout file, which acts as our source of truth."""
+    try:
+        # Assume the breakout file has a similar naming convention
+        p = sorted(DATA_DIR.glob("*-book-breakout.csv"))[-1]
+    except IndexError:
+        raise FileNotFoundError(f"No breakout CSV file found in {DATA_DIR}")
+
+    df = pd.read_csv(p, dtype=str)
+
+    # Clean up column names to snake_case
+    df.columns = [c.lower().replace(' ', '_') for c in df.columns]
+
+    # Select and rename key columns for our master roster
+    renames = {
+        'area': 'gm',
+        'business_name': 'advertiser_name',
+        'finance_product': 'product_type'
+    }
+
+    # Ensure required columns exist before selecting
+    required_cols = ['maid', 'campaign_id', 'campaign_name', 'bid', 'area', 'business_name', 'finance_product']
+    df = df.rename(columns=renames)
+
+    # Standardize campaign_id to be a clean string to ensure reliable merges
+    if 'campaign_id' in df.columns:
+        df['campaign_id'] = pd.to_numeric(df['campaign_id'], errors='coerce').fillna(0).astype(int).astype(str)
+
+    # Filter down to the essential columns for our roster
+    df = df[[c for c in df.columns if c in ['maid', 'campaign_id', 'campaign_name', 'bid', 'gm', 'advertiser_name', 'product_type']]]
+
+    return df.copy()
