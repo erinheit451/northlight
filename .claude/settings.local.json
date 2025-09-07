@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git push:*)",
+      "Read(/C:\\Users\\Roci\\northlight\\frontend\\book/**)",
+      "Bash(curl:*)",
+      "Read(//c/**)",
+      "Bash(set PYTHONPATH=%CD%)",
+      "Bash(pytest:*)",
+      "Bash(git restore:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
