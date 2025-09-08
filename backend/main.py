@@ -17,10 +17,13 @@ from starlette.staticfiles import StaticFiles
 from backend.routers import diagnose, export
 # Import the book router
 from backend.routers.book import router as book_router
+from backend.data.snapshots import latest_bench_path
 
 # --- App Setup ---
 ROOT = Path(__file__).resolve().parent
-DATA_FILE = ROOT / "data" / "benchmarks_latest.json"
+from backend.data.snapshots import latest_bench_path
+
+
 
 app = FastAPI(title="Northlight Unified API", version="0.7.0")
 
@@ -55,14 +58,25 @@ BENCH: Dict[str, Any] = {}
 TOL = 0.10
 
 def load_benchmarks() -> Dict[str, Any]:
-    if not DATA_FILE.exists():
-        raise FileNotFoundError(f"Missing benchmarks file: {DATA_FILE}")
-    payload = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-    if "records" not in payload:
-        raise ValueError("benchmarks_latest.json missing 'records' root key")
-    recs = payload["records"]
-    recs["_version"] = payload.get("version") or payload.get("date")
+    """
+    Loads the most recent dated snapshot produced by scripts/convert_benchmarks.py,
+    e.g. backend/data/2025-09-08-benchmarks.json.
+    """
+    path = latest_bench_path()  # resolves to newest snapshot in backend/data
+    if not path.exists():
+        raise FileNotFoundError(f"No benchmark snapshots found in {path.parent}")
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    # We expect an object at payload["records"], not a list
+    recs = payload.get("records")
+    if not isinstance(recs, dict):
+        raise ValueError("Benchmark snapshot missing 'records' object")
+
+    # Plumb a version for UI/debugging
+    recs["_version"] = payload.get("version") or payload.get("date") or path.stem.split("-")[0]
     return recs
+
 
 @app.on_event("startup")
 def _startup():

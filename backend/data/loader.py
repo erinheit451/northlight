@@ -32,7 +32,7 @@ def init_data() -> None:
         raise ValueError(f"Invalid JSON in {DATA_FILE}: {e}") from e
 
     if "records" not in payload or not isinstance(payload["records"], dict):
-        raise ValueError("benchmarks_latest.json missing 'records' object")
+        raise ValueError("Benchmark snapshot missing 'records' object")
 
     recs: Dict[str, Any] = payload["records"]
     recs["_version"] = payload.get("version") or payload.get("date") or "unknown"

@@ -3,7 +3,9 @@ from pathlib import Path
 # Paths
 BACKEND_ROOT = Path(__file__).resolve().parent          # .../northlight/backend
 REPO_ROOT = BACKEND_ROOT.parent                         # .../northlight
-DATA_FILE = BACKEND_ROOT / "data" / "benchmarks_latest.json"
+from backend.data.snapshots import latest_bench_path
+DATA_FILE = latest_bench_path()
+
 
 # App
 APP_TITLE = "Northlight Benchmarks API"

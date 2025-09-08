@@ -1,10 +1,11 @@
 import csv, json, re, sys, hashlib, time
 from pathlib import Path
+from datetime import date
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 OUT = DATA / f"benchmarks_{time.strftime('%Y%m%d')}.json"
-ALIAS = DATA / "benchmarks_latest.json"
+OUT = DATA / f"{date.today():%Y-%m-%d}-benchmarks.json"
 
 MEDIANS_CSV = DATA / "Benchmark Data - Standard.csv"
 DMS_CSV = DATA / "Benchmark Data - DMS-Ultimate.csv"
