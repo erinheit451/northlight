@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Priority Queue - Northlight</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account Priority Queue - Northlight</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+  <style>
 /* ===========================
-    NORTHLIGHT – Design System v1
-   =========================== */
+    NORTHLIGHT – Design System
+    =========================== */
 :root{
   --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0; --gray-300:#cbd5e1;
   --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155; --gray-900:#0f172a;
   --primary-50:#eff6ff; --primary-500:#3b82f6; --primary-600:#2563eb; --primary-700:#1d4ed8;
-  --red-50: #fef2f2; --red-100: #fee2e2; --red-500: #ef4444; --red-600: #dc2626; --red-700: #b91c1c; --red-800: #991b1b;
-  --orange-50: #fff7ed; --orange-100: #ffedd5; --orange-500: #f97316; --orange-600: #ea580c;
-  --green-100: #dcfce7; --green-700: #15803d;
-  --text-xs:12px; --text-sm:14px; --text-base:16px; --text-lg:18px;
-  --text-xl:20px; --text-2xl:24px; --text-3xl:30px;
-  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
-  --space-6:24px; --space-8:32px; --space-12:48px;
+  --red-50:#fef2f2; --red-100:#fee2e2; --red-600:#dc2626; --red-700:#b91c1c; --red-800:#991b1b;
+  --orange-50:#fff7ed; --orange-100:#ffedd5; --orange-600:#ea580c;
+  --green-100:#dcfce7; --green-700:#15803d;
+  --blue-100:#dbeafe; --blue-700:#1d4ed8;
+
+  --text-xs:12px; --text-sm:14px; --text-base:16px; --text-lg:18px; --text-xl:20px; --text-2xl:24px; --text-3xl:30px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-12:48px;
   --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
 }
 *{box-sizing:border-box}
@@ -27,468 +27,777 @@ html,body{height:100%}
 body{
   font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   line-height:1.5; color:var(--gray-900); background:var(--gray-50);
-  margin:0; padding: 0;
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  margin:0; padding:0; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-main {max-width:1400px; margin: 0 auto; padding: var(--space-8);}
+main {max-width:1400px; margin:0 auto; padding:var(--space-8);}
 h1,h2,h3{margin:0; font-weight:700}
-p {margin: 0 0 var(--space-4)}
+p{margin:0 0 var(--space-4)}
 .subtext{color:var(--gray-500); font-size:var(--text-sm)}
 
-header.header{padding:16px 40px; border-bottom:1px solid var(--gray-200); background:rgba(255,255,255,.9);
-  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:sticky; top:0; z-index:10;}
+header.header{
+  padding:16px 40px; border-bottom:1px solid var(--gray-200); background:rgba(255,255,255,.9);
+  backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.08); position:sticky; top:0; z-index:10;
+}
 .header-content{display:flex; justify-content:space-between; align-items:center; max-width:1400px; margin:0 auto;}
 .brand-section{display:flex; flex-direction:column;}
 .brand-name{display:flex; align-items:baseline; margin-bottom:2px}
 .company-name{font-family:'Montserrat',sans-serif; font-weight:800; font-size:28px; color:#2d3748; letter-spacing:1px}
-.beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:4px; vertical-align:super}
-.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0; font-family:'Inter',system-ui}
+.beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:6px; vertical-align:super}
+.tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0}
 .nav-tabs{display:flex; gap:var(--space-2)}
-.nav-tab{padding:var(--space-2) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:600; text-decoration:none; color:var(--gray-700); border:1px solid var(--gray-200); background:#fff; cursor:pointer;}
+.nav-tab{
+  padding:var(--space-2) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:600;
+  text-decoration:none; color:var(--gray-700); border:1px solid var(--gray-200); background:#fff; cursor:pointer;
+}
 .nav-tab:hover{background:var(--gray-50)}
 .nav-tab.active{background:var(--primary-500); color:#fff; border-color:var(--primary-500)}
 
-.summary-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--space-6); margin:var(--space-6) 0}
-.summary-card{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-5); text-align:center;}
-.summary-card.critical{border-left:4px solid var(--red-500)}
-.summary-card.high{border-left:4px solid var(--orange-500)}
+.summary-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:var(--space-6); margin:var(--space-6) 0;
+}
+.summary-card{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-5); text-align:center;
+}
+.summary-card.critical{border-left:4px solid var(--red-600)}
+.summary-card.high{border-left:4px solid var(--orange-600)}
 .summary-number{font-size:var(--text-3xl); font-weight:700; margin-bottom:var(--space-2)}
-.summary-number.critical{color:var(--red-600)}
+.summary-number.critical{color:var(--red-700)}
 .summary-number.high{color:var(--orange-600)}
 .summary-label{font-size:var(--text-sm); color:var(--gray-500); font-weight:500}
 
-.filter-bar{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-4); margin:var(--space-6) 0; display:flex; gap:var(--space-4); align-items:center; flex-wrap:wrap;}
-.filter-group{display:flex; flex-direction:column; gap:var(--space-2)}
-.filter-label{font-size:var(--text-xs); color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;}
-.filter-select{border:1px solid var(--gray-300); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); font-size:var(--text-sm); background:#fff; min-width:180px;}
-
-.content-card{background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); padding:var(--space-6); margin:var(--space-6) 0;}
-
-.account-table{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius-lg); overflow:hidden;}
-.account-table th{background:var(--gray-100); padding:var(--space-3) var(--space-4); text-align:left; font-weight:600; font-size:var(--text-sm); color:var(--gray-600); border-bottom:2px solid var(--gray-200)}
-.account-table td{padding:var(--space-4); border-bottom:1px solid var(--gray-100); font-size:var(--text-sm); vertical-align:middle;}
-.account-table tbody tr:hover{background:var(--gray-50)}
-.cell-content {display: flex; flex-direction: column; gap: 2px;}
-.cell-main {font-weight: 600; color: var(--gray-900);}
-.cell-subtext {font-size: var(--text-xs); color: var(--gray-500);}
-
-.priority-badge {display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;}
-.priority-badge.p1 {background: var(--red-100); color: var(--red-700);}
-.priority-badge.p2 {background: var(--orange-100); color: var(--orange-600);}
-.priority-badge.p3 {background: var(--gray-200); color: var(--gray-700);}
-.priority-badge.p4 {background: var(--gray-100); color: var(--gray-500);}
-
-/* --- NEW METRICS STYLES --- */
-.metrics-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
-.metric-item { display: flex; justify-content: space-between; font-size: var(--text-xs); }
-.metric-label { color: var(--gray-500); }
-.metric-value { font-weight: 600; }
-.metric-critical-strong { color: var(--red-800); }
-.metric-critical { color: var(--red-600); }
-.metric-warning { color: var(--orange-600); }
-.metric-good { color: var(--green-700); }
-.metric-neutral { color: var(--gray-700); }
-
-.action-button {
-  padding: 6px 14px; border-radius: var(--radius-md); font-size: var(--text-sm);
-  font-weight: 600; border: 1px solid var(--gray-300); background: #fff;
-  color: var(--gray-700); cursor: pointer; transition: all 0.2s;
+.filter-bar{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-4); margin:var(--space-6) 0; display:flex; gap:var(--space-4); align-items:center; flex-wrap:wrap;
 }
-.action-button:hover { background: var(--gray-100); border-color: var(--gray-400); }
-    </style>
+.filter-group{display:flex; flex-direction:column; gap:var(--space-2)}
+.filter-label{font-size:var(--text-xs); color:var(--gray-500); font-weight:700; text-transform:uppercase; letter-spacing:.5px;}
+.filter-select{
+  border:1px solid var(--gray-300); border-radius:var(--radius-md);
+  padding:var(--space-2) var(--space-3); font-size:var(--text-sm); background:#fff; min-width:180px;
+}
+
+/* ===========================
+    Card List Layout
+    =========================== */
+.content-card{
+  background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
+  padding:var(--space-6); margin:var(--space-6) 0;
+}
+.cards-list{display:flex; flex-direction:column; gap:12px;}
+.load-more{
+  display:none; margin:16px auto 0; padding:10px 16px; font-weight:700;
+  border:1px solid var(--gray-300); background:#fff; border-radius:8px; cursor:pointer;
+}
+.load-more:hover{background:var(--gray-100);}
+
+/* ===========================
+    Priority Card
+    =========================== */
+.priority-card{
+  background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.08); overflow:hidden;
+  position:relative; transition:all .2s ease; border:1px solid var(--gray-200);
+}
+.priority-card::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px;}
+.priority-card.high-risk::before{background:var(--red-600)}
+.priority-card.medium-risk::before{background:var(--orange-600)}
+.priority-card.low-risk::before{background:var(--green-700)}
+.priority-card:hover{transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.12);}
+
+.card-header{padding:20px 24px; cursor:pointer; position:relative;}
+.card-header:hover{background:linear-gradient(to right,#fafafa,transparent)}
+.card-main-row{display:flex; align-items:flex-start; gap:24px;}
+
+.churn-display{display:flex; flex-direction:column; align-items:center; min-width:85px;}
+.churn-percentage{font-size:36px; font-weight:800; line-height:1;}
+.churn-percentage.high{color:var(--red-700)}
+.churn-percentage.medium{color:var(--orange-600)}
+.churn-percentage.low{color:var(--green-700)}
+.churn-label{font-size:11px; color:var(--gray-500); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-top:4px;}
+
+.account-section{flex:1; min-width:0;}
+.account-name{font-size:16px; font-weight:700; color:#1f2937; margin-bottom:2px;}
+.campaign-name-sub{font-size:13px; font-weight:500; color:var(--gray-500); margin-bottom:4px;}
+.primary-issue{font-size:14px; font-weight:600; margin-bottom:8px; color:var(--red-700);}
+.primary-issue.warning{color:var(--orange-600)}
+.primary-issue.neutral{color:var(--gray-500)}
+
+.account-details{display:flex; gap:16px; font-size:12px; color:var(--gray-600); flex-wrap:wrap;}
+.detail-item{display:flex; gap:4px;}
+.detail-item strong{color:#111827}
+
+.rar-section{text-align:right; min-width:160px;}
+.rar-amount{font-size:28px; font-weight:800; color:#1f2937; line-height:1;}
+.rar-label{font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; margin-top:4px;}
+.budget-context{font-size:13px; color:var(--gray-500); margin-top:4px;}
+
+.status-line{display:flex; align-items:center; gap:12px; margin-top:12px; padding-top:12px; border-top:1px solid var(--gray-200);}
+.status-badge{
+  display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700;
+}
+.status-badge.urgent{background:var(--red-100); color:var(--red-800)}
+.status-badge.warning{background:var(--orange-100); color:var(--orange-600)}
+.status-badge.info{background:var(--blue-100); color:var(--blue-700)}
+.time-indicator{margin-left:auto; font-size:11px; color:var(--gray-400);}
+
+.expand-arrow{position:absolute; right:24px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:20px; transition:transform .2s;}
+.expand-arrow.expanded{transform:translateY(-50%) rotate(90deg);}
+
+.card-expanded{display:none; background:#fafbfc; border-top:1px solid var(--gray-200);}
+.card-expanded.show{display:block;}
+.expanded-content{padding:24px;}
+
+/* Sections */
+.section-title{
+  font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--gray-500); margin-bottom:12px;
+}
+
+/* Risk Breakdown */
+.risk-breakdown{background:#fff; border-radius:8px; padding:16px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.risk-factor{display:flex; align-items:center; margin-bottom:12px; gap:16px;}
+.factor-label{width:140px; font-size:13px; color:#4b5563;}
+.factor-bar{flex:1; height:24px; background:#e5e7eb; border-radius:4px; overflow:hidden;}
+.factor-fill{height:100%; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; color:white; font-size:11px; font-weight:700; transition:width .6s ease;}
+.factor-fill.baseline{background:#6b7280;}
+.factor-fill.risk{background:#ef4444;}
+.factor-fill.protective{background:#10b981;}
+.factor-context{min-width:140px; font-size:12px; color:#6b7280; text-align:right;}
+.total-risk{padding-top:12px; margin-top:12px; border-top:2px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; font-weight:800;}
+
+/* Metrics */
+.metrics-bar{
+  background:#fff; border-radius:8px; padding:16px; margin-bottom:20px; display:flex; gap:32px; flex-wrap:wrap; box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.metric-item{display:flex; align-items:baseline; gap:8px;}
+.metric-label{font-size:11px; color:#6b7280; font-weight:700; text-transform:uppercase;}
+.metric-value{font-size:16px; font-weight:800; color:#1f2937;}
+.metric-trend{font-size:14px; font-weight:800;}
+.trend-up{color:var(--red-700)}
+.trend-down{color:var(--green-700)}
+.trend-neutral{color:var(--gray-500)}
+.metric-context{font-size:12px; color:#6b7280}
+
+/* Actions */
+.priority-actions{background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.action-item{
+  border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px; margin-bottom:10px;
+  display:flex; justify-content:space-between; align-items:center; transition:all .2s ease; cursor:pointer;
+}
+.action-item:last-child{margin-bottom:0;}
+.action-item:hover{border-color:var(--primary-500); background:var(--primary-50); transform:translateX(2px);}
+.action-content{flex:1;}
+.action-title{font-size:14px; font-weight:700; color:#1f2937; margin-bottom:2px;}
+.action-impact{font-size:12px; color:#059669; font-weight:700;}
+.action-button{
+  padding:8px 12px; background:var(--primary-500); color:#fff; border:0; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;
+}
+.action-button:hover{background:var(--primary-600)}
+  </style>
 </head>
+
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="brand-section">
-                <div class="brand-name"><span class="company-name">NORTHLIGHT</span><span class="beta-label">beta</span></div>
-                <p class="tagline">Turn data into daylight</p>
-            </div>
-            <nav class="nav-tabs">
-                <a href="/" class="nav-tab">Benchmark MVP</a>
-                <a href="/book" class="nav-tab active">Account Priority</a>
-            </nav>
+  <header class="header">
+    <div class="header-content">
+      <div class="brand-section">
+        <div class="brand-name">
+          <span class="company-name">NORTHLIGHT</span>
+          <span class="beta-label">beta</span>
         </div>
-    </header>
+        <p class="tagline">Turn data into daylight</p>
+      </div>
+      <nav class="nav-tabs">
+        <a href="/" class="nav-tab">Benchmark MVP</a>
+        <a href="/book" class="nav-tab active">Account Priority</a>
+      </nav>
+    </div>
+  </header>
 
-    <main>
-        <div style="margin-bottom: var(--space-8);">
-            <h1 style="font-size: 36px;">Account Priority Queue</h1>
-            <p class="subtext">Accounts are scored and prioritized based on retention risk and business value.</p>
-        </div>
+  <main>
+    <div style="margin-bottom: var(--space-8);">
+      <h1 style="font-size:36px;">Account Priority Queue</h1>
+      <p class="subtext">Accounts are scored and prioritized based on retention risk and business value.</p>
+    </div>
 
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-number" id="totalAccounts">—</div>
-                <div class="summary-label">Scored Accounts</div>
-            </div>
-            <div class="summary-card critical">
-                <div class="summary-number critical" id="p1Critical">—</div>
-                <div class="summary-label">P1 Critical</div>
-            </div>
-            <div class="summary-card high">
-                <div class="summary-number high" id="p2High">—</div>
-                <div class="summary-label">P2 High Priority</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-number" id="budgetAtRisk">—</div>
-                <div class="summary-label">Budget at Risk (P1/P2)</div>
-            </div>
-        </div>
+    <!-- Summary -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-number" id="totalAccounts">—</div>
+        <div class="summary-label">Scored Accounts</div>
+      </div>
+      <div class="summary-card critical">
+        <div class="summary-number critical" id="p1Critical">—</div>
+        <div class="summary-label">P1 Critical</div>
+      </div>
+      <div class="summary-card high">
+        <div class="summary-number high" id="p2High">—</div>
+        <div class="summary-label">P2 High Priority</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-number" id="budgetAtRisk">—</div>
+        <div class="summary-label">Total Monthly Budget</div>
+      </div>
+    </div>
 
-        <div class="filter-bar">
-             <div class="filter-group">
-                <div class="filter-label">View</div>
-                <select id="viewFilter" class="filter-select">
-                    <option value="optimizer">Optimizer View</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <div class="filter-label">Optimizer</div>
-                <select id="optimizerFilter" class="filter-select"><option value="">All Optimizers</option></select>
-            </div>
-            <div class="filter-group">
-                <div class="filter-label">Account Manager</div>
-                <select id="amFilter" class="filter-select"><option value="">All AMs</option></select>
-            </div>
-             <div class="filter-group">
-                <div class="filter-label">Partner</div>
-                <select id="partnerFilter" class="filter-select"><option value="">All Partners</option></select>
-            </div>
-            <div class="filter-group">
-                <div class="filter-label">GM</div>
-                <select id="gmFilter" class="filter-select"><option value="">All GMs</option></select>
-            </div>
-        </div>
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-label">View</div>
+        <select id="viewFilter" class="filter-select">
+          <option value="optimizer">Optimizer View</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Optimizer</div>
+        <select id="optimizerFilter" class="filter-select"><option value="">All Optimizers</option></select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Account Manager</div>
+        <select id="amFilter" class="filter-select"><option value="">All AMs</option></select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Partner</div>
+        <select id="partnerFilter" class="filter-select"><option value="">All Partners</option></select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">GM</div>
+        <select id="gmFilter" class="filter-select"><option value="">All GMs</option></select>
+      </div>
+    </div>
 
-        <div class="content-card">
-            <table class="account-table">
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">Account</th>
-                        <th style="width: 15%;">Owner</th>
-                        <th style="width: 15%;">Priority</th>
-                        <th style="width: 25%;">Key Metrics</th>
-                        <th style="width: 10%;">Budget</th>
-                        <th style="width: 10%;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="accountTableBody">
-                    <tr><td colspan="6" style="text-align:center; padding: 48px;">Loading accounts...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </main>
+    <!-- Cards -->
+    <div class="content-card">
+      <div id="cardsContainer" class="cards-list">
+        <div style="text-align:center; padding:48px;">Loading accounts...</div>
+      </div>
+      <button id="loadMoreBtn" class="load-more">Load more</button>
+    </div>
+  </main>
 
-<script>
+  <script>
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎉 Page loaded, initializing dropdown debug system...');
-    
-    const API_BASES = [
-        window.location.origin,
-        'https://northlight-wsgw.onrender.com',
-        'https://northlight-api-dev.onrender.com'
-    ];
-    console.log('🌐 API bases configured:', API_BASES);
+  // ===== API bases =====
+  const API_BASES = [
+    window.location.origin,
+    'https://northlight-wsgw.onrender.com',
+    'https://northlight-api-dev.onrender.com',
+  ];
 
-    const elements = {
-        totalAccounts: document.getElementById('totalAccounts'),
-        p1Critical: document.getElementById('p1Critical'),
-        p2High: document.getElementById('p2High'),
-        budgetAtRisk: document.getElementById('budgetAtRisk'),
-        viewFilter: document.getElementById('viewFilter'),
-        optimizerFilter: document.getElementById('optimizerFilter'),
-        partnerFilter: document.getElementById('partnerFilter'),
-        amFilter: document.getElementById('amFilter'),
-        gmFilter: document.getElementById('gmFilter'),
-        tableBody: document.getElementById('accountTableBody'),
+  // ===== DOM refs =====
+  const el = {
+    totalAccounts: document.getElementById('totalAccounts'),
+    p1Critical:    document.getElementById('p1Critical'),
+    p2High:        document.getElementById('p2High'),
+    budgetAtRisk:  document.getElementById('budgetAtRisk'),
+
+    viewFilter:      document.getElementById('viewFilter'),
+    optimizerFilter: document.getElementById('optimizerFilter'),
+    partnerFilter:   document.getElementById('partnerFilter'),
+    amFilter:        document.getElementById('amFilter'),
+    gmFilter:        document.getElementById('gmFilter'),
+
+    cardsContainer:  document.getElementById('cardsContainer'),
+    loadMoreBtn:     document.getElementById('loadMoreBtn'),
+  };
+
+  // ===== State =====
+  const state = { accounts: [], pageSize: 50, rendered: 0 };
+
+  // ===== Number & string helpers (do NOT coerce null to 0) =====
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const pctInt = (v) => {
+    const n = toNum(v);
+    return n == null ? null : Math.round(n * 100);
+  };
+  const fmtPct = (v) => v == null ? '—' : `${v}%`;
+  const fmtMoney0 = (x) => (x == null || isNaN(x)) ? '—' : '$' + Math.round(Number(x)).toLocaleString('en-US');
+
+  // ===== API =====
+  async function fetchFromAny(path, params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    for (const base of API_BASES) {
+      try {
+        const url = `${base}${path}?${qs}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${res.status}`);
+        return await res.json();
+      } catch (e) { /* try next base */ }
+    }
+    throw new Error('All API bases failed');
+  }
+  async function fetchData(params = {}) {
+    const [summary, accounts] = await Promise.all([
+      fetchFromAny('/api/book/summary', params),
+      fetchFromAny('/api/book/all', params),
+    ]);
+    if (Array.isArray(accounts) && accounts.length) {
+      console.log('Sample record:', accounts[0]);
+    }
+    return { summary, accounts };
+  }
+
+  // ===== Filters =====
+  function populateFilters(facets) {
+    const set = (select, options, label) => {
+      const cur = select.value;
+      select.innerHTML = `<option value="">All ${label}</option>`;
+      (options || []).forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt; select.appendChild(o);
+      });
+      select.value = cur;
     };
+    set(el.optimizerFilter, facets?.optimizers, 'Optimizers');
+    set(el.partnerFilter,   facets?.partners,   'Partners');
+    set(el.amFilter,        facets?.ams,        'AMs');
+    set(el.gmFilter,        facets?.gms,        'GMs');
+  }
+  function cleanVal(sel){
+    const v = sel?.value?.trim();
+    return (v && v.toLowerCase()!=='undefined' && v.toLowerCase()!=='null') ? v : null;
+  }
+
+  // ===== Summary =====
+  function renderSummary(summary) {
+    const c = summary?.counts || {};
+    el.totalAccounts.textContent = c.total_accounts ?? '0';
+    el.p1Critical.textContent    = c.p1_critical ?? '0';
+    el.p2High.textContent        = c.p2_high ?? '0';
+    el.budgetAtRisk.textContent  = fmtMoney0(summary?.budget_at_risk ?? 0);
+  }
+
+  // New: always sum actual budgets
+  function updateTotalBudgetFromAccounts(accounts){
+    const total = (accounts || []).reduce((s, a) => s + (Number(a?.campaign_budget) || 0), 0);
+    el.budgetAtRisk.textContent = fmtMoney0(total);
+  }
+
+  // ===== Driver parsing =====
+  function parseDrivers(raw) {
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch {}
+      try { return JSON.parse(JSON.parse(raw)); } catch {}
+      return null;
+    }
+    return null;
+  }
+
+  function parseFlareBreakdown(raw){
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
+
+  // ===== Status helpers =====
+  function churnBand(prob) {
+    const p = toNum(prob);
+    if (p == null) return { band:'low-risk', color:'low' }; // neutral default
+    if (p >= 0.40) return { band:'high-risk',   color:'high' };
+    if (p >= 0.20) return { band:'medium-risk', color:'medium' };
+    return { band:'low-risk', color:'low' };
+  }
+  function primaryIssue(acc){
+    const text = acc.headline_diagnosis || acc.primary_issue || 'Monitoring';
+    const p = toNum(acc.churn_prob_90d);
+    const sev = acc.headline_severity || (p==null ? 'neutral' : (p>=0.40?'critical':(p>=0.20?'warning':'neutral')));
+    return { text, sev };
+  }
+  const teamLine = (acc) => [acc.optimizer, acc.am, acc.gm].filter(Boolean).join(' / ') || '—';
+
+  // ===== Actions from drivers =====
+  function buildActionsFromDrivers(drivers) {
+    const items = [];
+    if (!drivers) return items;
+
+    const impacts = Object.fromEntries((drivers.drivers || []).map(d => [d.name, d.impact || 0]));
+    const add = (title, impact, cta) => items.push({ title, impact, cta });
+
+    if ('Single Product' in impacts) {
+      add('Add a second product (e.g., SEO or Website)', impacts['Single Product'], 'Start Proposal →');
+    }
+    if ('Zero Leads (30d)' in impacts) {
+      add('Fix tracking & lead quality audit', impacts['Zero Leads (30d)'], 'Open Checklist →');
+    }
+    if (Object.keys(impacts).some(k => k.startsWith('High CPL') || k.startsWith('Elevated CPL') || k.startsWith('CPL above goal'))) {
+      const k = Object.keys(impacts).find(k => k.includes('CPL'));
+      add('Budget/keyword optimization for lead volume', impacts[k], 'Open Planner →');
+    }
+    if ('New Account (≤1m)' in impacts || 'Early Tenure (≤3m)' in impacts) {
+      const m = Math.max(impacts['New Account (≤1m)']||0, impacts['Early Tenure (≤3m)']||0);
+      add('Set expectations / launch plan call', m, 'Schedule Call →');
+    }
+
+    return items.sort((a,b)=>b.impact-a.impact).slice(0,3);
+  }
+
+  // ===== Expanded sections =====
+  function expandedRisk(acc){
+    const p = toNum(acc.churn_prob_90d);
+    const drivers = parseDrivers(acc.risk_drivers_json);
+
+    if (p == null) {
+      return `
+        <div class="section-title">Churn Risk Breakdown</div>
+        <div class="risk-breakdown">
+          <div style="color:var(--gray-500);font-size:13px;">No churn data yet (likely pre-flight).</div>
+          <div class="total-risk"><span>Total Churn Risk</span><span style="font-size:20px;color:var(--red-600);">—</span></div>
+        </div>`;
+    }
+    if (!drivers || !drivers.drivers || drivers.drivers.length === 0) {
+      return `
+        <div class="section-title">Churn Risk Breakdown</div>
+        <div class="risk-breakdown">
+          <div style="color:var(--gray-500);font-size:13px;">No driver breakdown available.</div>
+          <div class="total-risk"><span>Total Churn Risk</span><span style="font-size:20px;color:var(--red-600);">${fmtPct(pctInt(p))}</span></div>
+        </div>`;
+    }
+
+    const basePP = Math.max(0, Math.min(100, drivers.baseline|0));
+    const rows = (drivers.drivers||[]).map(d=>{
+      const w = Math.max(0, Math.min(100, d.impact|0));
+      return `
+        <div class="risk-factor">
+          <span class="factor-label">${d.name}</span>
+          <div class="factor-bar">
+            <div class="factor-fill risk" style="width:${w}%">${w>8?`+${w}%`:''}</div>
+          </div>
+          <span class="factor-context">Impact</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="section-title">Churn Risk Breakdown</div>
+      <div class="risk-breakdown">
+        <div class="risk-factor">
+          <span class="factor-label">Baseline</span>
+          <div class="factor-bar">
+            <div class="factor-fill baseline" style="width:${basePP}%">${basePP>8?`${basePP}%`:''}</div>
+          </div>
+          <span class="factor-context">Cohort baseline</span>
+        </div>
+        ${rows}
+        <div class="total-risk">
+          <span>Total Churn Risk</span>
+          <span style="font-size:20px;color:var(--red-600);">${fmtPct(pctInt(p))}</span>
+        </div>
+      </div>`;
+  }
+
+  function expandedMetrics(acc){
+    const cpl   = toNum(acc.running_cid_cpl);
+    const goal  = toNum(acc.effective_cpl_goal ?? acc.cpl_goal ?? acc.bsc_cpl_avg);
+    const util  = toNum(acc.utilization);
+    const spent = toNum(acc.amount_spent);
+    const budg  = toNum(acc.campaign_budget);
+    const io    = toNum(acc.io_cycle);
+
+    const leads = toNum(acc.running_cid_leads) ?? 0;
+    const expMo = toNum(acc.expected_leads_monthly);
+    const expTdPlan  = toNum(acc.expected_leads_to_date);
+    const expTdSpend = toNum(acc.expected_leads_to_date_spend);
+
+    const tLeads = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
+      : d>0 ? {txt:`↑${d}%`, cls:'trend-down'}
+      : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-up'}
+      : {txt:'→', cls:'trend-neutral'};
+
+    const expRef = Math.min(
+      expTdPlan!=null && expTdPlan>0 ? expTdPlan : Infinity,
+      expTdSpend!=null && expTdSpend>0 ? expTdSpend : Infinity
+    );
+    const leadsDelta = Number.isFinite(expRef) ? Math.round(((leads/expRef)-1)*100) : null;
+    const tLeadsObj = tLeads(leadsDelta);
+
+    const cplDeltaPct = (cpl!=null && goal>0) ? Math.round(((cpl/goal)-1)*100) : null;
     
-    console.log('🔍 Element check:');
-    Object.entries(elements).forEach(([key, el]) => {
-        console.log(`   ${key}: ${el ? '✅ Found' : '❌ Missing'}`);
-    });
+    const trend = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
+      : d>0 ? {txt:`↑${d}%`, cls:'trend-up'}
+      : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-down'}
+      : {txt:'→', cls:'trend-neutral'};
 
-    const fmtMoney0 = x => (x == null || isNaN(x)) ? '—' : '$' + Math.round(x).toLocaleString('en-US');
-    const fmtScore  = x => (x == null || isNaN(x)) ? '—' : Number(x).toFixed(1);
+    const tCpl   = trend(cplDeltaPct);
+    const pacingText = (util==null) ? '—' : (util<0.75 ? 'Under' : (util>1.25 ? 'Over' : 'On track'));
 
-    // --- PRE-FLIGHT AND METRICS RENDERING FUNCTIONS ---
+    return `
+      <div class="section-title">Key Metrics</div>
+      <div class="metrics-bar">
+        <div class="metric-item">
+          <span class="metric-label">CPL:</span>
+          <span class="metric-value">${cpl!=null?fmtMoney0(cpl):'—'}</span>
+          <span class="metric-trend ${tCpl.cls}">${tCpl.txt}</span>
+          <span class="metric-context">(Goal: ${goal!=null?fmtMoney0(goal):'—'})</span>
+        </div>
+        
+        <div class="metric-item">
+          <span class="metric-label">Leads:</span>
+          <span class="metric-value">${leads}</span>
+          <span class="metric-trend ${tLeadsObj.cls}">${tLeadsObj.txt}</span>
+          <span class="metric-context">
+            (Expected to date: plan ${expTdPlan!=null?Math.max(1, Math.round(expTdPlan)):'—'}
+            · spend ${expTdSpend!=null?Math.max(1, Math.round(expTdSpend)):'—'}
+            ${expMo!=null?`; monthly ${Math.round(expMo)}`:''})
+          </span>
+        </div>
 
-    function renderMetrics(c) {
-        // This function will contain the existing metrics list logic
-        const cplMetric = formatCpl(c.running_cid_cpl, c.effective_cpl_goal);
-        const leadsMetric = formatLeads(c.lead_risk_reason, c.running_cid_leads);
-        const productMetric = formatProductCount(c.true_product_count);
-        const pacingMetric = formatPacing(c.utilization);
-        const ageMetric = formatAge(c.io_cycle);
-        // ... add any other metric formatters here as we build them ...
+        <div class="metric-item">
+          <span class="metric-label">Pacing:</span>
+          <span class="metric-value">${util!=null? Math.round(util*100)+'%':'—'}</span>
+          <span class="metric-trend trend-neutral">→</span>
+          <span class="metric-context">${pacingText}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Spent:</span>
+          <span class="metric-value">${fmtMoney0(spent)}</span>
+          <span class="metric-context">/ ${fmtMoney0(budg)}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Account Age:</span>
+          <span class="metric-value">${io!=null? `${io} months` : '—'}</span>
+          <span class="metric-context">${io!=null && io<=3 ? '(Critical period)' : ''}</span>
+        </div>
+      </div>`;
+  }
 
-        return `
-            <ul class="metrics-list">
-                <li class="metric-item"><span class="metric-label">Lead Performance</span><span class="metric-value ${leadsMetric.className}">${leadsMetric.text}</span></li>
-                <li class="metric-item"><span class="metric-label">Pacing</span><span class="metric-value ${pacingMetric.className}">${pacingMetric.text}</span></li>
-                <li class="metric-item"><span class="metric-label">CPL vs Goal</span><span class="metric-value ${cplMetric.className}">${cplMetric.text}</span></li>
-                <li class="metric-item"><span class="metric-label">Product Mix</span><span class="metric-value ${productMetric.className}">${productMetric.text}</span></li>
-                <li class="metric-item">
-                    <span class="metric-label">Age</span>
-                    <span class="metric-value ${ageMetric.className}">${ageMetric.text}</span>
-                </li>
-            </ul>
-        `;
+  function expandedActions(acc){
+    const p = toNum(acc.churn_prob_90d);
+    const drivers = parseDrivers(acc.risk_drivers_json);
+    const items = buildActionsFromDrivers(drivers);
+
+    if (p == null || !items.length) {
+      return `
+        <div class="section-title">Priority Actions</div>
+        <div class="metrics-bar" style="gap:12px;">
+          <div style="color:var(--gray-500);font-size:13px;">No recommended actions available.</div>
+        </div>`;
     }
 
-    function renderChecklist(c) {
-        // This function builds the HTML for the new Pre-Flight Checklist
-        const goalStatus = c.is_cpl_goal_missing 
-            ? `<span class="metric-value metric-warning">Pending</span>`
-            : `<span class="metric-value metric-good">Set</span>`;
+    const total = pctInt(p) ?? null;
+    const rows = items.map(it => {
+      const reduce = it.impact|0;
+      const after  = total!=null ? Math.max(0, total - reduce) : null;
+      return `
+        <div class="action-item">
+          <div class="action-content">
+            <div class="action-title">${it.title}</div>
+            <div class="action-impact">${after!=null?`Reduces churn to ${after}% (−${reduce}pp)`:`Estimated reduction −${reduce}pp`}</div>
+          </div>
+          <button class="action-button">${it.cta}</button>
+        </div>`;
+    }).join('');
 
-        return `
-            <ul class="metrics-list">
-                <li class="metric-item"><span class="metric-label">Status</span><span class="metric-value metric-neutral">Pending Launch</span></li>
-                <li class="metric-item"><span class="metric-label">CPL Goal</span>${goalStatus}</li>
-                <li class="metric-item"><span class="metric-label">Spend Activity</span><span class="metric-value metric-neutral">No Spend</span></li>
-            </ul>
-        `;
+    return `
+      <div class="section-title">Priority Actions (Ranked by Impact)</div>
+      <div class="priority-actions">${rows}</div>`;
+  }
+
+  // ===== Card builder (FINAL REVISION) =====
+  function cardHeader(acc){
+    const toKey = (s) => (s ?? '').toString().trim().toLowerCase();
+
+    const partnerRaw    = acc.partner_name || '';
+    const advRaw        = acc.advertiser_name || acc.business_name || acc.account_name || '';
+    const campaign      = acc.campaign_name || acc.bid_name || '';
+
+    // If advertiser equals partner, promote the campaign to the headline instead of repeating partner
+    let advertiser = advRaw || campaign || 'Unknown Advertiser';
+    if (advertiser && partnerRaw && toKey(advertiser) === toKey(partnerRaw) && campaign) {
+      advertiser = campaign; // show the campaign as the headline when adv == partner
     }
 
-    // --- NEW METRIC FORMATTING HELPERS ---
+    // Show partner line only if it's different from the chosen headline
+    const showPartner = partnerRaw && toKey(partnerRaw) !== toKey(advertiser);
+    const partner = partnerRaw || 'N/A';
+
+    const p = Number.isFinite(Number(acc.churn_prob_90d)) ? Number(acc.churn_prob_90d) : null;
+    const band = churnBand(p);
+
+    const cid = acc.campaign_id || acc.maid || 'N/A';
+    const io  = acc.io_cycle != null ? `${acc.io_cycle} months` : '—';
+    const issue = primaryIssue(acc);
+
+    const flare = Number.isFinite(Number(acc.flare_score)) ? Number(acc.flare_score) : null;
+    const flareBand = (acc.flare_band||'').toString();
     
-    function formatCpl(actualCpl, goalCpl) {
-        if (actualCpl == null || goalCpl == null || goalCpl === 0) {
-            return { text: 'No Goal', className: 'metric-neutral' };
-        }
-        const pct = ((actualCpl / goalCpl) - 1) * 100;
-        if (pct > 0) {
-            const className = pct >= 100 ? 'metric-critical-strong' : (pct >= 50 ? 'metric-critical' : 'metric-warning');
-            return { text: `${pct.toFixed(0)}% over`, className };
-        } else {
-            return { text: `${Math.abs(pct).toFixed(0)}% under`, className: 'metric-good' };
-        }
+    const budget = toNum(acc.campaign_budget);
+
+    const pills = Array.isArray(acc.diagnosis_pills) ? acc.diagnosis_pills.slice(0,3) : [];
+    
+    if (acc.is_safe === true) {
+      pills.unshift({ text: 'Safe', type: 'success' });
     }
 
-    function formatPacing(utilization) {
-        if (utilization == null) {
-            return { text: '—', className: 'metric-neutral' };
-        }
-        const deviation = (utilization - 1) * 100;
-        
-        if (deviation < -50) return { text: `${Math.abs(deviation).toFixed(0)}% under`, className: 'metric-critical' };
-        if (deviation < -25) return { text: `${Math.abs(deviation).toFixed(0)}% under`, className: 'metric-warning' };
-        if (deviation > 25)  return { text: `${deviation.toFixed(0)}% over`, className: 'metric-warning' };
-        
-        return { text: 'On Pace', className: 'metric-good' };
-    }
+    const pillSpan = (pill) => {
+      const map = {critical:'urgent', warning:'warning', success:'info', neutral:'info', healthy:'info'};
+      return `<span class="status-badge ${map[pill.type]||'info'}">${pill.text}</span>`;
+    };
 
-    function formatLeads(reason, leads) {
-        if (leads == null) {
-            return { text: '—', className: 'metric-neutral' };
-        }
+    const fb = parseFlareBreakdown(acc.flare_breakdown_json);
+    const topDrivers = (fb && fb.top_drivers && fb.top_drivers.length)
+      ? fb.top_drivers.map(d => `<span class="status-badge warning">${d.name} +${d.points}</span>`).join('')
+      : '';
 
-        switch (reason) {
-            case 'Hyper Critical':
-                return { text: 'Zero Leads (Behind Pace)', className: 'metric-critical-strong' };
-            case 'Critical Underperformance':
-                return { text: `Critically Low (${leads})`, className: 'metric-critical' };
-            case 'Concerning Underperformance':
-                return { text: `Low Volume (${leads})`, className: 'metric-warning' };
-            case 'Healthy':
-            default:
-                return { text: `Healthy (${leads})`, className: 'metric-good' };
-        }
-    }
+    return `
+      <div class="priority-card ${band.band}">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="false">
+          <div class="card-main-row">
+            <div class="churn-display">
+              <div class="churn-percentage ${flare!=null && flare>=70 ? 'high' : (flare>=50?'medium':'low')}">
+                ${flare!=null ? flare : '—'}
+              </div>
+              <div class="churn-label">FLARE</div>
+              <div class="subtext" style="margin-top:4px;">Churn: ${fmtPct(pctInt(p))}</div>
+            </div>
 
-    function formatAge(months) {
-        if (months == null) return { text: '—', className: 'metric-neutral' };
-        if (months <= 1) return { text: 'Brand New', className: 'metric-warning' };
-        if (months <= 3) return { text: 'First 90 Days', className: 'metric-warning' };
-        if (months <= 12) return { text: 'First Year', className: 'metric-neutral' };
-        return { text: 'Established', className: 'metric-good' };
-    }
+            <div class="account-section">
+              <div class="account-name">${advertiser}</div>
+              ${campaign && toKey(campaign) !== toKey(advertiser) ? `<div class="campaign-name-sub">${campaign}</div>` : ''}
+              <div class="primary-issue ${issue.sev}">${issue.text}</div>
+              <div class="account-details">
+                <div class="detail-item"><span>CID:</span><strong>${cid}</strong></div>
+                <div class="detail-item"><span>Team:</span><strong>${teamLine(acc)}</strong></div>
+                ${showPartner ? `<div class="detail-item"><span>Partner:</span><strong>${partner}</strong></div>` : ''}
+                <div class="detail-item"><span>Age:</span><strong>${io}</strong></div>
+              </div>
+            </div>
+            
+            <div class="rar-section">
+              <div class="rar-amount">${budget != null ? fmtMoney0(budget) : '—'}</div>
+              <div class="rar-label">Monthly Budget</div>
+            </div>
+          </div>
 
-    function formatProductCount(count) {
-        if (count == null) return { text: '—', className: 'metric-neutral' };
-        const className = count === 1 ? 'metric-warning' : 'metric-good';
-        return { text: `${count} products`, className };
-    }
+          <div class="status-line">
+            ${topDrivers}
+            ${pills.map(pillSpan).join('')}
+            <span class="time-indicator">Days active: ${acc.days_active ?? '—'}</span>
+          </div>
 
-    // --- API & RENDERING LOGIC ---
+          <span class="expand-arrow">▸</span>
+        </div>
 
-    async function fetchFromAny(path, params = {}) {
-        const qs = new URLSearchParams(params).toString();
-        console.log(`🔍 Trying to fetch: ${path} with params:`, params);
-        for (const base of API_BASES) {
-            try {
-                const url = `${base}${path}?${qs}`;
-                console.log(`   🌐 Attempting: ${url}`);
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`${response.status}`);
-                const data = await response.json();
-                console.log(`   ✅ Success from ${base}`);
-                return data;
-            } catch (e) {
-                console.warn(`   ❌ API base ${base} failed:`, e.message);
-            }
-        }
-        throw new Error('All API bases failed');
-    }
+        <div class="card-expanded">
+          <div class="expanded-content">
+            ${expandedRisk(acc)}
+            ${expandedMetrics(acc)}
+            ${expandedActions(acc)}
+          </div>
+        </div>
+      </div>`;
+  }
 
-    async function fetchData(params = {}) {
-        const [summary, accounts] = await Promise.all([
-            fetchFromAny('/api/book/summary', params),
-            fetchFromAny('/api/book/all', params)
-        ]);
-        return { summary, accounts };
-    }
 
-    function renderSummary(summary) {
-        const counts = summary.counts || {};
-        elements.totalAccounts.textContent = counts.total_accounts ?? '0';
-        elements.p1Critical.textContent    = counts.p1_critical ?? '0';
-        elements.p2High.textContent        = counts.p2_high ?? '0';
-        elements.budgetAtRisk.textContent  = fmtMoney0(summary.budget_at_risk ?? 0);
-    }
+  // ===== Card interactions =====
+  function attachCardToggles(scope){
+    const cards = (scope || document).querySelectorAll('.priority-card');
+    cards.forEach(card=>{
+      const header = card.querySelector('.card-header');
+      const expanded = card.querySelector('.card-expanded');
+      const arrow = card.querySelector('.expand-arrow');
 
-    function populateFilters(facets) {
-        const populate = (select, options, label) => {
-            const currentVal = select.value;
-            select.innerHTML = `<option value="">All ${label}</option>`;
-            (options || []).forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                select.appendChild(option);
-            });
-            select.value = currentVal;
-        };
-        populate(elements.optimizerFilter, facets?.optimizers, 'Optimizers');
-        populate(elements.partnerFilter,   facets?.partners,   'Partners');
-        populate(elements.amFilter,         facets?.ams,        'AMs');
-        populate(elements.gmFilter,         facets?.gms,        'GMs');
-    }
-
-    function renderTable(accounts) {
-        if (!accounts || accounts.length === 0) {
-            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px;">No accounts match the selected filters.</td></tr>`;
-            return;
-        }
-
-        const rows = accounts.map(acc => {
-            const tierClass = (acc.priority_tier || 'P4').split(' ')[0].toLowerCase();
-            const cplMetric = formatCpl(acc.running_cid_cpl, acc.effective_cpl_goal);
-            const pacingMetric = formatPacing(acc.utilization);
-            const leadsMetric = formatLeads(acc.lead_risk_reason, acc.running_cid_leads);
-            const ageMetric = formatAge(acc.io_cycle);
-
-            return `
-                <tr>
-                    <td>
-                        <div class="cell-content">
-                            <div class="cell-main">${acc.advertiser_name || 'N/A'}</div>
-                            <div class="cell-subtext" style="font-weight: 500;">${acc.campaign_name || 'No Name'}</div>
-                            <div class="cell-subtext">Partner: ${acc.bid_name || 'N/A'}</div>
-                            <div class="cell-subtext">CID: ${acc.campaign_id || 'N/A'}</div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="cell-content">
-                            <div class="cell-main">${acc.optimizer || '—'}</div>
-                            <div class="cell-subtext">AM: ${acc.am || 'No AM'}</div>
-                            <div class="cell-subtext">GM: ${acc.gm || 'No GM'}</div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="cell-content">
-                            <div class="cell-main">${fmtScore(acc.final_priority_score)}</div>
-                            <div><span class="priority-badge ${tierClass}">${acc.priority_tier}</span></div>
-                        </div>
-                    </td>
-                    <td>
-                        ${acc.primary_issue === 'Pre-Flight Check'
-                            ? renderChecklist(acc)
-                            : renderMetrics(acc)
-                        }
-                    </td>
-                    <td>${fmtMoney0(acc.campaign_budget)}</td>
-                    <td>
-                        <button class="action-button" data-maid="${acc.maid}">Diagnose</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        elements.tableBody.innerHTML = rows;
-    }
-
-    async function handleFilterChange(event) {
-        console.log('🔍 DROPDOWN CHANGE DETECTED:', event?.target?.id, '=', event?.target?.value);
-        
-        const filterValue = (element) => {
-            const val = element.value?.trim();
-            const isValid = val && val !== '' && val.toLowerCase() !== 'undefined' && val.toLowerCase() !== 'null';
-            const result = isValid ? val : null;
-            console.log(`   ${element.id}: raw='${element.value}' -> filtered='${result}'`);
-            return result;
-        };
-        
-        console.log('📋 Building filter parameters...');
-        const rawParams = {
-            view: elements.viewFilter.value,
-            optimizer: filterValue(elements.optimizerFilter),
-            partner: filterValue(elements.partnerFilter),
-            am: filterValue(elements.amFilter),
-            gm: filterValue(elements.gmFilter),
-        };
-        
-        // Remove null/undefined params to avoid sending them to API
-        const params = {};
-        Object.entries(rawParams).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-                params[key] = value;
-            }
+      const animateBars = () => {
+        const bars = expanded.querySelectorAll('.factor-fill');
+        bars.forEach((bar, i) => {
+          const target = bar.style.width;
+          if (!target || target === '0%') return;
+          bar.style.width = '0%';
+          setTimeout(()=>{ bar.style.width = target; }, 100 + i*50);
         });
-        console.log('📤 API params (cleaned):', JSON.stringify(params, null, 2));
-        
-        elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px;">Loading...</td></tr>`;
-        try {
-            console.log('🌐 Making API call...');
-            const { summary, accounts } = await fetchData(params);
-            console.log('📥 API response - Summary:', summary.counts, 'Accounts:', accounts.length);
-            renderSummary(summary);
-            renderTable(accounts);
-            console.log('✅ UI updated successfully');
-        } catch(err) {
-            console.error('❌ Failed to fetch data on filter change:', err);
-            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API.</td></tr>`;
-        }
+      };
+      const toggle = ()=>{
+        const show = !expanded.classList.contains('show');
+        expanded.classList.toggle('show', show);
+        arrow.classList.toggle('expanded', show);
+        header.setAttribute('aria-expanded', String(show));
+        if (show) animateBars();
+      };
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); }});
+    });
+  }
+
+  // ===== Render cards (with paging) =====
+  function renderCards(allAccounts, reset=true){
+    const container = el.cardsContainer;
+    const loadBtn = el.loadMoreBtn;
+
+    if (reset){
+      container.innerHTML = '';
+      state.rendered = 0;
     }
 
-    async function init() {
-        try {
-            const initialParams = { view: elements.viewFilter.value };
-            const { summary, accounts } = await fetchData(initialParams);
-            renderSummary(summary);
-            populateFilters(summary.facets || {});
-            renderTable(accounts);
-            console.log('🎯 Attaching event listeners to dropdowns...');
-            [elements.viewFilter, elements.optimizerFilter, elements.partnerFilter, elements.amFilter, elements.gmFilter]
-                .forEach(el => {
-                    if (el) {
-                        console.log(`   ✅ Attached listener to ${el.id}`);
-                        el.addEventListener('change', handleFilterChange);
-                    } else {
-                        console.error(`   ❌ Element not found for listener attachment`);
-                    }
-                });
-        } catch (err) {
-            console.error('Failed to initialize page:', err);
-            elements.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 48px; color: var(--red-600);">Error loading data. Could not connect to API. Check console/network.</td></tr>`;
-        }
+    if (!Array.isArray(allAccounts) || allAccounts.length===0){
+      container.innerHTML = `<div style="text-align:center;padding:48px;color:var(--gray-500)">No accounts match the selected filters.</div>`;
+      loadBtn.style.display = 'none';
+      return;
     }
 
-    init();
+    // Trust server order so FLARE matches what users see
+    const sorted = reset ? allAccounts.slice() : allAccounts;
+
+    const slice = sorted.slice(state.rendered, state.rendered + state.pageSize);
+    const html = slice.map(cardHeader).join('');
+    container.insertAdjacentHTML('beforeend', html);
+    attachCardToggles(container);
+
+    state.rendered += slice.length;
+    loadBtn.style.display = (state.rendered < sorted.length) ? 'inline-flex' : 'none';
+    loadBtn.onclick = ()=> renderCards(sorted, /*reset*/false);
+  }
+
+  // ===== Filtering =====
+  async function handleFilterChange(){
+    const params = {};
+    const raw = {
+      view: el.viewFilter.value,
+      optimizer: cleanVal(el.optimizerFilter),
+      partner:   cleanVal(el.partnerFilter),
+      am:        cleanVal(el.amFilter),
+      gm:        cleanVal(el.gmFilter),
+    };
+    Object.entries(raw).forEach(([k,v])=>{ if(v!=null) params[k]=v; });
+
+    el.cardsContainer.innerHTML = `<div style="text-align:center; padding:48px;">Loading...</div>`;
+    el.loadMoreBtn.style.display = 'none';
+
+    try{
+      const { summary, accounts } = await fetchData(params);
+      renderSummary(summary);
+      state.accounts = accounts || [];
+      updateTotalBudgetFromAccounts(state.accounts);
+      renderCards(state.accounts, true);
+    }catch(err){
+      console.error('Filter fetch failed:', err);
+      el.cardsContainer.innerHTML = `<div style="text-align:center; padding:48px; color: var(--red-600);">Error loading data. Could not connect to API.</div>`;
+    }
+  }
+
+  // ===== Init =====
+  async function init(){
+    try{
+      const { summary, accounts } = await fetchData({ view: el.viewFilter.value });
+      renderSummary(summary);
+      populateFilters(summary.facets || {});
+      state.accounts = accounts || [];
+      updateTotalBudgetFromAccounts(state.accounts);
+      renderCards(state.accounts, true);
+      [el.viewFilter, el.optimizerFilter, el.partnerFilter, el.amFilter, el.gmFilter]
+        .forEach(dd => dd && dd.addEventListener('change', handleFilterChange));
+    }catch(err){
+      console.error('Init failed:', err);
+      el.cardsContainer.innerHTML = `<div style="text-align:center; padding:48px; color: var(--red-600);">Error loading data. Could not connect to API.</div>`;
+    }
+  }
+
+  init();
 });
-</script>
-
+  </script>
 </body>
 </html>
+
