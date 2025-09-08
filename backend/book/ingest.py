@@ -1,4 +1,3 @@
-# backend/book/ingest.py
 from __future__ import annotations
 import re
 from pathlib import Path
@@ -25,7 +24,7 @@ def latest_snapshot_path() -> Path:
     return snaps[-1][1]
 
 def _snake(name: str) -> str:
-    return (name.strip().replace("/", " ").replace("%", "pct").replace("-", " ").replace("&", "and")).lower().replace(" ", " ")
+    return (name.strip().replace("/", " ").replace("%", "pct").replace("-", " ").replace("&", "and")).lower().replace(" ", "_")
 
 # A set of all strings that should be treated as null, case-insensitive.
 # You can add any other words you find in your data here (e.g., "PENDING").
@@ -83,7 +82,7 @@ RENAMES = {
     "CPL 15 to 30 Days": "cpl_15_to_30_days", "BSC CPL Top 10%": "bsc_cpl_top_10pct",
     "BSC CPL Top 25%": "bsc_cpl_top_25pct", "BSC CPL Avg": "bsc_cpl_avg",
     "BSC CPL Bottom 25%": "bsc_cpl_bottom_25pct", "BSC CPL Bottom 10%": "bsc_cpl_bottom_10pct",
-    "MCID Avg CPC": "mcid_avg_cpc", "BSC CPC Top 10%": "bsc_cpl_top_10pct",
+    "MCID Avg CPC": "mcid_avg_cpc", "BSC CPC Top 10%": "bsc_cpc_top_10pct",
     "BSC CPC Top 25%": "bsc_cpc_top_25pct", "BSC CPC Average": "bsc_cpc_average",
     "BSC CPC Bottom 25%": "bsc_cpc_bottom_25pct", "BSC CPC Bottom 10%": "bsc_cpc_bottom_10pct",
     "Utilization": "utilization", "Utilization %": "utilization", "Utilization Pct": "utilization",

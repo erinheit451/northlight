@@ -7,8 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
   <style>
 /* ===========================
-   NORTHLIGHT – Design System
-   =========================== */
+    NORTHLIGHT – Design System
+    =========================== */
 :root{
   --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0; --gray-300:#cbd5e1;
   --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155; --gray-900:#0f172a;
@@ -79,8 +79,8 @@ header.header{
 }
 
 /* ===========================
-   Card List Layout
-   =========================== */
+    Card List Layout
+    =========================== */
 .content-card{
   background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg);
   padding:var(--space-6); margin:var(--space-6) 0;
@@ -93,8 +93,8 @@ header.header{
 .load-more:hover{background:var(--gray-100);}
 
 /* ===========================
-   Priority Card
-   =========================== */
+    Priority Card
+    =========================== */
 .priority-card{
   background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.08); overflow:hidden;
   position:relative; transition:all .2s ease; border:1px solid var(--gray-200);
@@ -236,7 +236,7 @@ header.header{
       </div>
       <div class="summary-card">
         <div class="summary-number" id="budgetAtRisk">—</div>
-        <div class="summary-label">Monthly Revenue at Risk</div>
+        <div class="summary-label">Total Monthly Budget</div>
       </div>
     </div>
 
@@ -370,10 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
     el.budgetAtRisk.textContent  = fmtMoney0(summary?.budget_at_risk ?? 0);
   }
 
-  // Override the summary "Monthly Revenue at Risk" to be the sum of campaign budgets
-  function updateBudgetAtRiskFromAccounts(accounts){
-    const totalBudg = (accounts || []).reduce((s,a)=> s + (Number(a?.campaign_budget) || 0), 0);
-    el.budgetAtRisk.textContent = fmtMoney0(totalBudg);
+  // New: always sum actual budgets
+  function updateTotalBudgetFromAccounts(accounts){
+    const total = (accounts || []).reduce((s, a) => s + (Number(a?.campaign_budget) || 0), 0);
+    el.budgetAtRisk.textContent = fmtMoney0(total);
   }
 
   // ===== Driver parsing =====
@@ -387,6 +387,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return null;
   }
+
+  function parseFlareBreakdown(raw){
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
 
   // ===== Status helpers =====
   function churnBand(prob) {
@@ -486,23 +493,37 @@ document.addEventListener('DOMContentLoaded', () => {
   function expandedMetrics(acc){
     const cpl   = toNum(acc.running_cid_cpl);
     const goal  = toNum(acc.effective_cpl_goal ?? acc.cpl_goal ?? acc.bsc_cpl_avg);
-    const leads = toNum(acc.running_cid_leads) ?? 0;
-    const exp   = toNum(acc.expected_leads_monthly);
     const util  = toNum(acc.utilization);
     const spent = toNum(acc.amount_spent);
     const budg  = toNum(acc.campaign_budget);
     const io    = toNum(acc.io_cycle);
 
-    const cplDeltaPct = (cpl!=null && goal>0) ? Math.round(((cpl/goal)-1)*100) : null;
-    const leadsDelta  = (exp>0) ? Math.round(((leads/exp)-1)*100) : null;
+    const leads = toNum(acc.running_cid_leads) ?? 0;
+    const expMo = toNum(acc.expected_leads_monthly);
+    const expTdPlan  = toNum(acc.expected_leads_to_date);
+    const expTdSpend = toNum(acc.expected_leads_to_date_spend);
 
+    const tLeads = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
+      : d>0 ? {txt:`↑${d}%`, cls:'trend-down'}
+      : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-up'}
+      : {txt:'→', cls:'trend-neutral'};
+
+    const expRef = Math.min(
+      expTdPlan!=null && expTdPlan>0 ? expTdPlan : Infinity,
+      expTdSpend!=null && expTdSpend>0 ? expTdSpend : Infinity
+    );
+    const leadsDelta = Number.isFinite(expRef) ? Math.round(((leads/expRef)-1)*100) : null;
+    const tLeadsObj = tLeads(leadsDelta);
+
+    const cplDeltaPct = (cpl!=null && goal>0) ? Math.round(((cpl/goal)-1)*100) : null;
+    
     const trend = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
       : d>0 ? {txt:`↑${d}%`, cls:'trend-up'}
       : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-down'}
       : {txt:'→', cls:'trend-neutral'};
 
     const tCpl   = trend(cplDeltaPct);
-    const tLeads = trend(leadsDelta);
+    const pacingText = (util==null) ? '—' : (util<0.75 ? 'Under' : (util>1.25 ? 'Over' : 'On track'));
 
     return `
       <div class="section-title">Key Metrics</div>
@@ -513,17 +534,23 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="metric-trend ${tCpl.cls}">${tCpl.txt}</span>
           <span class="metric-context">(Goal: ${goal!=null?fmtMoney0(goal):'—'})</span>
         </div>
+        
         <div class="metric-item">
           <span class="metric-label">Leads:</span>
           <span class="metric-value">${leads}</span>
-          <span class="metric-trend ${tLeads.cls}">${tLeads.txt}</span>
-          <span class="metric-context">(Expected: ${exp!=null?Math.round(exp):'—'})</span>
+          <span class="metric-trend ${tLeadsObj.cls}">${tLeadsObj.txt}</span>
+          <span class="metric-context">
+            (Expected to date: plan ${expTdPlan!=null?Math.max(1, Math.round(expTdPlan)):'—'}
+            · spend ${expTdSpend!=null?Math.max(1, Math.round(expTdSpend)):'—'}
+            ${expMo!=null?`; monthly ${Math.round(expMo)}`:''})
+          </span>
         </div>
+
         <div class="metric-item">
           <span class="metric-label">Pacing:</span>
           <span class="metric-value">${util!=null? Math.round(util*100)+'%':'—'}</span>
           <span class="metric-trend trend-neutral">→</span>
-          <span class="metric-context">${util!=null ? (util<0.75?'Under':'On track') : '—'}</span>
+          <span class="metric-context">${pacingText}</span>
         </div>
         <div class="metric-item">
           <span class="metric-label">Spent:</span>
@@ -574,9 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function cardHeader(acc){
     const toKey = (s) => (s ?? '').toString().trim().toLowerCase();
 
-    const partnerRaw  = acc.partner_name || '';
-    const advRaw      = acc.advertiser_name || acc.business_name || acc.account_name || '';
-    const campaign    = acc.campaign_name || acc.bid_name || '';
+    const partnerRaw    = acc.partner_name || '';
+    const advRaw        = acc.advertiser_name || acc.business_name || acc.account_name || '';
+    const campaign      = acc.campaign_name || acc.bid_name || '';
 
     // If advertiser equals partner, promote the campaign to the headline instead of repeating partner
     let advertiser = advRaw || campaign || 'Unknown Advertiser';
@@ -595,23 +622,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const io  = acc.io_cycle != null ? `${acc.io_cycle} months` : '—';
     const issue = primaryIssue(acc);
 
-    // Monthly Revenue at Risk = campaign budget (by product decision)
-    const budget = Number.isFinite(Number(acc.campaign_budget)) ? Number(acc.campaign_budget) : null;
-    const rar = budget;
+    const flare = Number.isFinite(Number(acc.flare_score)) ? Number(acc.flare_score) : null;
+    const flareBand = (acc.flare_band||'').toString();
+    
+    const budget = toNum(acc.campaign_budget);
 
     const pills = Array.isArray(acc.diagnosis_pills) ? acc.diagnosis_pills.slice(0,3) : [];
+    
+    if (acc.is_safe === true) {
+      pills.unshift({ text: 'Safe', type: 'success' });
+    }
+
     const pillSpan = (pill) => {
       const map = {critical:'urgent', warning:'warning', success:'info', neutral:'info', healthy:'info'};
       return `<span class="status-badge ${map[pill.type]||'info'}">${pill.text}</span>`;
     };
+
+    const fb = parseFlareBreakdown(acc.flare_breakdown_json);
+    const topDrivers = (fb && fb.top_drivers && fb.top_drivers.length)
+      ? fb.top_drivers.map(d => `<span class="status-badge warning">${d.name} +${d.points}</span>`).join('')
+      : '';
 
     return `
       <div class="priority-card ${band.band}">
         <div class="card-header" role="button" tabindex="0" aria-expanded="false">
           <div class="card-main-row">
             <div class="churn-display">
-              <div class="churn-percentage ${band.color}">${fmtPct(pctInt(p))}</div>
-              <div class="churn-label">Churn Risk</div>
+              <div class="churn-percentage ${flare!=null && flare>=70 ? 'high' : (flare>=50?'medium':'low')}">
+                ${flare!=null ? flare : '—'}
+              </div>
+              <div class="churn-label">FLARE</div>
+              <div class="subtext" style="margin-top:4px;">Churn: ${fmtPct(pctInt(p))}</div>
             </div>
 
             <div class="account-section">
@@ -625,14 +666,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="detail-item"><span>Age:</span><strong>${io}</strong></div>
               </div>
             </div>
-
+            
             <div class="rar-section">
-              <div class="rar-amount">${rar!=null?fmtMoney0(rar):'—'}</div>
-              <div class="rar-label">Monthly Revenue at Risk</div>
+              <div class="rar-amount">${budget != null ? fmtMoney0(budget) : '—'}</div>
+              <div class="rar-label">Monthly Budget</div>
             </div>
           </div>
 
           <div class="status-line">
+            ${topDrivers}
             ${pills.map(pillSpan).join('')}
             <span class="time-indicator">Days active: ${acc.days_active ?? '—'}</span>
           </div>
@@ -696,13 +738,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Sort by final_priority_score desc, then by churn desc (fixed tie-breaker)
-    const sorted = (reset ? allAccounts.slice() : allAccounts)
-      .sort((a,b)=>{
-        const s = (toNum(b.final_priority_score)||0) - (toNum(a.final_priority_score)||0);
-        if (s !== 0) return s;
-        return (toNum(b.churn_prob_90d)||0) - (toNum(a.churn_prob_90d)||0);
-      });
+    // Trust server order so FLARE matches what users see
+    const sorted = reset ? allAccounts.slice() : allAccounts;
 
     const slice = sorted.slice(state.rendered, state.rendered + state.pageSize);
     const html = slice.map(cardHeader).join('');
@@ -733,8 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { summary, accounts } = await fetchData(params);
       renderSummary(summary);
       state.accounts = accounts || [];
-      // Override summary Monthly Revenue at Risk with sum of budgets
-      updateBudgetAtRiskFromAccounts(state.accounts);
+      updateTotalBudgetFromAccounts(state.accounts);
       renderCards(state.accounts, true);
     }catch(err){
       console.error('Filter fetch failed:', err);
@@ -749,8 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderSummary(summary);
       populateFilters(summary.facets || {});
       state.accounts = accounts || [];
-      // Override summary Monthly Revenue at Risk with sum of budgets
-      updateBudgetAtRiskFromAccounts(state.accounts);
+      updateTotalBudgetFromAccounts(state.accounts);
       renderCards(state.accounts, true);
       [el.viewFilter, el.optimizerFilter, el.partnerFilter, el.amFilter, el.gmFilter]
         .forEach(dd => dd && dd.addEventListener('change', handleFilterChange));

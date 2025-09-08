@@ -1,4 +1,3 @@
-# backend/routers/book.py
 from __future__ import annotations
 
 import time
@@ -30,47 +29,61 @@ def _now_bucket(seconds: int = 600) -> int:
 def get_cached_data(view: str, ts_bucket: int) -> pd.DataFrame:
     """
     Build the scored table and attach saved UI state.
-    IMPORTANT: whitelist includes churn fields and UI deps the frontend expects.
+    Returns a schema-stable DataFrame even if sources/state fail.
     """
-    # rules.process_for_view loads data internally; arg is unused
-    df = rules.process_for_view(pd.DataFrame(), view=view)
+    import logging
+    log = logging.getLogger("book")
 
-    # Merge persisted per-campaign UI state (e.g., status)
-    all_states = state._load()
-    if all_states:
-        st = pd.DataFrame.from_dict(all_states, orient="index")
-        if "status" not in st.columns:
-            st["status"] = "new"
-        st.index.name = "campaign_id"
-        st = st.reset_index()
-        df["campaign_id"] = df["campaign_id"].astype(str)
-        st["campaign_id"] = st["campaign_id"].astype(str)
-        df = pd.merge(df, st[["campaign_id", "status"]], on="campaign_id", how="left")
-        df["status"] = df["status"].fillna("new")
-    else:
+    # 1) Build core DF (never let this raise)
+    try:
+        df = rules.process_for_view(pd.DataFrame(), view=view)
+    except Exception as e:
+        log.exception("process_for_view failed")
+        df = pd.DataFrame()
+
+    # 2) Ensure identity cols exist before any use
+    for c in ("campaign_id", "maid", "advertiser_name", "partner_name"):
+        if c not in df.columns:
+            df[c] = np.nan
+    df["campaign_id"] = df["campaign_id"].astype(str)
+
+    # 3) Merge persisted state defensively
+    try:
+        all_states = state._load()
+    except Exception:
+        log.exception("state._load() failed")
+        all_states = None
+
+    if isinstance(all_states, dict) and all_states:
+        try:
+            st = pd.DataFrame.from_dict(all_states, orient="index")
+            if "status" not in st.columns:
+                st["status"] = "new"
+            st.index.name = "campaign_id"
+            st = st.reset_index()
+            st["campaign_id"] = st["campaign_id"].astype(str)
+            df = pd.merge(df, st[["campaign_id", "status"]], on="campaign_id", how="left")
+        except Exception:
+            log.exception("Merging UI state failed")
+
+    if "status" not in df.columns:
         df["status"] = "new"
+    df["status"] = df["status"].fillna("new")
 
-    # Stable schema: include everything the UI uses
+    # 4) Stabilize schema your UI expects
     want_cols = [
-        # Identity / routing
-        "campaign_id", "maid", "advertiser_name", "partner_name", "bid_name", "campaign_name",
-        "am", "optimizer", "gm", "business_category",
-        # Budgets / pacing
-        "campaign_budget", "amount_spent", "io_cycle", "days_elapsed", "days_active", "utilization",
-        # Performance / goals
-        "running_cid_leads", "running_cid_cpl", "cpl_goal", "bsc_cpl_avg",
-        "effective_cpl_goal", "expected_leads_monthly",
-        # Legacy risk components (kept for stability)
-        "age_risk", "lead_risk", "cpl_risk", "util_risk", "structure_risk",
-        # Unified scores
-        "total_risk_score", "value_score", "final_priority_score",
-        "priority_tier", "primary_issue",
-        # Churn model outputs (were missing before)
-        "churn_prob_90d", "churn_risk_band", "revenue_at_risk", "risk_drivers_json",
-        # UI extras
-        "headline_diagnosis", "headline_severity", "diagnosis_pills",
-        "campaign_count", "true_product_count",
-        # UI state
+        "campaign_id","maid","advertiser_name","partner_name","bid_name","campaign_name",
+        "am","optimizer","gm","business_category",
+        "campaign_budget","amount_spent","io_cycle","days_elapsed","days_active","utilization",
+        "running_cid_leads","running_cid_cpl","cpl_goal","bsc_cpl_avg",
+        "effective_cpl_goal","expected_leads_monthly","expected_leads_to_date","expected_leads_to_date_spend",
+        "age_risk","lead_risk","cpl_risk","util_risk","structure_risk",
+        "total_risk_score","value_score","final_priority_score",
+        "priority_index","priority_tier","primary_issue",
+        "churn_prob_90d","churn_risk_band","revenue_at_risk","risk_drivers_json",
+        "flare_score","flare_band","flare_breakdown_json","flare_score_raw",
+        "headline_diagnosis","headline_severity","diagnosis_pills",
+        "campaign_count","true_product_count","is_safe",
         "status",
     ]
     for c in want_cols:
@@ -109,16 +122,25 @@ def _filter_data(
     optimizer: Optional[str],
     gm: Optional[str],
 ) -> pd.DataFrame:
-    m = pd.Series([True] * len(df))
-    if partner is not None and "partner_name" in df.columns:
+    """
+    Apply equality filters only when both the column exists and a value is provided.
+    """
+    m = pd.Series([True] * len(df), index=df.index)
+
+    if "partner_name" in df.columns and partner is not None:
         m &= _normalize_equals(df["partner_name"], partner)
-    if am is not None and "am" in df.columns:
+
+    if "am" in df.columns and am is not None:
         m &= _normalize_equals(df["am"], am)
-    if optimizer is not None and "optimizer" in df.columns:
+
+    if "optimizer" in df.columns and optimizer is not None:
         m &= _normalize_equals(df["optimizer"], optimizer)
-    if gm is not None and "gm" in df.columns:
+
+    if "gm" in df.columns and gm is not None:
         m &= _normalize_equals(df["gm"], gm)
+
     return df[m]
+
 
 
 # ---------------------------
@@ -135,10 +157,10 @@ def summary(
     df = _get_full_processed_data(view=view)
 
     facets = {
-        "partners":  _safe_unique(df, "partner_name"),
-        "ams":       _safe_unique(df, "am"),
-        "optimizers":_safe_unique(df, "optimizer"),
-        "gms":       _safe_unique(df, "gm"),
+        "partners":   _safe_unique(df, "partner_name"),
+        "ams":        _safe_unique(df, "am"),
+        "optimizers": _safe_unique(df, "optimizer"),
+        "gms":        _safe_unique(df, "gm"),
     }
 
     filtered = _filter_data(df, partner, am, optimizer, gm)
@@ -180,13 +202,69 @@ def get_all_accounts(
     df = _get_full_processed_data(view=view)
     filtered = _filter_data(df, partner, am, optimizer, gm)
 
-    # Primary sort by final score; tie-break by churn if present
-    if "churn_prob_90d" in filtered.columns:
-        filtered = filtered.sort_values(
-            by=["final_priority_score", "churn_prob_90d"], ascending=[False, False]
-        )
-    else:
-        filtered = filtered.sort_values(by=["final_priority_score"], ascending=False)
+    sort_df = filtered.copy()
 
-    clean_df = filtered.replace({np.nan: None, pd.NaT: None})
+    # Ensure numeric fields
+    sort_df["priority_index"]   = pd.to_numeric(sort_df.get("priority_index", 0.0), errors="coerce").fillna(0.0)
+    sort_df["revenue_at_risk"]  = pd.to_numeric(sort_df.get("revenue_at_risk", 0.0), errors="coerce").fillna(0.0)
+    sort_df["churn_prob_90d"]   = pd.to_numeric(sort_df.get("churn_prob_90d", 0.0), errors="coerce").fillna(0.0)
+
+    # Single, defensible order:
+    # 1) Unified Priority Index (desc)
+    # 2) Dollars (desc)
+    # 3) Churn (desc)
+    # 4) Campaign id (asc) for stability
+    sorted_df = sort_df.sort_values(
+        by=["priority_index", "revenue_at_risk", "churn_prob_90d", "campaign_id"],
+        ascending=[False,          False,            False,           True]
+    )
+
+    clean_df = sorted_df.replace({np.nan: None, pd.NaT: None})
     return clean_df.to_dict("records")
+
+
+@router.get("/actions")
+def get_actions(campaign_id: str) -> Dict[str, Any]:
+    """
+    Returns best-effort recommended actions for a campaign.
+    If drivers are present, rank a few; otherwise return an empty list.
+    This prevents 404s that block the UI.
+    """
+    df = _get_full_processed_data(view="optimizer")
+    row = df.loc[df["campaign_id"].astype(str) == str(campaign_id)]
+    actions: List[Dict[str, Any]] = []
+
+    try:
+        if not row.empty:
+            raw = row.iloc[0].get("risk_drivers_json")
+            import json
+            drivers = raw if isinstance(raw, dict) else json.loads(raw) if raw else None
+            impacts = {d.get("name",""): int(d.get("impact", 0)) for d in (drivers or {}).get("drivers", [])}
+
+            def add(title, key, cta):
+                imp = impacts.get(key, 0)
+                if imp > 0:
+                    actions.append({"title": title, "impact": imp, "cta": cta})
+
+            # Mirror your frontend heuristics
+            add("Add a second product (e.g., SEO or Website)", "Single Product", "Start Proposal →")
+            add("Fix tracking & lead quality audit", "Zero Leads (30d)", "Open Checklist →")
+
+            # Any CPL driver
+            for k, v in impacts.items():
+                if v > 0 and (k.startswith("High CPL") or k.startswith("Elevated CPL") or k.startswith("CPL above goal")):
+                    actions.append({"title":"Budget/keyword optimization for lead volume","impact": v, "cta":"Open Planner →"})
+                    break
+
+            # Tenure driver
+            m = max(impacts.get("New Account (≤1m)", 0), impacts.get("Early Tenure (≤3m)", 0))
+            if m > 0:
+                actions.append({"title":"Set expectations / launch plan call","impact": m, "cta":"Schedule Call →"})
+
+            actions = sorted(actions, key=lambda x: x["impact"], reverse=True)[:3]
+    except Exception:
+        # Be defensive; never 500
+        actions = []
+
+    return {"campaign_id": str(campaign_id), "actions": actions}
+

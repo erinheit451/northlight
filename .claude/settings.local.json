@@ -10,7 +10,10 @@
       "Bash(set PYTHONPATH=%CD%)",
       "Bash(pytest:*)",
       "Bash(git restore:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(set PRE_COMMIT_ALLOW_NO_CONFIG=1)",
+      "Bash(PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m \"$(cat <<''EOF''\nTransform frontend to card-based churn risk interface with intelligent data fallbacks\n\n- Replaced table-based layout with expandable card interface\n- Added intelligent fallbacks for missing advertiser_name/campaign_name using bid_name\n- Implemented server-driven churn risk visualization\n- Added campaign_name to API schema whitelist\n- Enhanced data handling with proper null value processing\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
