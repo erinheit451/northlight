@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import pandas as pd
 import numpy as np
@@ -27,17 +26,57 @@ CATEGORY_LTV_MAP = {
 }
 AVERAGE_LTV = float(np.mean(list(CATEGORY_LTV_MAP.values())))
 
+# ===== SAFE tolerances (explicit) =====
+SAFE_CPL_TOLERANCE = 0.20    # within +20% of goal (<= 1.20x)
+SAFE_PACING_MIN = 0.75       # utilization lower bound
+SAFE_PACING_MAX = 1.25       # utilization upper bound
+SAFE_LEAD_RATIO_MIN = 0.80   # >= 80% of expected leads-to-date
+SAFE_MIN_LEADS = 3           # absolute floor when expected >= 1
+SAFE_MIN_LEADS_TINY_EXP = 1  # absolute floor when expected < 1
+# Visual cap for SAFE items
+SAFE_MAX_FLARE_SCORE = 20
+
 
 def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
-    product = df.get("product", pd.Series(dtype=str)).astype(str).str.upper().str.strip()
-    fprod   = df.get("finance_product", pd.Series(dtype=str)).astype(str).str.upper().str.strip()
+    """
+    Keep ONLY Search/SEM/XMO. Everything else (Display, Social, Presence, unknown) is filtered out.
+    Looks across multiple columns because sources differ.
+    """
+    def _norm(col: str) -> pd.Series:
+        if col not in df.columns:
+            return pd.Series([""], index=df.index, dtype=str)
+        return df[col].astype(str).str.upper().str.strip()
 
-    def is_search(s: pd.Series) -> pd.Series:
-        return (s.eq("SEARCH") | s.eq("SEM") | s.str.contains("SEARCH", na=False) | s.str.contains("SEM", na=False))
-    def is_xmo(s: pd.Series) -> pd.Series:
-        return s.eq("XMO") | s.str.contains("XMO", na=False)
+    product        = _norm("product")
+    finance_prod   = _norm("finance_product")
+    product_type   = _norm("product_type")   # from breakout
+    channel        = _norm("channel")
 
-    return is_search(product) | is_search(fprod) | is_xmo(fprod)
+    def is_search_like(s: pd.Series) -> pd.Series:
+        # exacts or substring safety (covers "SEARCH", "SEM", "GOOGLE SEARCH", etc.)
+        return (
+            s.eq("SEARCH") | s.eq("SEM") |
+            s.str.contains("SEARCH", na=False) |
+            s.str.contains("SEM", na=False)
+        )
+
+    def is_xmo_like(s: pd.Series) -> pd.Series:
+        return s.eq("XMO") | s.str.contains(r"\bXMO\b", na=False)
+
+    mask = (
+        is_search_like(product) |
+        is_search_like(finance_prod) |
+        is_search_like(product_type) |
+        is_search_like(channel) |
+        is_xmo_like(product) |
+        is_xmo_like(finance_prod) |
+        is_xmo_like(product_type) |
+        is_xmo_like(channel)
+    )
+
+    # If no signal columns are present or all empty, EXCLUDE (False).
+    mask = mask.fillna(False)
+    return mask
 
 
 def _priority_from_score(score: pd.Series) -> pd.Series:
@@ -72,7 +111,7 @@ FALLBACK_CPL_TIERS = [
     (1.2, 1.00),    # <1.2x => baseline
     (1.5, 1.25),    # 1.2–1.5x
     (3.0, 1.75),    # 1.5–3x
-    (999, 3.20),    # >=3x
+    (999, 3.20),    # ≥3x
 ]
 
 # Optional: enable ONLY if your Budget Gradient Audit shows stable uplift (N>=30, OR>=~1.15)
@@ -313,7 +352,7 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
 
     # Tenure (mutually exclusive)
     odds = odds * np.where(df['tenure_bucket'].eq('LTE_1M'), _CAL_HR['is_tenure_lte_1m'],
-                      np.where(df['tenure_bucket'].eq('M1_3'),   _CAL_HR['is_tenure_lte_3m'], 1.0))
+                          np.where(df['tenure_bucket'].eq('M1_3'),   _CAL_HR['is_tenure_lte_3m'], 1.0))
     # Single product
     odds = odds * np.where(df['is_single_product'], _CAL_HR['is_single_product'], 1.0)
     # Zero-lead month + early zero-lead
@@ -509,8 +548,8 @@ def attach_priority_and_flare(df: pd.DataFrame) -> pd.DataFrame:
 
     # Keep everything as Series to preserve pandas semantics
     ranks_s   = pd.Series(upi, index=out.index).rank(method="average", pct=True)  # 0..1
-    flare_raw = (100.0 * ranks_s)                              # Series[float]
-    flare_int = flare_raw.round().astype(int)                  # Series[int]
+    flare_raw = (100.0 * ranks_s)                                                  # Series[float]
+    flare_int = flare_raw.round().astype(int)                                      # Series[int]
 
     # Visual bands from UPI percentiles (display only; not used for sorting)
     bands_s = pd.cut(
@@ -520,6 +559,21 @@ def attach_priority_and_flare(df: pd.DataFrame) -> pd.DataFrame:
         right=True
     )
     bands_s = bands_s.astype("string").fillna("low")
+    
+    # --- FIX: Assign the Series directly, NOT the underlying numpy array ---
+    out["flare_score_raw"]      = flare_raw
+    out["flare_score"]          = flare_int
+    out["flare_band"]           = bands_s
+    # --------------------------------------------------------------------
+
+    # Push SAFE to a clearly low visual band
+    safe_mask = out.get("is_safe", pd.Series(False, index=out.index)).fillna(False)
+    if safe_mask.any():
+        # This line now works correctly because "flare_score" is a pandas Series
+        out.loc[safe_mask, "flare_score"] = np.minimum(
+            out.loc[safe_mask, "flare_score"].fillna(0), SAFE_MAX_FLARE_SCORE
+        )
+        out.loc[safe_mask, "flare_band"] = "low"
 
     # Minimal breakdown for the UI chip (length = rows)
     breakdown = []
@@ -530,9 +584,6 @@ def attach_priority_and_flare(df: pd.DataFrame) -> pd.DataFrame:
             # Optional: add "top_drivers" later if you want chips here
         })
 
-    out["flare_score_raw"]      = flare_raw.values
-    out["flare_score"]          = flare_int.values
-    out["flare_band"]           = bands_s.values
     out["flare_breakdown_json"] = breakdown
     return out
 
@@ -1003,10 +1054,12 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
 
     # Select only the necessary columns from health_data to avoid conflicts
     health_cols = [
-        'campaign_id', 'am', 'optimizer', 'io_cycle', 'campaign_budget', 
-        'running_cid_leads', 'utilization', 'cpl_goal', 'bsc_cpl_avg', 
+        'campaign_id', 'am', 'optimizer', 'io_cycle', 'campaign_budget',
+        'running_cid_leads', 'utilization', 'cpl_goal', 'bsc_cpl_avg',
         'running_cid_cpl', 'amount_spent', 'days_elapsed', 'bsc_cpc_average',
-        'business_category', 'bid_name', 'cpl_mcid', 'gm', 'advertiser_name', 'partner_name', 'campaign_name'
+        'business_category', 'bid_name', 'cpl_mcid', 'gm', 'advertiser_name', 'partner_name', 'campaign_name',
+        # add product signals so we can filter
+        'product', 'finance_product', 'channel'
     ]
     
     # Only select columns that exist in health_data
@@ -1053,6 +1106,10 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
         enriched_df.loc[same & enriched_df["campaign_name"].notna(), "advertiser_name"] = enriched_df["campaign_name"]
 
 
+    # ---- Channel filter: keep only Search/SEM/XMO for this view ----
+    # If you ever need a view that shows all channels, guard with `if view == "optimizer":`
+    keep_mask = _is_relevant_campaign(enriched_df)
+    enriched_df = enriched_df[keep_mask].copy()
     # Ensure we have days_elapsed before splitting pre-flight vs active
     if 'days_elapsed' not in enriched_df.columns:
         enriched_df['days_elapsed'] = np.nan

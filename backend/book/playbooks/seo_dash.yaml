@@ -1,0 +1,24 @@
+id: seo_dash
+label: "Search + SEO + Dash"
+triad: ["Search", "SEO", "Dash"]
+
+# Disqualifiers → treat as service-only (don't cross/upsell from here)
+gates:
+  zero_lead_30d: true      # recent zero-lead month
+  cpl_ratio_max: 3.0       # CPL ≥ 3× goal = crisis
+  min_days_active: 30      # need at least ~1 month of data
+
+# Cross-sell thresholds (Single → add; Two → complete bundle)
+cross_sell:
+  min_spark: 40            # quick readiness score (0–100)
+  max_cpl_ratio: 1.50
+  util_max: 1.20
+
+# Budget upsell thresholds (Search line only)
+upsell:
+  max_cpl_ratio: 1.20
+  util_max: 0.95
+  bump_pct: 0.25           # UI uses +25%
+
+# Minimum viable monthly SEM budget for this playbook
+min_sem: 2500

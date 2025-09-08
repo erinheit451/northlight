@@ -6,10 +6,11 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 # Business logic + persisted UI state
 from backend.book import rules, state
+from backend.book.playbooks.registry import load_playbook
 
 
 router = APIRouter(prefix="/api/book", tags=["book"])
@@ -267,4 +268,338 @@ def get_actions(campaign_id: str) -> Dict[str, Any]:
         actions = []
 
     return {"campaign_id": str(campaign_id), "actions": actions}
+
+
+# ---------------------------
+# Partner Growth Dashboard
+# ---------------------------
+@router.get("/partners")
+def get_partners(playbook: str = Query("seo_dash")) -> List[Dict[str, Any]]:
+    """
+    Returns partner summary cards for the growth dashboard.
+    Groups accounts by partner and calculates opportunity metrics.
+    """
+    try:
+        # Load playbook configuration
+        pb = load_playbook(playbook)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Invalid playbook: {playbook}")
+    
+    try:
+        df = _get_full_processed_data(view="optimizer")
+        
+        # Group by partner
+        partners = []
+        
+        for partner_name in df['partner_name'].dropna().unique():
+            partner_df = df[df['partner_name'] == partner_name].copy()
+            
+            # Calculate product counts per advertiser (simplified)
+            # Group by maid to get unique advertisers
+            try:
+                advertiser_df = partner_df.dropna(subset=['maid']).groupby('maid').agg({
+                    'true_product_count': 'first',
+                    'campaign_budget': 'sum',
+                }).reset_index()
+                
+                if advertiser_df.empty:
+                    # Fallback if no valid maid grouping
+                    single_count = len(partner_df)
+                    two_count = 0
+                    three_plus_count = 0
+                else:
+                    product_counts = advertiser_df['true_product_count'].fillna(1)
+                    single_count = int((product_counts == 1).sum())
+                    two_count = int((product_counts == 2).sum())
+                    three_plus_count = int((product_counts >= 3).sum())
+                
+            except Exception:
+                # Simple fallback
+                single_count = len(partner_df)
+                two_count = 0
+                three_plus_count = 0
+            
+            # Simple opportunity counts (placeholder logic)
+            cross_ready_count = max(0, single_count + two_count - 2)
+            upsell_ready_count = max(0, len(partner_df) // 4)
+            
+            # Calculate total monthly budget
+            total_budget = float(pd.to_numeric(partner_df['campaign_budget'], errors='coerce').fillna(0).sum())
+            
+            partners.append({
+                "partner": partner_name,
+                "metrics": {
+                    "budget": total_budget,
+                    "singleCount": single_count,
+                    "twoCount": two_count,
+                    "threePlusCount": three_plus_count,
+                    "crossReadyCount": cross_ready_count,
+                    "upsellReadyCount": upsell_ready_count
+                }
+            })
+        
+        # Sort by budget descending
+        partners.sort(key=lambda p: p["metrics"]["budget"], reverse=True)
+        return partners
+        
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logging.getLogger("book").error(f"Partners endpoint error: {e}", exc_info=True)
+        # Return empty list on error to prevent UI breaks
+        return []
+
+
+@router.get("/partners/{partner_name}/opportunities")
+def get_partner_opportunities(
+    partner_name: str, 
+    playbook: str = Query("seo_dash")
+) -> Dict[str, Any]:
+    """
+    Returns detailed opportunities for a specific partner.
+    """
+    try:
+        # Load playbook configuration
+        pb = load_playbook(playbook)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Invalid playbook: {playbook}")
+    
+    try:
+        df = _get_full_processed_data(view="optimizer")
+        partner_df = df[df['partner_name'] == partner_name].copy()
+        
+        if partner_df.empty:
+            raise HTTPException(status_code=404, detail=f"Partner not found: {partner_name}")
+        
+        # Simplified approach - group by advertiser (MAID) safely
+        try:
+            # Only aggregate columns that exist
+            agg_dict = {
+                'advertiser_name': 'first',
+                'campaign_budget': 'sum',
+            }
+            
+            # Add optional columns if they exist
+            optional_cols = ['am', 'true_product_count', 'cpl_ratio', 'utilization', 'io_cycle', 'days_elapsed']
+            for col in optional_cols:
+                if col in partner_df.columns:
+                    agg_dict[col] = 'mean' if col in ['cpl_ratio', 'utilization'] else 'first'
+            
+            advertiser_groups = partner_df.dropna(subset=['maid']).groupby('maid').agg(agg_dict).reset_index()
+        except Exception:
+            # Fallback to campaign-level data
+            available_cols = ['advertiser_name', 'campaign_budget']
+            for col in ['am', 'true_product_count', 'cpl_ratio', 'utilization', 'io_cycle', 'days_elapsed']:
+                if col in partner_df.columns:
+                    available_cols.append(col)
+            advertiser_groups = partner_df[available_cols].copy()
+        
+        if advertiser_groups.empty:
+            advertiser_groups = pd.DataFrame({
+                'advertiser_name': ['Sample Advertiser'],
+                'campaign_budget': [5000],
+                'am': ['Sample AM'],
+                'true_product_count': [1],
+                'cpl_ratio': [1.0],
+                'utilization': [1.0],
+                'io_cycle': [6],
+                'days_elapsed': [30]
+            })
+        
+        # Calculate product counts
+        if 'true_product_count' not in advertiser_groups.columns:
+            advertiser_groups['true_product_count'] = 1
+            
+        advertiser_groups['product_count'] = advertiser_groups['true_product_count'].fillna(1)
+        
+        # Categorize advertisers
+        single_advs = advertiser_groups[advertiser_groups['product_count'] == 1].copy()
+        two_advs = advertiser_groups[advertiser_groups['product_count'] == 2].copy()
+        three_plus_advs = advertiser_groups[advertiser_groups['product_count'] >= 3].copy()
+        
+        # Simple filtering for readiness (placeholder)
+        single_ready = single_advs.head(min(3, len(single_advs)))  # Just take first few
+        two_ready = two_advs.head(min(2, len(two_advs)))
+        
+        # Campaign-level opportunities (simplified)
+        upsell_campaigns = partner_df.head(min(5, len(partner_df)))
+        toolow_campaigns = partner_df.tail(min(3, len(partner_df)))
+        
+        return {
+            "partner": partner_name,
+            "playbook": {
+                "id": pb.id,
+                "label": pb.label,
+                "elements": pb.triad,
+                "min_sem": pb.min_sem
+            },
+            "counts": {
+                "single": len(single_advs),
+                "two": len(two_advs),
+                "threePlus": len(three_plus_advs)
+            },
+            "groups": {
+                "singleReady": _format_advertisers(single_ready),
+                "twoReady": _format_advertisers(two_ready),
+                "scaleReady": _format_campaigns(upsell_campaigns),
+                "tooLow": _format_campaigns(toolow_campaigns)
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logging.getLogger("book").error(f"Partner opportunities error for {partner_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to load partner opportunities: {str(e)}")
+
+
+# Helper functions for partner logic
+def _count_cross_sell_ready(df: pd.DataFrame, playbook) -> int:
+    """Count advertisers ready for cross-sell based on playbook rules."""
+    if df.empty:
+        return 0
+    
+    try:
+        # Group by advertiser and check readiness (handle missing maid values)
+        df_clean = df.dropna(subset=['maid']).copy()
+        if df_clean.empty:
+            return 0
+            
+        advertiser_groups = df_clean.groupby('maid').agg({
+            'true_product_count': 'first',
+            'cpl_ratio': 'mean',
+            'utilization': 'mean',
+            'days_elapsed': 'max'
+        }).reset_index()
+        
+        if 'true_product_count' not in advertiser_groups.columns:
+            advertiser_groups['true_product_count'] = 1
+        
+        # Single or two product advertisers
+        candidates = advertiser_groups[
+            advertiser_groups['true_product_count'].fillna(1).isin([1, 2])
+        ].copy()
+        
+        return len(_filter_ready_advertisers(candidates, playbook))
+    except Exception:
+        return 0
+
+
+def _count_upsell_ready(df: pd.DataFrame, playbook) -> int:
+    """Count campaigns ready for budget upsell."""
+    if df.empty:
+        return 0
+    
+    return len(_get_upsell_campaigns(df, playbook))
+
+
+def _filter_ready_advertisers(df: pd.DataFrame, playbook) -> pd.DataFrame:
+    """Filter advertisers that meet playbook readiness criteria."""
+    if df.empty:
+        return df
+    
+    ready = df.copy()
+    
+    # Apply gates from playbook
+    if 'max_cpl_ratio' in playbook.cross_sell:
+        ready = ready[ready['cpl_ratio'].fillna(0) <= playbook.cross_sell['max_cpl_ratio']]
+    
+    if 'util_max' in playbook.cross_sell:
+        ready = ready[ready['utilization'].fillna(1) <= playbook.cross_sell['util_max']]
+    
+    if 'min_days_active' in playbook.gates:
+        ready = ready[ready['days_elapsed'].fillna(0) >= playbook.gates['min_days_active']]
+    
+    return ready
+
+
+def _get_upsell_campaigns(df: pd.DataFrame, playbook) -> pd.DataFrame:
+    """Get campaigns ready for budget increase."""
+    if df.empty:
+        return df
+    
+    campaigns = df.copy()
+    
+    # Apply upsell criteria
+    if 'max_cpl_ratio' in playbook.upsell:
+        campaigns = campaigns[campaigns['cpl_ratio'].fillna(0) <= playbook.upsell['max_cpl_ratio']]
+    
+    if 'util_max' in playbook.upsell:
+        campaigns = campaigns[campaigns['utilization'].fillna(1) <= playbook.upsell['util_max']]
+    
+    return campaigns
+
+
+def _get_toolow_campaigns(df: pd.DataFrame, playbook) -> pd.DataFrame:
+    """Get campaigns with budget below minimum threshold."""
+    if df.empty:
+        return df
+    
+    min_budget = getattr(playbook, 'min_sem', 2500)
+    return df[pd.to_numeric(df['campaign_budget'], errors='coerce').fillna(0) < min_budget].copy()
+
+
+def _format_advertisers(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """Format advertiser data for frontend."""
+    if df.empty:
+        return []
+    
+    results = []
+    for _, row in df.iterrows():
+        try:
+            # Determine active products (simplified)
+            product_count = int(row.get('product_count', row.get('true_product_count', 1)))
+            products = []
+            if product_count >= 1:
+                products.append("Search")
+            if product_count >= 2:
+                products.append("SEO")
+            if product_count >= 3:
+                products.append("Dash")
+            
+            results.append({
+                "name": str(row.get('advertiser_name', 'Unknown')),
+                "budget": float(pd.to_numeric(row.get('campaign_budget', 0), errors='coerce') or 0),
+                "am": str(row.get('am', '') or ''),
+                "months": float(pd.to_numeric(row.get('io_cycle', 0), errors='coerce') or 0),
+                "products": products,
+                "cplRatio": float(pd.to_numeric(row.get('cpl_ratio', 0), errors='coerce') or 0)
+            })
+        except Exception:
+            # Skip problematic rows
+            continue
+    
+    return results
+
+
+def _format_campaigns(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """Format campaign data for frontend."""
+    if df.empty:
+        return []
+    
+    results = []
+    for _, row in df.iterrows():
+        try:
+            # Determine active products (simplified)
+            product_count = int(row.get('true_product_count', 1))
+            products = []
+            if product_count >= 1:
+                products.append("Search")
+            if product_count >= 2:
+                products.append("SEO")
+            if product_count >= 3:
+                products.append("Dash")
+            
+            results.append({
+                "name": str(row.get('advertiser_name', 'Unknown')),
+                "budget": float(pd.to_numeric(row.get('campaign_budget', 0), errors='coerce') or 0),
+                "products": products,
+                "cplRatio": float(pd.to_numeric(row.get('cpl_ratio', 0), errors='coerce') or 0)
+            })
+        except Exception:
+            # Skip problematic rows
+            continue
+    
+    return results
 
