@@ -10,9 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css?v=2025-09-09a">
-
+  <!-- Styles (cache-busted) -->
+  <link rel="stylesheet" href="styles.css?v=ui-v4">
 </head>
 <body>
   <!-- HEADER -->
@@ -27,9 +26,7 @@
       </div>
       <div class="right-section">
         <div class="beta-row">
-          <div class="beta-badge">
-            <span>🧪</span><span>Beta Access</span>
-          </div>
+          <div class="beta-badge"><span>🧪</span><span>Beta Access</span></div>
         </div>
         <div class="beta-subtitle">Free while we perfect things</div>
       </div>
@@ -41,6 +38,7 @@
     <h1 class="tool-title">Benchmark Your Campaign</h1>
 
     <div class="form-container" id="formContainer">
+      <!-- Row 1: Category / Subcategory -->
       <div class="form-grid">
         <div class="form-group">
           <label for="category" class="form-label">Category</label>
@@ -52,6 +50,7 @@
         </div>
       </div>
 
+      <!-- Row 2: 2x2 inputs -->
       <div class="form-grid">
         <div class="form-group">
           <label for="goal_cpl" class="form-label">Goal CPL</label>
@@ -79,18 +78,25 @@
 
     <div class="section-divider" aria-hidden="true"></div>
 
-    <section id="results" class="card" role="region" aria-live="polite" aria-busy="false" aria-labelledby="resultsHeading" style="display:none;">
+    <!-- RESULTS -->
+    <section id="results" role="region" aria-live="polite" aria-busy="false" aria-labelledby="resultsHeading" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <h3 id="resultsHeading" style="margin:0;">Results</h3>
         <div style="display:flex;gap:8px;">
           <button id="copySummaryBtn" class="btn-small" type="button" disabled>Copy Summary</button>
         </div>
       </div>
-      <div id="primaryStatusBlock"></div>
-      <div id="cpl-verdict-container"></div>
-      <div id="cpc-verdict-container"></div>
-      <div id="cr-verdict-container"></div>
-      <div id="diagnosisCard"></div>
+
+      <!-- Goal CPL analysis -->
+      <div id="primaryStatusBlock" class="card"></div>
+
+      <!-- Metric verdicts -->
+      <div id="cpl-verdict-container" class="card"></div>
+      <div id="cpc-verdict-container" class="card"></div>
+      <div id="cr-verdict-container"  class="card"></div>
+
+      <!-- Diagnosis + Scenario Builder -->
+      <div id="diagnosisCard" class="card"></div>
       <div id="scenarioBuilder" class="card" style="display:none;margin-top:24px;"></div>
     </section>
   </main>
@@ -103,11 +109,10 @@
         <a href="#" id="dataFreshnessLink">Data Freshness</a>
         <a href="#" id="termsLink">Terms</a>
       </div>
-      <div class="footer-right muted"> © <span id="footerYear"></span> Northlight </div>
+      <div class="footer-right muted">© <span id="footerYear"></span> Northlight</div>
     </div>
   </footer>
 
-  <!-- External JavaScript ONLY -->
-  <script src="script.js"></script>
+  <script src="script.js?v=ui-v4"></script>
 </body>
 </html>
