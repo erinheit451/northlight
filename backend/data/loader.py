@@ -27,7 +27,7 @@ def init_data() -> None:
 
     payload_txt = DATA_FILE.read_text(encoding="utf-8")
     try:
-        payload = json.loads(payload_txt)
+        payload_txt = DATA_FILE.read_text(encoding="utf-8-sig")
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {DATA_FILE}: {e}") from e
 

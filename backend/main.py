@@ -66,7 +66,7 @@ def load_benchmarks() -> Dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"No benchmark snapshots found in {path.parent}")
 
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
 
     # We expect an object at payload["records"], not a list
     recs = payload.get("records")
