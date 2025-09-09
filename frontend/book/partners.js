@@ -9,14 +9,30 @@ const perfClass = r => (r<=1.0 ? 'perf-good' : r<=1.2 ? 'perf-ok' : 'perf-bad');
 const round2 = x => Number(x ?? 0).toFixed(2);
 
 // ---- API calls --------------------------------------------------
+const API_BASES = [
+  'http://localhost:8001',    // Local development server
+  window.location.origin,     // Current page origin (for production)
+  'https://northlight-wsgw.onrender.com',
+  'https://northlight-api-dev.onrender.com',
+];
+
+async function fetchFromAny(path) {
+  for (const base of API_BASES) {
+    try {
+      const url = base + path;
+      const r = await fetch(url);
+      if (r.ok) return r;
+    } catch (e) { continue; }
+  }
+  throw new Error('All API bases failed');
+}
+
 async function fetchPartners(playbook="seo_dash") {
-  const r = await fetch(`/api/book/partners?playbook=${encodeURIComponent(playbook)}`);
-  if (!r.ok) throw new Error(`Failed to load partners: ${r.status}`);
+  const r = await fetchFromAny(`/api/book/partners?playbook=${encodeURIComponent(playbook)}`);
   return r.json();
 }
 async function fetchPartnerDetail(name, playbook="seo_dash") {
-  const r = await fetch(`/api/book/partners/${encodeURIComponent(name)}/opportunities?playbook=${encodeURIComponent(playbook)}`);
-  if (!r.ok) throw new Error(`Failed to load partner ${name}: ${r.status}`);
+  const r = await fetchFromAny(`/api/book/partners/${encodeURIComponent(name)}/opportunities?playbook=${encodeURIComponent(playbook)}`);
   return r.json();
 }
 

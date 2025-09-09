@@ -175,11 +175,14 @@ def summary(
     if "revenue_at_risk" in filtered.columns:
         budget_at_risk = float(pd.to_numeric(filtered["revenue_at_risk"], errors="coerce").fillna(0).sum())
     else:
-        budget_at_risk = float(
-            filtered.loc[pt.isin(["P1 - CRITICAL", "P2 - HIGH"]), "campaign_budget"]
-            .fillna(0)
-            .sum()
-        )
+        if "campaign_budget" in filtered.columns and not pt.empty:
+            budget_at_risk = float(
+                filtered.loc[pt.isin(["P1 - CRITICAL", "P2 - HIGH"]), "campaign_budget"]
+                .fillna(0)
+                .sum()
+            )
+        else:
+            budget_at_risk = 0.0
 
     return {
         "counts": {
@@ -206,9 +209,15 @@ def get_all_accounts(
     sort_df = filtered.copy()
 
     # Ensure numeric fields
-    sort_df["priority_index"]   = pd.to_numeric(sort_df.get("priority_index", 0.0), errors="coerce").fillna(0.0)
-    sort_df["revenue_at_risk"]  = pd.to_numeric(sort_df.get("revenue_at_risk", 0.0), errors="coerce").fillna(0.0)
-    sort_df["churn_prob_90d"]   = pd.to_numeric(sort_df.get("churn_prob_90d", 0.0), errors="coerce").fillna(0.0)
+    for col, default in [("priority_index", 0.0), ("revenue_at_risk", 0.0), ("churn_prob_90d", 0.0)]:
+        if col in sort_df.columns:
+            sort_df[col] = pd.to_numeric(sort_df[col], errors="coerce").fillna(default)
+        else:
+            sort_df[col] = default
+
+    # Ensure campaign_id exists for stable sorting
+    if "campaign_id" not in sort_df.columns:
+        sort_df["campaign_id"] = range(len(sort_df))
 
     # Single, defensible order:
     # 1) Unified Priority Index (desc)

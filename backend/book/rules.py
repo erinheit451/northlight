@@ -860,7 +860,7 @@ def categorize_issues(df):
             categories.append('CONVERSION_FAILURE')
         elif pd.notna(row.get('cpl_variance_pct')) and row['cpl_variance_pct'] > 200:
             categories.append('EFFICIENCY_CRISIS')
-        elif row['unified_performance_score'] >= 6:
+        elif row.get('unified_performance_score', 0) >= 6:
             categories.append('PERFORMANCE_ISSUE')
         elif row['maturity_amplifier'] >= 1.8:
             categories.append('NEW_ACCOUNT')

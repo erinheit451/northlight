@@ -288,7 +288,8 @@ header.header{
 document.addEventListener('DOMContentLoaded', () => {
   // ===== API bases =====
   const API_BASES = [
-    window.location.origin,
+    'http://localhost:8001',    // Local development server
+    window.location.origin,     // Current page origin (for production)
     'https://northlight-wsgw.onrender.com',
     'https://northlight-api-dev.onrender.com',
   ];
