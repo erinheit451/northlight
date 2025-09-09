@@ -25,14 +25,14 @@ def init_data() -> None:
     if not DATA_FILE.exists():
         raise FileNotFoundError(f"Missing benchmarks file: {DATA_FILE}")
 
-    payload_txt = DATA_FILE.read_text(encoding="utf-8")
+    payload_txt = DATA_FILE.read_text(encoding="utf-8-sig")
     try:
         payload = json.loads(payload_txt)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {DATA_FILE}: {e}") from e
 
     if "records" not in payload or not isinstance(payload["records"], dict):
-        raise ValueError("benchmarks_latest.json missing 'records' object")
+        raise ValueError("Benchmark snapshot missing 'records' object")
 
     recs: Dict[str, Any] = payload["records"]
     recs["_version"] = payload.get("version") or payload.get("date") or "unknown"
