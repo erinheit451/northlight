@@ -100,9 +100,10 @@ header.header{
   position:relative; transition:all .2s ease; border:1px solid var(--gray-200);
 }
 .priority-card::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px;}
-.priority-card.high-risk::before{background:var(--red-600)}
-.priority-card.medium-risk::before{background:var(--orange-600)}
-.priority-card.low-risk::before{background:var(--green-700)}
+.priority-card.critical::before{background:var(--red-600)}
+.priority-card.warning::before{background:var(--orange-600)}
+.priority-card.monitoring::before{background:var(--gray-400)}
+.priority-card.safe::before{background:var(--green-700)} /* New safe status */
 .priority-card:hover{transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.12);}
 
 .card-header{padding:20px 24px; cursor:pointer; position:relative;}
@@ -111,9 +112,10 @@ header.header{
 
 .churn-display{display:flex; flex-direction:column; align-items:center; min-width:85px;}
 .churn-percentage{font-size:36px; font-weight:800; line-height:1;}
-.churn-percentage.high{color:var(--red-700)}
-.churn-percentage.medium{color:var(--orange-600)}
-.churn-percentage.low{color:var(--green-700)}
+.churn-percentage.critical{color:var(--red-700)}
+.churn-percentage.warning{color:var(--orange-600)}
+.churn-percentage.monitoring{color:var(--gray-700)}
+.churn-percentage.safe{color:var(--green-700); font-size:44px;} /* New safe status */
 .churn-label{font-size:11px; color:var(--gray-500); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-top:4px;}
 
 .account-section{flex:1; min-width:0;}
@@ -122,6 +124,7 @@ header.header{
 .primary-issue{font-size:14px; font-weight:600; margin-bottom:8px; color:var(--red-700);}
 .primary-issue.warning{color:var(--orange-600)}
 .primary-issue.neutral{color:var(--gray-500)}
+.primary-issue.safe{color:var(--green-700)} /* New safe status */
 
 .account-details{display:flex; gap:16px; font-size:12px; color:var(--gray-600); flex-wrap:wrap;}
 .detail-item{display:flex; gap:4px;}
@@ -139,6 +142,7 @@ header.header{
 .status-badge.urgent{background:var(--red-100); color:var(--red-800)}
 .status-badge.warning{background:var(--orange-100); color:var(--orange-600)}
 .status-badge.info{background:var(--blue-100); color:var(--blue-700)}
+.status-badge.success{background:var(--green-100); color:var(--green-700)}
 .time-indicator{margin-left:auto; font-size:11px; color:var(--gray-400);}
 
 .expand-arrow{position:absolute; right:24px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:20px; transition:transform .2s;}
@@ -165,6 +169,14 @@ header.header{
 .factor-fill.protective{background:#10b981;}
 .factor-context{min-width:140px; font-size:12px; color:#6b7280; text-align:right;}
 .total-risk{padding-top:12px; margin-top:12px; border-top:2px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; font-weight:800;}
+
+/* Attribution composite bar (optional) */
+.attrib-stack {
+  position: relative; height:24px; background:#e5e7eb;
+  border-radius:4px; overflow:hidden; margin:8px 0 4px 0;
+}
+.attrib-seg { position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; color:#fff; font-size:11px; font-weight:700; }
+.attrib-seg .label { pointer-events:none; white-space:nowrap; }
 
 /* Metrics */
 .metrics-bar{
@@ -220,7 +232,6 @@ header.header{
       <p class="subtext">Accounts are scored and prioritized based on retention risk and business value.</p>
     </div>
 
-    <!-- Summary -->
     <div class="summary-grid">
       <div class="summary-card">
         <div class="summary-number" id="totalAccounts">—</div>
@@ -240,7 +251,6 @@ header.header{
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="filter-bar">
       <div class="filter-group">
         <div class="filter-label">View</div>
@@ -266,7 +276,6 @@ header.header{
       </div>
     </div>
 
-    <!-- Cards -->
     <div class="content-card">
       <div id="cardsContainer" class="cards-list">
         <div style="text-align:center; padding:48px;">Loading accounts...</div>
@@ -304,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== State =====
   const state = { accounts: [], pageSize: 50, rendered: 0 };
 
-  // ===== Number & string helpers (do NOT coerce null to 0) =====
+  // ===== Number & string helpers =====
   const toNum = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
@@ -370,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
     el.budgetAtRisk.textContent  = fmtMoney0(summary?.budget_at_risk ?? 0);
   }
 
-  // New: always sum actual budgets
   function updateTotalBudgetFromAccounts(accounts){
     const total = (accounts || []).reduce((s, a) => s + (Number(a?.campaign_budget) || 0), 0);
     el.budgetAtRisk.textContent = fmtMoney0(total);
@@ -388,43 +396,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  function parseFlareBreakdown(raw){
-    if (!raw) return null;
-    if (typeof raw === 'object') return raw;
-    try { return JSON.parse(raw); } catch { return null; }
+  // ===== NEW: Centralized Status Logic =====
+  function getAccountStatus(acc) {
+      if (acc.is_safe === true) return 'safe';
+      const p = toNum(acc.churn_prob_90d);
+      if (p == null) return 'monitoring';
+      if (p >= 0.40) return 'critical';
+      if (p >= 0.20) return 'warning';
+      return 'monitoring';
   }
 
-
-  // ===== Status helpers =====
-  function churnBand(prob) {
-    const p = toNum(prob);
-    if (p == null) return { band:'low-risk', color:'low' }; // neutral default
-    if (p >= 0.40) return { band:'high-risk',   color:'high' };
-    if (p >= 0.20) return { band:'medium-risk', color:'medium' };
-    return { band:'low-risk', color:'low' };
-  }
-  function primaryIssue(acc){
+  function primaryIssue(acc, status){
+    if (status === 'safe') {
+        return { text: acc.headline_diagnosis || 'Performing Well', sev: 'safe' };
+    }
     const text = acc.headline_diagnosis || acc.primary_issue || 'Monitoring';
-    const p = toNum(acc.churn_prob_90d);
-    const sev = acc.headline_severity || (p==null ? 'neutral' : (p>=0.40?'critical':(p>=0.20?'warning':'neutral')));
+    const sev = status === 'critical' ? 'critical' : (status === 'warning' ? 'warning' : 'neutral');
     return { text, sev };
   }
+  
   const teamLine = (acc) => [acc.optimizer, acc.am, acc.gm].filter(Boolean).join(' / ') || '—';
 
   // ===== Actions from drivers =====
   function buildActionsFromDrivers(drivers) {
     const items = [];
     if (!drivers) return items;
-
     const impacts = Object.fromEntries((drivers.drivers || []).map(d => [d.name, d.impact || 0]));
     const add = (title, impact, cta) => items.push({ title, impact, cta });
 
-    if ('Single Product' in impacts) {
-      add('Add a second product (e.g., SEO or Website)', impacts['Single Product'], 'Start Proposal →');
-    }
-    if ('Zero Leads (30d)' in impacts) {
-      add('Fix tracking & lead quality audit', impacts['Zero Leads (30d)'], 'Open Checklist →');
-    }
+    if ('Single Product' in impacts) add('Add a second product (e.g., SEO or Website)', impacts['Single Product'], 'Start Proposal →');
+    if ('Zero Leads (30d)' in impacts) add('Fix tracking & lead quality audit', impacts['Zero Leads (30d)'], 'Open Checklist →');
     if (Object.keys(impacts).some(k => k.startsWith('High CPL') || k.startsWith('Elevated CPL') || k.startsWith('CPL above goal'))) {
       const k = Object.keys(impacts).find(k => k.includes('CPL'));
       add('Budget/keyword optimization for lead volume', impacts[k], 'Open Planner →');
@@ -433,43 +434,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const m = Math.max(impacts['New Account (≤1m)']||0, impacts['Early Tenure (≤3m)']||0);
       add('Set expectations / launch plan call', m, 'Schedule Call →');
     }
-
     return items.sort((a,b)=>b.impact-a.impact).slice(0,3);
   }
 
   // ===== Expanded sections =====
-  function expandedRisk(acc){
+  let NL_RISK_VIEW = 'attribution';
+  
+  function renderRiskAttribution(acc){
     const p = toNum(acc.churn_prob_90d);
-    const drivers = parseDrivers(acc.risk_drivers_json);
+    const driversObj = parseDrivers(acc.risk_drivers_json);
+    const baselinePP = Number.isFinite(driversObj?.baseline) ? Math.max(0, Math.min(100, Math.round(driversObj.baseline))) : null;
 
-    if (p == null) {
-      return `
-        <div class="section-title">Churn Risk Breakdown</div>
-        <div class="risk-breakdown">
-          <div style="color:var(--gray-500);font-size:13px;">No churn data yet (likely pre-flight).</div>
-          <div class="total-risk"><span>Total Churn Risk</span><span style="font-size:20px;color:var(--red-600);">—</span></div>
-        </div>`;
-    }
-    if (!drivers || !drivers.drivers || drivers.drivers.length === 0) {
-      return `
-        <div class="section-title">Churn Risk Breakdown</div>
-        <div class="risk-breakdown">
-          <div style="color:var(--gray-500);font-size:13px;">No driver breakdown available.</div>
-          <div class="total-risk"><span>Total Churn Risk</span><span style="font-size:20px;color:var(--red-600);">${fmtPct(pctInt(p))}</span></div>
-        </div>`;
+    if (p == null || baselinePP == null) {
+      return `<div class="section-title">Churn Risk Breakdown</div><div class="risk-breakdown"><div style="color:var(--gray-500);font-size:13px;">No churn data yet.</div></div>`;
     }
 
-    const basePP = Math.max(0, Math.min(100, drivers.baseline|0));
-    const rows = (drivers.drivers||[]).map(d=>{
-      const w = Math.max(0, Math.min(100, d.impact|0));
-      return `
-        <div class="risk-factor">
-          <span class="factor-label">${d.name}</span>
-          <div class="factor-bar">
-            <div class="factor-fill risk" style="width:${w}%">${w>8?`+${w}%`:''}</div>
-          </div>
-          <span class="factor-context">Impact</span>
-        </div>`;
+    const finalPP = Math.max(0, Math.min(100, pctInt(p)));
+    const upliftPP = Math.max(0, finalPP - baselinePP);
+    const rows = Array.isArray(driversObj?.drivers) ? driversObj.drivers : [];
+    const factorRows = rows.map(a => {
+        const impact = Math.round(a.impact || 0);
+        return `<div class="risk-factor"><span class="factor-label">${a.name}</span><div class="factor-bar"><div class="factor-fill risk" style="width:${impact}%">+${impact}pp</div></div><span class="factor-context">Risk driver</span></div>`
     }).join('');
 
     return `
@@ -477,19 +462,17 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="risk-breakdown">
         <div class="risk-factor">
           <span class="factor-label">Baseline</span>
-          <div class="factor-bar">
-            <div class="factor-fill baseline" style="width:${basePP}%">${basePP>8?`${basePP}%`:''}</div>
-          </div>
+          <div class="factor-bar"><div class="factor-fill baseline" style="width:${baselinePP}%">${baselinePP>8?`${baselinePP}%`:''}</div></div>
           <span class="factor-context">Cohort baseline</span>
         </div>
-        ${rows}
+        ${factorRows}
         <div class="total-risk">
           <span>Total Churn Risk</span>
-          <span style="font-size:20px;color:var(--red-600);">${fmtPct(pctInt(p))}</span>
+          <span style="font-size:20px;color:var(--red-600);">${finalPP}%</span>
         </div>
       </div>`;
   }
-
+  
   function expandedMetrics(acc){
     const cpl   = toNum(acc.running_cid_cpl);
     const goal  = toNum(acc.effective_cpl_goal ?? acc.cpl_goal ?? acc.bsc_cpl_avg);
@@ -497,71 +480,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const spent = toNum(acc.amount_spent);
     const budg  = toNum(acc.campaign_budget);
     const io    = toNum(acc.io_cycle);
-
     const leads = toNum(acc.running_cid_leads) ?? 0;
-    const expMo = toNum(acc.expected_leads_monthly);
     const expTdPlan  = toNum(acc.expected_leads_to_date);
-    const expTdSpend = toNum(acc.expected_leads_to_date_spend);
 
-    const tLeads = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
-      : d>0 ? {txt:`↑${d}%`, cls:'trend-down'}
-      : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-up'}
-      : {txt:'→', cls:'trend-neutral'};
-
-    const expRef = Math.min(
-      expTdPlan!=null && expTdPlan>0 ? expTdPlan : Infinity,
-      expTdSpend!=null && expTdSpend>0 ? expTdSpend : Infinity
-    );
-    const leadsDelta = Number.isFinite(expRef) ? Math.round(((leads/expRef)-1)*100) : null;
-    const tLeadsObj = tLeads(leadsDelta);
-
-    const cplDeltaPct = (cpl!=null && goal>0) ? Math.round(((cpl/goal)-1)*100) : null;
-    
-    const trend = (d)=> d==null ? {txt:'→',cls:'trend-neutral'}
-      : d>0 ? {txt:`↑${d}%`, cls:'trend-up'}
-      : d<0 ? {txt:`↓${Math.abs(d)}%`, cls:'trend-down'}
-      : {txt:'→', cls:'trend-neutral'};
-
-    const tCpl   = trend(cplDeltaPct);
+    const cplDeltaPct = (cpl!=null && goal > 0) ? Math.round(((cpl/goal)-1)*100) : null;
+    const trend = (d, upIsBad = true) => {
+        if (d==null) return {txt:'→',cls:'trend-neutral'};
+        const up = upIsBad ? 'trend-up' : 'trend-down';
+        const down = upIsBad ? 'trend-down' : 'trend-up';
+        return d > 0 ? {txt:`↑${d}%`, cls: up} : d < 0 ? {txt:`↓${Math.abs(d)}%`, cls: down} : {txt:'→', cls:'trend-neutral'};
+    }
+    const tCpl = trend(cplDeltaPct);
     const pacingText = (util==null) ? '—' : (util<0.75 ? 'Under' : (util>1.25 ? 'Over' : 'On track'));
 
     return `
       <div class="section-title">Key Metrics</div>
       <div class="metrics-bar">
-        <div class="metric-item">
-          <span class="metric-label">CPL:</span>
-          <span class="metric-value">${cpl!=null?fmtMoney0(cpl):'—'}</span>
-          <span class="metric-trend ${tCpl.cls}">${tCpl.txt}</span>
-          <span class="metric-context">(Goal: ${goal!=null?fmtMoney0(goal):'—'})</span>
-        </div>
-        
-        <div class="metric-item">
-          <span class="metric-label">Leads:</span>
-          <span class="metric-value">${leads}</span>
-          <span class="metric-trend ${tLeadsObj.cls}">${tLeadsObj.txt}</span>
-          <span class="metric-context">
-            (Expected to date: plan ${expTdPlan!=null?Math.max(1, Math.round(expTdPlan)):'—'}
-            · spend ${expTdSpend!=null?Math.max(1, Math.round(expTdSpend)):'—'}
-            ${expMo!=null?`; monthly ${Math.round(expMo)}`:''})
-          </span>
-        </div>
-
-        <div class="metric-item">
-          <span class="metric-label">Pacing:</span>
-          <span class="metric-value">${util!=null? Math.round(util*100)+'%':'—'}</span>
-          <span class="metric-trend trend-neutral">→</span>
-          <span class="metric-context">${pacingText}</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Spent:</span>
-          <span class="metric-value">${fmtMoney0(spent)}</span>
-          <span class="metric-context">/ ${fmtMoney0(budg)}</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Account Age:</span>
-          <span class="metric-value">${io!=null? `${io} months` : '—'}</span>
-          <span class="metric-context">${io!=null && io<=3 ? '(Critical period)' : ''}</span>
-        </div>
+        <div class="metric-item"><span class="metric-label">CPL:</span><span class="metric-value">${cpl!=null?fmtMoney0(cpl):'—'}</span><span class="metric-trend ${tCpl.cls}">${tCpl.txt}</span><span class="metric-context">(Goal: ${goal!=null?fmtMoney0(goal):'—'})</span></div>
+        <div class="metric-item"><span class="metric-label">Leads:</span><span class="metric-value">${leads}</span><span class="metric-context">(Expected: ${expTdPlan!=null?Math.round(expTdPlan):'—'})</span></div>
+        <div class="metric-item"><span class="metric-label">Pacing:</span><span class="metric-value">${util!=null? Math.round(util*100)+'%':'—'}</span><span class="metric-context">${pacingText}</span></div>
+        <div class="metric-item"><span class="metric-label">Spent:</span><span class="metric-value">${fmtMoney0(spent)}</span><span class="metric-context">/ ${fmtMoney0(budg)}</span></div>
+        <div class="metric-item"><span class="metric-label">Account Age:</span><span class="metric-value">${io!=null? `${io} months` : '—'}</span></div>
       </div>`;
   }
 
@@ -569,90 +508,94 @@ document.addEventListener('DOMContentLoaded', () => {
     const p = toNum(acc.churn_prob_90d);
     const drivers = parseDrivers(acc.risk_drivers_json);
     const items = buildActionsFromDrivers(drivers);
-
     if (p == null || !items.length) {
-      return `
-        <div class="section-title">Priority Actions</div>
-        <div class="metrics-bar" style="gap:12px;">
-          <div style="color:var(--gray-500);font-size:13px;">No recommended actions available.</div>
-        </div>`;
+      return `<div class="section-title">Priority Actions</div><div class="metrics-bar"><div style="color:var(--gray-500);font-size:13px;">No recommended actions available.</div></div>`;
     }
-
-    const total = pctInt(p) ?? null;
+    const total = pctInt(p);
     const rows = items.map(it => {
       const reduce = it.impact|0;
       const after  = total!=null ? Math.max(0, total - reduce) : null;
-      return `
-        <div class="action-item">
-          <div class="action-content">
-            <div class="action-title">${it.title}</div>
-            <div class="action-impact">${after!=null?`Reduces churn to ${after}% (−${reduce}pp)`:`Estimated reduction −${reduce}pp`}</div>
-          </div>
-          <button class="action-button">${it.cta}</button>
-        </div>`;
+      return `<div class="action-item"><div class="action-content"><div class="action-title">${it.title}</div><div class="action-impact">${after!=null?`Reduces churn to ${after}% (−${reduce}pp)`:`Estimated reduction −${reduce}pp`}</div></div><button class="action-button">${it.cta}</button></div>`;
     }).join('');
-
-    return `
-      <div class="section-title">Priority Actions (Ranked by Impact)</div>
-      <div class="priority-actions">${rows}</div>`;
+    return `<div class="section-title">Priority Actions</div><div class="priority-actions">${rows}</div>`;
   }
 
-  // ===== Card builder (FINAL REVISION) =====
+  function expandedSafeContent(acc) {
+      return `
+        ${expandedMetrics(acc)}
+        <div class="section-title">Optimization Opportunities</div>
+        <div class="priority-actions">
+            <div class="action-item"><div class="action-content"><div class="action-title">Review Performance & Plan Next Steps</div><div class="action-impact">Discuss budget, new channels, or creative updates.</div></div><button class="action-button">Schedule Call →</button></div>
+            <div class="action-item"><div class="action-content"><div class="action-title">Explore Budget Increase</div><div class="action-impact">Capitalize on strong performance to scale results.</div></div><button class="action-button">Open Planner →</button></div>
+        </div>
+      `;
+  }
+
+  // ===== NEW: Helper for positive pills on Safe accounts =====
+  function getPositivePills(acc) {
+      const pills = [{ text: 'Performing', type: 'success' }];
+      const util = toNum(acc.utilization);
+      if (util >= 0.9 && util <= 1.15) {
+          pills.push({ text: 'Good Pacing', type: 'info' });
+      }
+      const cpl = toNum(acc.running_cid_cpl);
+      const goal = toNum(acc.effective_cpl_goal ?? acc.cpl_goal);
+      if (cpl != null && goal != null && cpl < goal) {
+          pills.push({ text: 'CPL Below Goal', type: 'info' });
+      }
+      const leads = toNum(acc.running_cid_leads) ?? 0;
+      const expTdPlan = toNum(acc.expected_leads_to_date);
+      if (leads > 0 && expTdPlan != null && leads >= expTdPlan) {
+          pills.push({ text: 'Strong Lead Volume', type: 'info' });
+      }
+      return pills.slice(0, 4); // Max 4 pills
+  }
+
+  // ===== Card builder (REFACTORED) =====
   function cardHeader(acc){
     const toKey = (s) => (s ?? '').toString().trim().toLowerCase();
+    
+    // --- Determine Account Status ---
+    const status = getAccountStatus(acc);
 
-    const partnerRaw    = acc.partner_name || '';
-    const advRaw        = acc.advertiser_name || acc.business_name || acc.account_name || '';
-    const campaign      = acc.campaign_name || acc.bid_name || '';
-
-    // If advertiser equals partner, promote the campaign to the headline instead of repeating partner
+    // --- Advertiser & Campaign Names ---
+    const partnerRaw   = acc.partner_name || '';
+    const advRaw       = acc.advertiser_name || acc.business_name || acc.account_name || '';
+    const campaign     = acc.campaign_name || acc.bid_name || '';
     let advertiser = advRaw || campaign || 'Unknown Advertiser';
-    if (advertiser && partnerRaw && toKey(advertiser) === toKey(partnerRaw) && campaign) {
-      advertiser = campaign; // show the campaign as the headline when adv == partner
+    if (toKey(advertiser) === toKey(partnerRaw) && campaign) {
+      advertiser = campaign;
     }
-
-    // Show partner line only if it's different from the chosen headline
     const showPartner = partnerRaw && toKey(partnerRaw) !== toKey(advertiser);
-    const partner = partnerRaw || 'N/A';
 
-    const p = Number.isFinite(Number(acc.churn_prob_90d)) ? Number(acc.churn_prob_90d) : null;
-    const band = churnBand(p);
-
-    const cid = acc.campaign_id || acc.maid || 'N/A';
-    const io  = acc.io_cycle != null ? `${acc.io_cycle} months` : '—';
-    const issue = primaryIssue(acc);
-
-    const flare = Number.isFinite(Number(acc.flare_score)) ? Number(acc.flare_score) : null;
-    const flareBand = (acc.flare_band||'').toString();
-    
+    // --- Core Data Points ---
     const budget = toNum(acc.campaign_budget);
-
-    const pills = Array.isArray(acc.diagnosis_pills) ? acc.diagnosis_pills.slice(0,3) : [];
+    const p = toNum(acc.churn_prob_90d);
+    const flare = toNum(acc.flare_score);
+    const issue = primaryIssue(acc, status);
     
-    if (acc.is_safe === true) {
-      pills.unshift({ text: 'Safe', type: 'success' });
-    }
+    // --- Status-Dependent Displays ---
+    const flareDisplay = status === 'safe'
+        ? { value: '✓', label: 'SAFE', class: 'safe' }
+        : { value: flare ?? '—', label: 'FLARE', class: status };
+
+    const pills = status === 'safe'
+        ? getPositivePills(acc)
+        : (Array.isArray(acc.diagnosis_pills) ? acc.diagnosis_pills.slice(0,3) : []);
 
     const pillSpan = (pill) => {
-      const map = {critical:'urgent', warning:'warning', success:'info', neutral:'info', healthy:'info'};
-      return `<span class="status-badge ${map[pill.type]||'info'}">${pill.text}</span>`;
+        const map = {critical:'urgent', warning:'warning', success:'success', info:'info', neutral:'info'};
+        return `<span class="status-badge ${map[pill.type]||'info'}">${pill.text}</span>`;
     };
 
-    const fb = parseFlareBreakdown(acc.flare_breakdown_json);
-    const topDrivers = (fb && fb.top_drivers && fb.top_drivers.length)
-      ? fb.top_drivers.map(d => `<span class="status-badge warning">${d.name} +${d.points}</span>`).join('')
-      : '';
-
     return `
-      <div class="priority-card ${band.band}">
+      <div class="priority-card ${status}">
         <div class="card-header" role="button" tabindex="0" aria-expanded="false">
           <div class="card-main-row">
             <div class="churn-display">
-              <div class="churn-percentage ${flare!=null && flare>=70 ? 'high' : (flare>=50?'medium':'low')}">
-                ${flare!=null ? flare : '—'}
-              </div>
-              <div class="churn-label">FLARE</div>
-              <div class="subtext" style="margin-top:4px;">Churn: ${fmtPct(pctInt(p))}</div>
+              <div class="churn-percentage ${flareDisplay.class}">${flareDisplay.value}</div>
+              <div class="churn-label">${flareDisplay.label}</div>
+              ${status !== 'safe' ? `<div class="subtext" style="margin-top:4px;">Churn: ${fmtPct(pctInt(p))}</div>` : ''}
             </div>
 
             <div class="account-section">
@@ -660,10 +603,10 @@ document.addEventListener('DOMContentLoaded', () => {
               ${campaign && toKey(campaign) !== toKey(advertiser) ? `<div class="campaign-name-sub">${campaign}</div>` : ''}
               <div class="primary-issue ${issue.sev}">${issue.text}</div>
               <div class="account-details">
-                <div class="detail-item"><span>CID:</span><strong>${cid}</strong></div>
+                <div class="detail-item"><span>CID:</span><strong>${acc.campaign_id || 'N/A'}</strong></div>
                 <div class="detail-item"><span>Team:</span><strong>${teamLine(acc)}</strong></div>
-                ${showPartner ? `<div class="detail-item"><span>Partner:</span><strong>${partner}</strong></div>` : ''}
-                <div class="detail-item"><span>Age:</span><strong>${io}</strong></div>
+                ${showPartner ? `<div class="detail-item"><span>Partner:</span><strong>${partnerRaw}</strong></div>` : ''}
+                <div class="detail-item"><span>Age:</span><strong>${acc.io_cycle != null ? `${acc.io_cycle} months` : '—'}</strong></div>
               </div>
             </div>
             
@@ -674,7 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="status-line">
-            ${topDrivers}
             ${pills.map(pillSpan).join('')}
             <span class="time-indicator">Days active: ${acc.days_active ?? '—'}</span>
           </div>
@@ -684,9 +626,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div class="card-expanded">
           <div class="expanded-content">
-            ${expandedRisk(acc)}
-            ${expandedMetrics(acc)}
-            ${expandedActions(acc)}
+            ${status === 'safe'
+                ? expandedSafeContent(acc)
+                : `${renderRiskAttribution(acc)}${expandedMetrics(acc)}${expandedActions(acc)}`
+            }
           </div>
         </div>
       </div>`;
@@ -694,9 +637,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ===== Card interactions =====
-  function attachCardToggles(scope){
-    const cards = (scope || document).querySelectorAll('.priority-card');
-    cards.forEach(card=>{
+  function attachCardToggles(cards, accounts){
+    cards.forEach((card, i)=>{
+      const acc = accounts[i];
       const header = card.querySelector('.card-header');
       const expanded = card.querySelector('.card-expanded');
       const arrow = card.querySelector('.expand-arrow');
@@ -737,14 +680,16 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBtn.style.display = 'none';
       return;
     }
-
-    // Trust server order so FLARE matches what users see
+    
     const sorted = reset ? allAccounts.slice() : allAccounts;
+    const oldRenderedCount = state.rendered;
 
     const slice = sorted.slice(state.rendered, state.rendered + state.pageSize);
     const html = slice.map(cardHeader).join('');
     container.insertAdjacentHTML('beforeend', html);
-    attachCardToggles(container);
+
+    const newCards = Array.from(container.children).slice(oldRenderedCount);
+    attachCardToggles(newCards, slice);
 
     state.rendered += slice.length;
     loadBtn.style.display = (state.rendered < sorted.length) ? 'inline-flex' : 'none';
@@ -800,4 +745,3 @@ document.addEventListener('DOMContentLoaded', () => {
   </script>
 </body>
 </html>
-

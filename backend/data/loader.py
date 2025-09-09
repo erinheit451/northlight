@@ -25,9 +25,9 @@ def init_data() -> None:
     if not DATA_FILE.exists():
         raise FileNotFoundError(f"Missing benchmarks file: {DATA_FILE}")
 
-    payload_txt = DATA_FILE.read_text(encoding="utf-8")
+    payload_txt = DATA_FILE.read_text(encoding="utf-8-sig")
     try:
-        payload_txt = DATA_FILE.read_text(encoding="utf-8-sig")
+        payload = json.loads(payload_txt)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {DATA_FILE}: {e}") from e
 

@@ -1,5 +1,4 @@
-﻿# backend/main.py
-from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List, Tuple
@@ -27,20 +26,19 @@ from backend.data.snapshots import latest_bench_path
 
 app = FastAPI(title="Northlight Unified API", version="0.7.0")
 
-# --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://northlight.pages.dev",
-        "https://develop.northlight.pages.dev", 
+        "https://develop.northlight.pages.dev",
         "http://localhost",
         "http://localhost:8000",
         "http://127.0.0.1:5500",
         "http://127.0.0.1:8000",
-        "http://127.0.0.1:9000"
+        "http://127.0.0.1:9000",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -54,44 +52,59 @@ app.mount("/book", StaticFiles(directory=str(ROOT.parent / "frontend" / "book"),
 app.mount("/", StaticFiles(directory=str(ROOT.parent / "frontend"), html=True), name="static")
 
 # --- Benchmark Data Loading ---
-BENCH: Dict[str, Any] = {}
+BENCH: Dict[str, Any] = {"_version": "boot"}
 TOL = 0.10
 
 def load_benchmarks() -> Dict[str, Any]:
     """
-    Loads the most recent dated snapshot produced by scripts/convert_benchmarks.py,
-    e.g. backend/data/2025-09-08-benchmarks.json.
+    Loads the newest backend/data/YYYY-MM-DD-benchmarks.json and returns a dict.
+    Expected shape: { "<key>": { "meta": { category, subcategory }, ... }, ... }
     """
-    path = latest_bench_path()  # resolves to newest snapshot in backend/data
+    path = latest_bench_path()
     if not path.exists():
         raise FileNotFoundError(f"No benchmark snapshots found in {path.parent}")
-
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
-
-    # We expect an object at payload["records"], not a list
     recs = payload.get("records")
     if not isinstance(recs, dict):
         raise ValueError("Benchmark snapshot missing 'records' object")
-
-    # Plumb a version for UI/debugging
-    recs["_version"] = payload.get("version") or payload.get("date") or path.stem.split("-")[0]
+    recs["_version"] = payload.get("version") or payload.get("date") or path.stem
     return recs
-
-
 @app.on_event("startup")
 def _startup():
+    import logging
     global BENCH
-    BENCH = load_benchmarks()
-
+    try:
+        BENCH = load_benchmarks()
+    except Exception:
+        logging.exception("Failed to load benchmarks at startup; serving empty meta")
+        BENCH = {"_version": "empty"}
+import logging
 @app.get("/benchmarks/meta")
 def benchmarks_meta(limit: int = 2000):
-    items=[]
-    for k,v in BENCH.items():
-        if k=="_version": continue
-        meta=v.get("meta",{})
-        items.append({"key":k,"category":meta.get("category"),"subcategory":meta.get("subcategory")})
-    items.sort(key=lambda x:(x["category"] or "", x["subcategory"] or ""))
+    log = logging.getLogger("bench")
+    items: List[Dict[str, Any]] = []
+    for k, v in (BENCH or {}).items():
+        if k == "_version":
+            continue
+        if not isinstance(v, dict):
+            # Pinpoint bad data instead of 500
+            log.error("Non-dict record in BENCH: key=%r type=%s value=%r", k, type(v).__name__, v)
+            continue
+        meta = v.get("meta") or {}
+        items.append({
+            "key": k,
+            "category": meta.get("category"),
+            "subcategory": meta.get("subcategory"),
+        })
+    items.sort(key=lambda x: ((x["category"] or ""), (x["subcategory"] or "")))
     return items[:limit]
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+@app.get("/version")
+def version():
+    return {"version": app.version, "bench_version": (BENCH or {}).get("_version")}
 
 # --- Diagnose Endpoint Models and Helpers ---
 class DiagnoseIn(BaseModel):
@@ -220,7 +233,7 @@ def budget_anchors_from_dms(dms: Dict[str,float]) -> List[Tuple[float,float]]:
     return pairs
 
 def detect_edge_cases(req: DiagnoseIn, cpl: Optional[float], cpc: Optional[float], 
-                     cr: Optional[float], med_cpl: Optional[float]) -> List[str]:
+                      cr: Optional[float], med_cpl: Optional[float]) -> List[str]:
     issues = []
     
     if req.leads == 0 and req.clicks > 50:
