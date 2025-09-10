@@ -418,6 +418,24 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const teamLine = (acc) => [acc.optimizer, acc.am, acc.gm].filter(Boolean).join(' / ') || '—';
 
+  // ===== Age rendering with new runtime fields =====
+  function renderAge(acc) {
+    const tdays = toNum(acc.true_days_running);
+    const clabel = acc.cycle_label;
+
+    if (Number.isFinite(tdays) && tdays > 0) {
+      const ageText = `${Math.round(tdays)} days`;
+      const labelText = clabel ? ` (${clabel})` : '';
+      return { main: ageText, detail: labelText };
+    }
+    // Fallback to old behavior so nothing breaks
+    const io = toNum(acc.io_cycle);
+    if (Number.isFinite(io) && io >= 0) {
+      return { main: `${io} months`, detail: '' };
+    }
+    return { main: '—', detail: '' };
+  }
+
   // ===== Actions from drivers =====
   function buildActionsFromDrivers(drivers) {
     const items = [];
@@ -501,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="metric-item"><span class="metric-label">Leads:</span><span class="metric-value">${leads}</span><span class="metric-context">(Expected: ${expTdPlan!=null?Math.round(expTdPlan):'—'})</span></div>
         <div class="metric-item"><span class="metric-label">Pacing:</span><span class="metric-value">${util!=null? Math.round(util*100)+'%':'—'}</span><span class="metric-context">${pacingText}</span></div>
         <div class="metric-item"><span class="metric-label">Spent:</span><span class="metric-value">${fmtMoney0(spent)}</span><span class="metric-context">/ ${fmtMoney0(budg)}</span></div>
-        <div class="metric-item"><span class="metric-label">Account Age:</span><span class="metric-value">${io!=null? `${io} months` : '—'}</span></div>
+        <div class="metric-item"><span class="metric-label">Account Age:</span><span class="metric-value">${renderAge(acc).main}</span><span class="metric-context" style="color:var(--gray-500);">${renderAge(acc).detail}</span></div>
       </div>`;
   }
 
@@ -607,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="detail-item"><span>CID:</span><strong>${acc.campaign_id || 'N/A'}</strong></div>
                 <div class="detail-item"><span>Team:</span><strong>${teamLine(acc)}</strong></div>
                 ${showPartner ? `<div class="detail-item"><span>Partner:</span><strong>${partnerRaw}</strong></div>` : ''}
-                <div class="detail-item"><span>Age:</span><strong>${acc.io_cycle != null ? `${acc.io_cycle} months` : '—'}</strong></div>
+                <div class="detail-item"><span>Age:</span><strong>${renderAge(acc).main}</strong><span style="color:var(--gray-500);font-size:11px;">${renderAge(acc).detail}</span></div>
               </div>
             </div>
             

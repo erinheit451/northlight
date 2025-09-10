@@ -55,7 +55,8 @@ def _to_float(x):
         return None
 
 NUMERIC_HINTS = {
-    "io_cycle", "campaign_budget", "running_cid_leads", "cpl_mcid", "utilization",
+    "io_cycle", "avg_cycle_length",        # ← ensure cycle length parsed to float
+    "campaign_budget", "running_cid_leads", "cpl_mcid", "utilization",
     "mcid_clicks", "mcid_leads", "amount_spent", "days_elapsed", "cpl_goal", 
     "running_cid_cpl", "cpl_last_15_days", "bsc_cpl_top_10pct", "bsc_cpl_top_25pct",
     "bsc_cpl_avg", "bsc_cpl_bottom_25pct", "bsc_cpl_bottom_10pct", "mcid_avg_cpc",

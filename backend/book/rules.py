@@ -8,6 +8,27 @@ from typing import Dict, Any, List, Tuple
 
 from backend.book.ingest import load_health_data, load_breakout_data
 
+
+def _attach_runtime_fields(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute true runtime from IO cycles + average cycle length + current days elapsed.
+    Produces: true_days_running, true_months_running, cycle_label.
+    Fully defensive defaults: avg_length→30, io→0, days→0.
+    """
+    out = df.copy()
+    io   = pd.to_numeric(out.get('io_cycle'), errors='coerce').fillna(0.0)
+    avg  = pd.to_numeric(out.get('avg_cycle_length'), errors='coerce').fillna(30.0)
+    days = pd.to_numeric(out.get('days_elapsed'), errors='coerce').fillna(0.0)
+
+    out['true_days_running']   = ((io - 1).clip(lower=0) * avg + days).clip(lower=0)
+    out['true_months_running'] = (out['true_days_running'] / 30.0).round(1)
+    out['cycle_label'] = (
+        "Cycle " + io.fillna(0).astype(int).astype(str) +
+        ", Day " + days.fillna(0).astype(int).astype(str) +
+        " (~" + avg.fillna(30).astype(int).astype(str) + "d avg)"
+    )
+    return out
+
 # --- Configuration for Risk Scoring ---
 
 CATEGORY_LTV_MAP = {
@@ -405,8 +426,17 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
         pd.to_numeric(df['advertiser_product_count'], errors='coerce').fillna(0).astype(float) == 1
     )
 
-    io = pd.to_numeric(df['io_cycle'], errors='coerce').fillna(0)
-    df['tenure_bucket'] = pd.cut(io, bins=[-0.001, 1, 3, 9999], labels=['LTE_1M','M1_3','GT_3'])
+    tm = pd.to_numeric(df.get('true_months_running'), errors='coerce')
+    if tm.isnull().all():
+        # fallback if model called earlier than _attach_runtime_fields
+        io_f  = pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)
+        avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.0)
+        days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
+        tm = (((io_f - 1).clip(lower=0) * avg_f + days_f) / 30.0).round(1)
+    df['tenure_bucket'] = pd.cut(
+        tm.fillna(0.0), bins=[-0.001, 1.0, 3.0, 9999],
+        labels=['LTE_1M','M1_3','GT_3']
+    )
 
     leads = pd.to_numeric(df['running_cid_leads'], errors='coerce').fillna(0)
     days  = pd.to_numeric(df['days_elapsed'], errors='coerce').fillna(0)
@@ -441,8 +471,8 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     # Acute conversion failure
     budget       = pd.to_numeric(df['campaign_budget'], errors='coerce').fillna(0)
     spent        = spend
-    cycle_days   = (pd.to_numeric(df['io_cycle'], errors='coerce').fillna(1.0) * 30.4).replace(0, 30.4)
-    ideal_spend  = (budget / cycle_days) * days
+    avg_len      = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.4).replace(0, 30.4)
+    ideal_spend  = (budget / avg_len) * days
     spend_prog   = (spent / ideal_spend.replace(0, np.nan)).fillna(0)
     lead_ratio   = np.where(exp_td_plan > 0, leads / exp_td_plan, 1.0)
 
@@ -636,8 +666,8 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
     days        = pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
     budget      = pd.to_numeric(df.get('campaign_budget'), errors='coerce').fillna(0.0)
     spent       = amount_spent
-    cycle_days  = (pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(1.0) * 30.4).replace(0, 30.4)
-    ideal_spend = (budget / cycle_days) * days
+    avg_len     = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.4).replace(0, 30.4)
+    ideal_spend = (budget / avg_len) * days
     spend_prog  = (spent / ideal_spend.replace(0, np.nan)).fillna(0.0)
     lead_ratio  = np.where(exp_td_plan > 0, leads / exp_td_plan, 1.0)
 
@@ -1007,9 +1037,12 @@ def generate_diagnosis_pills(row):
             else:
                 pills.append({'text': f'CPL {pct}%', 'type': 'success'})
 
-        # New account status
-        if pd.notna(row.get('io_cycle')) and row.get('io_cycle', 999) <= 3:
+        # Tenure status from true months
+        tm = float(row.get('true_months_running') or 0)
+        if tm <= 1.0:
             pills.append({'text': 'New Account', 'type': 'warning'})
+        elif tm <= 3.0:
+            pills.append({'text': 'Early Tenure', 'type': 'neutral'})
 
         # Single product risk
         if row.get('single_product_flag') or row.get('true_product_count') == 1:
@@ -1124,7 +1157,8 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
 
     # Select only the necessary columns from health_data to avoid conflicts
     health_cols = [
-        'campaign_id', 'am', 'optimizer', 'io_cycle', 'campaign_budget',
+        'campaign_id', 'am', 'optimizer', 'io_cycle', 'avg_cycle_length',  # ← add this
+        'campaign_budget',
         'running_cid_leads', 'utilization', 'cpl_goal', 'bsc_cpl_avg',
         'running_cid_cpl', 'amount_spent', 'days_elapsed', 'bsc_cpc_average',
         'business_category', 'bid_name', 'cpl_mcid', 'gm', 'advertiser_name', 
@@ -1142,6 +1176,9 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
         on='campaign_id',
         how='left'
     )
+
+    # Attach true runtime fields BEFORE any splits or modeling
+    enriched_df = _attach_runtime_fields(enriched_df)
 
     # Normalize identity fields after merge
     def _coalesce_col(df, base):
