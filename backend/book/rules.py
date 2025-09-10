@@ -584,10 +584,10 @@ def _is_actually_performing(df: pd.DataFrame) -> pd.Series:
         ~zero_issues
     )
     
-    # 2. Absurd goal but good actual CPL (like Bryson Law with $6000 goal)
+    # 2. Absurd goal but reasonable actual CPL (like Bryson Law with $6000 goal)  
     absurd_goal_but_performing = (
         ((advertiser_goal > benchmark * 10) | (advertiser_goal < benchmark * 0.1)) &
-        (actual_cpl <= benchmark * 1.5) &
+        (actual_cpl <= benchmark * 2.5) &  # More lenient for absurd goal cases
         (leads >= 2) &
         ~zero_issues
     )
@@ -607,8 +607,37 @@ def _is_actually_performing(df: pd.DataFrame) -> pd.Series:
         ~zero_issues
     )
     
+    # 5. New and thriving: excellent CPL on new campaigns with minimal volume requirement
+    new_and_thriving = (
+        (days_active < 30) &  # New campaigns only
+        (days_active >= 5) &  # Need at least 5 days of data
+        (leads >= 2) &  # Slightly higher threshold than proposed
+        (actual_cpl <= benchmark * 0.8) &  # Better than 80% of benchmark (stricter than "good")
+        (spent >= 300) &  # Meaningful spend requirement
+        ~zero_issues
+    )
+    
+    # 6. New with excellent efficiency: captures very efficient new campaigns regardless of volume
+    new_excellent_efficiency = (
+        (days_active < 30) &  # New campaigns only
+        (days_active >= 3) &  # Minimum data requirement
+        (leads >= 1) &  # At least some conversion
+        (actual_cpl <= benchmark * 0.7) &  # Exceptional efficiency (like -83%, -95% examples)
+        (spent >= 100) &  # Minimal spend threshold to show real activity
+        ~zero_issues
+    )
+    
+    # 7. Goal performance: meeting or beating goal significantly (the key fix!)
+    goal_performance = (
+        (advertiser_goal.notna()) &  # Must have a goal set
+        (advertiser_goal > 0) &  # Goal must be positive
+        (actual_cpl <= advertiser_goal * 0.8) &  # Beating goal by 20%+ (like -83%, -95% examples)
+        (leads >= 1) &  # At least some conversion
+        ~zero_issues
+    )
+    
     # Mark as SAFE if ANY condition is met
-    result = early_winner | absurd_goal_but_performing | standard_good | obviously_excellent
+    result = early_winner | absurd_goal_but_performing | standard_good | obviously_excellent | new_and_thriving | new_excellent_efficiency | goal_performance
     
     return result
 

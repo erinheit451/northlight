@@ -63,7 +63,7 @@ def _now_bucket(seconds: int = 600) -> int:
 # ---------------------------
 # Build dataset (with fixes)
 # ---------------------------
-@lru_cache(maxsize=1)
+# @lru_cache(maxsize=1)  # Temporarily disabled to test SAFE logic changes
 def get_cached_data(view: str, ts_bucket: int) -> pd.DataFrame:
     """
     Build the scored table and attach saved UI state.
