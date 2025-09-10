@@ -4,9 +4,216 @@ import numpy as np
 import json
 import os
 import hashlib
-from typing import Dict, Any, List, Tuple
+import math
+from typing import Dict, Any, List, Tuple, Optional
 
 from backend.book.ingest import load_health_data, load_breakout_data
+
+
+def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Risk is your current model output for a single account.
+    Required inputs (directly or derivable):
+      - risk["total_pct"]   -> final churn % shown in the header (int 0..100)
+      - risk["baseline_pp"] -> cohort baseline in percentage points (int)
+      - risk["drivers"]     -> list of {name, points, is_controllable, explanation, lift_x? or rel_pct?}
+    Returns an object that the frontend renders *and* that sums exactly to total_pct.
+    """
+    if not risk:
+        return None
+
+    total = int(round(float(risk.get("total_pct", 0))))
+    baseline = int(round(float(risk.get("baseline_pp", risk.get("baseline", 0)))))
+    drivers_in: List[Dict[str, Any]] = risk.get("drivers") or []
+
+    # Handle both old and new driver formats
+    raw_drivers: List[Dict[str, Any]] = []
+
+    # Case A: you already have a list of drivers
+    if isinstance(drivers_in, list) and drivers_in:
+        raw_drivers = drivers_in
+    else:
+        # Case B: flat fields (keep the ones that exist) - fallback for old format
+        for k, label, typ, why in [
+            ("risk_cpl_pp",            "High CPL (≥3× goal)",         "controllable",
+             "3× goal historically elevates churn vs cohort."),
+            ("risk_new_account_pp",    "New Account (≤1m)",           "structural",
+             "First 30 days show elevated hazard vs matured accounts."),
+            ("risk_single_product_pp", "Single Product",               "structural",
+             "Fewer anchors → higher volatility."),
+            ("risk_pacing_pp",         "Off-pacing",                   "controllable",
+             "Under/over-spend drives instability and lead gaps."),
+            ("risk_low_leads_pp",      "Below expected leads",         "controllable",
+             "Lead scarcity increases cancel probability."),
+        ]:
+            if k in risk and isinstance(risk[k], (int, float)):
+                raw_drivers.append({
+                    "name": label,
+                    "points": float(risk[k]),
+                    "is_controllable": (typ == "controllable"),
+                    "explanation": why,
+                })
+
+    drivers_norm: List[Dict[str, Any]] = []
+    for d in raw_drivers:
+        pp = int(round(float(d.get("points", d.get("impact", 0)))))
+        if pp == 0:
+            continue
+        dtype = "controllable" if d.get("is_controllable") else "structural"
+        if pp < 0:
+            dtype = "protective"
+        drivers_norm.append({
+            "label": d.get("label") or d.get("name") or "Driver",
+            "pp": pp,
+            "type": dtype,
+            "why": d.get("explanation") or d.get("why") or "",
+            # optional: either "lift_x" (e.g., 1.7) or "rel_pct" (e.g., +40)
+            "lift_x": d.get("lift_x"),
+            "rel_pct": d.get("rel_pct"),
+        })
+
+    # Sum and residual reconciliation
+    sum_pp = baseline + sum(d["pp"] for d in drivers_norm)
+    residual = total - sum_pp
+
+    # Instead of adding a gray "other factors", push rounding into the last driver
+    if abs(residual) >= 1 and drivers_norm:
+        drivers_norm[-1]["pp"] += residual
+
+    if total == 0 and baseline == 0 and not drivers_norm:
+        return None
+
+    return {
+        "total_pct": max(0, min(100, total)),
+        "baseline_pp": max(0, min(100, baseline)),
+        "drivers": drivers_norm,
+        "cap_to": 100,
+        "show_ranges": False
+    }
+
+
+def _collect_odds_factors_for_row(row) -> list[dict]:
+    """Return the exact multiplicative odds factors this row used, with labels."""
+    factors = []
+    def add(key, label, hr, typ, why, controllable=False):
+        if hr is None or hr == 1: 
+            return
+        factors.append({
+            "key": key, "label": label, "hr": float(hr),
+            "type": typ, "why": why, "is_controllable": bool(controllable)
+        })
+
+    # Tenure
+    ten = str(row.get('tenure_bucket') or '')
+    if ten == 'LTE_1M':
+        add('tenure_lte_1m','New Account (≤1m)', _CAL_HR['is_tenure_lte_1m'], 'structural',
+            "Early hazard is elevated vs matured.")
+    elif ten == 'M1_3':
+        add('tenure_1_3','Early Tenure (≤3m)', _CAL_HR['is_tenure_lte_3m'], 'structural',
+            "First three months show higher churn risk.")
+
+    # Structure
+    if bool(row.get('is_single_product')):
+        add('single_product','Single Product', _CAL_HR['is_single_product'], 'structural',
+            "Fewer anchors → higher volatility.")
+
+    # Conversion failures
+    if bool(row.get('zero_lead_last_mo')):
+        add('zero_30d','Zero Leads (30d)', _CAL_HR['zero_lead_last_mo'], 'controllable',
+            "Extended zero-lead period indicates conversion issues.", True)
+    if bool(row.get('zero_lead_emerging')):
+        add('zero_early','Zero Leads (early)', 1.80, 'controllable',
+            "Early zero-lead signal at adequate spend.", True)
+
+    # Acute lead deficit (recompute with same logic as model)
+    try:
+        exp_td_plan  = float(row.get('expected_leads_to_date') or 0)
+        leads        = float(row.get('running_cid_leads') or 0)
+        spent        = float(row.get('amount_spent') or 0)
+        budget       = float(row.get('campaign_budget') or 0)
+        days         = float(row.get('days_elapsed') or 0)
+        avg_len      = float(row.get('avg_cycle_length') or 30.4) or 30.4
+        ideal_spend  = (budget / avg_len) * days
+        spend_prog   = (spent / (ideal_spend or float('inf'))) if ideal_spend else 0.0
+        lead_ratio   = (leads / exp_td_plan) if exp_td_plan > 0 else 1.0
+        sev_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.25) and (spend_prog >= 0.5) and (days >= 7)
+        mod_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.50) and (spend_prog >= 0.4) and (days >= 7)
+    except Exception:
+        sev_deficit = mod_deficit = False
+
+    if sev_deficit:
+        add('lead_deficit_sev','Lead deficit / conv quality', 2.8, 'controllable',
+            "Severe deficit vs plan at adequate spend.", True)
+    elif mod_deficit:
+        add('lead_deficit_mod','Lead deficit / conv quality', 1.6, 'controllable',
+            "Under-delivery vs plan at adequate spend.", True)
+
+    # CPL gradient
+    cplr = float(row.get('cpl_ratio') or 0.0)
+    lab  = _driver_label_for_cpl(cplr)
+    if lab:
+        add('cpl', lab, _hr_from_cpl_ratio(cplr), 'controllable',
+            "Efficiency gap vs goal drives churn risk.", True)
+
+    # Under-pacing
+    util = float(row.get('utilization') or 0)
+    days = float(row.get('days_elapsed') or 0)
+    if (util < 0.60) and (days >= 14):
+        add('under_pacing','Under-pacing', 1.15, 'controllable',
+            "Sustained under-delivery is risky.", True)
+
+    # Protective dampeners
+    exp_td_spend = float(row.get('expected_leads_to_date_spend') or 0)
+    good_volume  = ((exp_td_spend > 0) and (leads >= exp_td_spend)) or (lead_ratio >= 1.0)
+    good_cpl     = (cplr <= 0.90)
+    if good_volume or good_cpl:
+        add('good_perf','Strong volume / CPL', 0.70, 'protective',
+            "Protective signal: strong volume and/or efficient CPL.")
+
+    if (ten == 'LTE_1M') and (good_volume or good_cpl) and (spend_prog >= 0.5):
+        add('new_and_good','New + good early signal', 0.75, 'protective',
+            "Protective dampener when new and performing.")
+
+    return factors
+
+
+def _shap_pp_from_factors(base_p: float, factors: list[dict]) -> list[dict]:
+    """
+    Aumann-Shapley for logistic w/ log-odds additivity:
+    - z = logit(p) = log(p/(1-p)) ; each factor contributes c_i = log(hr_i)
+    - Δp distributed as φ_i = (c_i / Σc) * (σ(z0+Σc) - σ(z0))
+    Returns list of drivers with integer pp that sum exactly to Δp.
+    """
+    z0 = math.log(base_p / (1 - base_p))
+    cs = [math.log(max(1e-9, f["hr"])) for f in factors]  # allow hr<1
+    sumc = sum(cs)
+    p1 = 1.0 / (1.0 + math.exp(-(z0 + sumc)))
+    delta = p1 - base_p  # probability change
+
+    drivers = []
+    if abs(sumc) < 1e-12 or abs(delta) < 1e-12:
+        return drivers
+
+    # raw (float) contributions in pp
+    raw_pp = [(c / sumc) * (delta * 100.0) for c in cs]
+    # round & reconcile to preserve sum exactly
+    rounded = [int(round(x)) for x in raw_pp]
+    need = int(round(delta * 100.0)) - sum(rounded)
+    if rounded:
+        rounded[-1] += need  # push rounding error into last item
+
+    for f, pp in zip(factors, rounded):
+        drivers.append({
+            "name": f["label"],
+            "impact": int(pp),                  # integer pp (can be negative)
+            "lift_x": float(f["hr"]),           # optional ×tag
+            "is_controllable": f["is_controllable"],
+            "explanation": f["why"],
+            "type": f["type"],
+        })
+    # Sort by absolute impact for readability
+    drivers.sort(key=lambda d: abs(d["impact"]), reverse=True)
+    return drivers
 
 
 def _attach_runtime_fields(df: pd.DataFrame) -> pd.DataFrame:
@@ -521,29 +728,10 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drivers JSON
     def compute_drivers_row(row):
-        def to_prob(o): return o/(1+o)
-        def to_odds(p): return p/(1-p) if p < 1 else 999
         base = float(np.clip(P0_BASELINE, 0.01, 0.95))
-        current_prob = base
-        drivers = []
-        steps = []
-        ten = str(row.get('tenure_bucket') or '')
-        if ten == 'LTE_1M': steps.append(('New Account (≤1m)', _CAL_HR['is_tenure_lte_1m']))
-        elif ten == 'M1_3': steps.append(('Early Tenure (≤3m)', _CAL_HR['is_tenure_lte_3m']))
-        if bool(row.get('is_single_product')): steps.append(('Single Product', _CAL_HR['is_single_product']))
-        if bool(row.get('zero_lead_last_mo')): steps.append(('Zero Leads (30d)', _CAL_HR['zero_lead_last_mo']))
-        if bool(row.get('zero_lead_emerging')): steps.append(('Zero Leads (early)', 1.80))
-        cplr = float(row.get('cpl_ratio') or 0.0)
-        lab  = _driver_label_for_cpl(cplr)
-        if lab: steps.append((lab, _hr_from_cpl_ratio(cplr)))
-        for name, hr in steps:
-            old_odds = to_odds(current_prob)
-            new_prob = to_prob(old_odds * float(hr))
-            delta = max(0.0, new_prob - current_prob)
-            drivers.append({'name': name, 'impact': int(round(delta * 100))})
-            current_prob = new_prob
-        drivers.sort(key=lambda d: d['impact'], reverse=True)
-        return {'baseline': int(round(base * 100)), 'drivers': drivers[:6]}
+        factors = _collect_odds_factors_for_row(row)
+        drivers = _shap_pp_from_factors(base, factors)
+        return {"baseline": int(round(base * 100)), "drivers": drivers}
 
     df['risk_drivers_json'] = df.apply(compute_drivers_row, axis=1)
     return df

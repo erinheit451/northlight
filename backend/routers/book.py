@@ -11,6 +11,43 @@ from fastapi import APIRouter, Query, HTTPException
 # Business logic + persisted UI state
 from backend.book import rules, state
 from backend.book.playbooks.registry import load_playbook
+from backend.book.rules import build_churn_waterfall
+
+
+def _get_driver_explanation(driver_name: str) -> str:
+    """Get explanation text for risk drivers."""
+    explanations = {
+        'High CPL (≥3× goal)': '3× goal historically elevates churn vs cohort.',
+        'New Account (≤1m)': 'First 30 days show elevated hazard vs matured accounts.',
+        'Single Product': 'Fewer anchors → higher volatility.',
+        'Off-pacing': 'Under/over-spend drives instability and lead gaps.',
+        'Below expected leads': 'Lead scarcity increases cancel probability.',
+        'Early Tenure (≤3m)': 'Accounts in first 3 months have higher churn risk.',
+        'Zero Leads (30d)': 'Extended periods without leads indicate conversion issues.',
+        'CPL above goal': 'Cost per lead exceeding target reduces campaign viability.'
+    }
+    return explanations.get(driver_name, 'Risk factor affecting churn probability.')
+
+
+def _estimate_lift_ratio(driver_name: str, impact_pp: int) -> Optional[float]:
+    """Estimate lift ratio from driver name and impact."""
+    # Rough estimates based on typical hazard ratios
+    base_lifts = {
+        'High CPL (≥3× goal)': 3.2,
+        'New Account (≤1m)': 4.1,
+        'Single Product': 1.3,
+        'Early Tenure (≤3m)': 1.5,
+        'Zero Leads (30d)': 3.2,
+        'Off-pacing': 1.15,
+        'Below expected leads': 1.6
+    }
+    
+    base_lift = base_lifts.get(driver_name)
+    if base_lift and impact_pp > 0:
+        # Scale the lift based on impact magnitude
+        scale_factor = min(2.0, max(0.5, impact_pp / 20.0))
+        return round(base_lift * scale_factor, 1)
+    return None
 
 
 router = APIRouter(prefix="/api/book", tags=["book"])
@@ -304,7 +341,8 @@ def get_partners(playbook: str = Query("seo_dash")) -> List[Dict[str, Any]]:
 @router.get("/partners/{partner_name}/opportunities")
 def get_partner_opportunities(
     partner_name: str, 
-    playbook: str = Query("seo_dash")
+    playbook: str = Query("seo_dash"),
+    cid: Optional[str] = Query(None)
 ) -> Dict[str, Any]:
     """
     Returns detailed opportunities for a specific partner.
@@ -313,7 +351,69 @@ def get_partner_opportunities(
     from backend.book.partners_cache import get_partner_detail
     
     try:
-        return get_partner_detail(partner_name, playbook)
+        result = get_partner_detail(partner_name, playbook)
+        
+        # If a specific CID is requested, add churn waterfall data
+        if cid:
+            df = _get_full_processed_data(view="optimizer")
+            risk_row = df.loc[df["campaign_id"].astype(str) == str(cid)]
+            
+            if not risk_row.empty:
+                risk_data = risk_row.iloc[0]
+                
+                # Extract headline total (the % shown in the header)
+                churn_prob = pd.to_numeric(risk_data.get('churn_prob_90d'), errors='coerce')
+                total_pct = int(round(churn_prob * 100)) if pd.notna(churn_prob) else 0
+                
+                # Extract driver data
+                drivers_json = risk_data.get('risk_drivers_json')
+                parsed_drivers = None
+                
+                if isinstance(drivers_json, dict):
+                    parsed_drivers = drivers_json
+                elif isinstance(drivers_json, str):
+                    try:
+                        import json
+                        parsed_drivers = json.loads(drivers_json)
+                    except:
+                        pass
+                
+                if parsed_drivers and isinstance(parsed_drivers, dict):
+                    # Build canonical risk dict that sums to headline
+                    risk_dict = {
+                        "total_pct": total_pct,
+                        "baseline_pp": parsed_drivers.get("baseline", 11),
+                        "drivers": []
+                    }
+                    
+                    # Convert existing drivers to new format
+                    for driver in parsed_drivers.get("drivers", []):
+                        name = driver.get("name", "Risk Factor")
+                        pp   = int(driver.get("impact", 0))
+                        lift = driver.get("lift_x")
+
+                        controllable = any(k in name for k in [
+                            "CPL", "Leads", "Under-pacing", "Lead deficit", "Zero Leads"
+                        ])
+                        structural = any(k in name for k in [
+                            "New Account", "Early Tenure", "Single Product", "Budget < $2k"
+                        ])
+                        dtype = "controllable" if controllable else ("structural" if structural else ("protective" if pp < 0 else "structural"))
+
+                        risk_dict["drivers"].append({
+                            "name": name,
+                            "points": pp,
+                            "is_controllable": (dtype == "controllable"),
+                            "explanation": _get_driver_explanation(name),
+                            "lift_x": lift
+                        })
+                    
+                    # Build waterfall
+                    waterfall = build_churn_waterfall(risk_dict)
+                    if waterfall:
+                        result["churn_waterfall"] = waterfall
+        
+        return result
     except ValueError as e:
         # Partner not found
         raise HTTPException(status_code=404, detail=str(e))
@@ -321,5 +421,25 @@ def get_partner_opportunities(
         import logging
         logging.getLogger("partners").error(f"Partner opportunities error for {partner_name}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to load partner opportunities: {str(e)}")
+
+
+@router.get("/drivers_matrix")
+def drivers_matrix(view: str = Query("optimizer"), top_k: int = Query(6)) -> Dict[str, Any]:
+    import json
+    df = _get_full_processed_data(view=view)
+    out_rows = []
+    for _, r in df.iterrows():
+        raw = r.get("risk_drivers_json")
+        try:
+            drv = raw if isinstance(raw, dict) else json.loads(raw)
+        except Exception:
+            drv = None
+        if not drv: 
+            continue
+        row = {"cid": str(r.get("campaign_id")), "total": int(round((r.get("churn_prob_90d") or 0)*100))}
+        for d in sorted(drv.get("drivers", []), key=lambda x: abs(x.get("impact",0)), reverse=True)[:top_k]:
+            row[d.get("name")] = int(d.get("impact",0))
+        out_rows.append(row)
+    return {"rows": out_rows}
 
 
