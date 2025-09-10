@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Campaign Credit Scoring</title>
+  <link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+  <main class="wrap">
+    <section class="form">
+      <h1>Campaign Credit Scoring</h1>
+      <label>Category <input id="category" placeholder="Attorneys & Legal Services"/></label>
+      <label>Subcategory <input id="subcategory" placeholder="Personal Injury"/></label>
+      <label>City <input id="city"/></label>
+      <label>State <input id="state"/></label>
+      <label>ZIP <input id="zip"/></label>
+      <label>Monthly Budget ($) <input id="budget" type="number" min="0" step="100"/></label>
+      <fieldset>
+        <legend>Products</legend>
+        <label><input type="checkbox" value="search" class="prod"> Search</label>
+        <label><input type="checkbox" value="website" class="prod"> Website</label>
+        <label><input type="checkbox" value="call_tracking" class="prod"> Call Tracking</label>
+        <label><input type="checkbox" value="social" class="prod"> Social</label>
+        <label><input type="checkbox" value="display" class="prod"> Display</label>
+      </fieldset>
+      <label>Contract
+        <select id="contract">
+          <option value="evergreen">Evergreen</option>
+          <option value="io">IO</option>
+        </select>
+      </label>
+      <label>IO Length (cycles) <input id="io_len" type="number" min="1" step="1"/></label>
+      <label>Goal Type
+        <select id="goal_type">
+          <option value="CPL">CPL</option>
+          <option value="CPA">CPA</option>
+        </select>
+      </label>
+      <label>Goal Value <input id="goal_value" type="number" min="0" step="1"/></label>
+      <label>Landing Page URL <input id="lp_url" placeholder="https://..."/></label>
+      <fieldset>
+        <legend>Economics (Optional)</legend>
+        <label>Transaction Value ($) <input id="tx_value" type="number" min="0" step="1"/></label>
+        <label>Close Rate (%) <input id="close_rate" type="number" min="0" max="100" step="0.1"/></label>
+      </fieldset>
+      <button id="calc">Calculate Score</button>
+    </section>
+    <section class="results" id="results"></section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

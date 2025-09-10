@@ -1,0 +1,121 @@
+{
+  "version": "v1",
+  "caps": { "max_pos": 300, "max_neg": -300 },
+  "vertical_ltv_band_points": { "top": 120, "high": 60, "mid": 0, "low": -80 },
+  "budget_bands": [
+    { "max": 1500, "points": -140 },
+    { "min": 1500, "max": 2500, "points": -60 },
+    { "min": 2500, "max": 5000, "points": 20 },
+    { "min": 5000, "max": 8000, "points": 50 },
+    { "min": 8000, "points": 70 }
+  ],
+  "products": {
+    "base_points": { "one": -80, "two_mixed": 80, "three_plus": 120 },
+    "channel_mix_points": {
+      "search_only": 0,
+      "social_only": -60,
+      "search_plus_website": 35,
+      "add_call_tracking": 15,
+      "add_social": 10
+    },
+    "required_pairs": [["search","website"]]
+  },
+  "contract": {
+    "evergreen": 70,
+    "io_short_1_3": -50,
+    "io_medium_4_5": -10,
+    "io_long_6_10": 20
+  },
+  "geo_cpc_pressure": {
+    "high_pressure_low_budget": -30,
+    "default": 0
+  },
+  "goal_policy": {
+    "use_band": "p66",
+    "clamp_to": ["p50","p75"],
+    "too_low_bounds": { "warn_below": "p50", "hard_below": "p25", "penalty_warn": -20, "penalty_hard": -45 },
+    "too_high_bounds": { "warn_above_multiplier": 1.5, "penalty_warn": -25 }
+  },
+  "lp_heuristics": {
+    "load_time_sec_threshold": 4.0,
+    "points": {
+      "fast_load": 20,
+      "slow_load": -30,
+      "mobile_viewport": 10,
+      "above_fold_cta": 10,
+      "short_form": 10,
+      "https_missing": -10,
+      "intrusive_modal": -10
+    },
+    "map_range": { "min": -80, "max": 50 }
+  },
+  "grade_bands": [
+    { "grade": "A", "min": 760 },
+    { "grade": "B", "min": 700 },
+    { "grade": "C", "min": 640 },
+    { "grade": "D", "min": 0 }
+  ],
+  "score_map": { "min": 300, "max": 900 },
+
+  "labels": {
+    "vertical": {
+      "top": "High-value, high-retention vertical.",
+      "high": "Strong vertical with above-average outcomes.",
+      "mid": "Typical vertical with average outcomes.",
+      "low": "Challenging vertical with below-average outcomes."
+    }
+  },
+
+  "narratives": {
+    "vertical": {
+      "top": "Attorneys & Legal Services typically perform well on our platform. These accounts tend to retain longer and support healthier budgets. Great choice.",
+      "high": "This vertical often shows solid performance and retention when packaged correctly.",
+      "mid": "This vertical can perform well with the right package and realistic goals.",
+      "low": "This category tends to be more volatile with shorter average retention and lower budgets. We'll suggest safeguards."
+    },
+    "budget": {
+      "bands": [
+        { "label": "under_1500", "max": 1500, "verdict": "Low budget", "text": "Budgets under $1,500/mo are unstable. Lead volume is inconsistent and churn risk is higher.", "celebrate": false },
+        { "label": "1500_2500", "min": 1500, "max": 2500, "verdict": "Improving", "text": "$1,500–$2,500/mo is workable but still sensitive to volatility. Moving toward $2,500 stabilizes results.", "celebrate": false },
+        { "label": "2500_5000", "min": 2500, "max": 5000, "verdict": "Healthy budget", "text": "$2,500–$5,000/mo is a healthy range. It supports steady lead flow and better retention.", "celebrate": true },
+        { "label": "5000_plus", "min": 5000, "verdict": "Excellent budget", "text": "Budgets above $5,000/mo typically deliver consistent volume and stronger retention.", "celebrate": true }
+      ],
+      "bands_copy": "Typical bands we see: <$1.5k higher risk • $2.5–5k healthy • $5k+ excellent."
+    },
+    "goal": {
+      "aligned": "Your CPL goal fits the realistic range for this vertical and budget. Nicely aligned with success.",
+      "below_p50": "Your goal is below the typical median for this vertical. Ambitious goals can cause avoidable miss flags; we suggest adjusting toward the realistic band.",
+      "below_p25": "Your goal is well below typical performance for this vertical. This sets the campaign up for failure. We recommend aligning with the suggested goal.",
+      "too_high": "Your goal is much higher than the realistic band. You're likely leaving efficiency on the table; consider tightening toward the suggested goal.",
+      "suggestion_prefix": "Suggested CPL goal (based on benchmarks): "
+    },
+    "products": {
+      "baseline": "Search is the engine. Pairing it with a quality Website is the baseline setup we recommend.",
+      "with_website": "Search + Website is a proven baseline. Good foundation.",
+      "missing_website": "Add a fast, clear Website experience to stabilize performance. It's a foundational pair with Search.",
+      "social_add": "Adding Social can expand reach and support upper-funnel demand while Search converts. Best after the baseline is in place.",
+      "display_add": "Display can help with awareness and retargeting once the baseline is performing.",
+      "youtube_add": "YouTube supports consideration and brand lift; use after the baseline is stable.",
+      "dash_add": "Dash centralizes reporting and helps teams act faster; recommended for multi-product packages.",
+      "tracking_on": "LocaliQ Tracking helps us attribute leads and optimize faster.",
+      "tracking_off": "Enable LocaliQ Tracking so we can measure every lead and optimize decisively."
+    },
+    "contract": {
+      "evergreen": "Evergreen contracts typically retain better and support the ongoing optimization that drives results.",
+      "io_short": "Short IOs increase pressure on early results and raise churn risk. Consider a longer commitment or Evergreen.",
+      "io_long": "Longer IOs behave closer to Evergreen and give optimization the time it needs."
+    },
+    "lp": {
+      "ok": "Your landing page looks basically sound from our quick checks.",
+      "needs_work": "Your landing page needs a few basics: secure URL, clear above-the-fold call-to-action, fast load, short form.",
+      "hint": "Better landing pages increase lead volume and reduce CPL, which improves retention."
+    },
+    "economics": {
+      "headline_ok": "Your economics look healthy.",
+      "headline_warn": "Watch your economics.",
+      "rev_per_lead": "Estimated revenue per lead:",
+      "breakeven_cpl": "Break-even CPL:",
+      "roas": "ROAS at your goal:"
+    }
+  }
+}

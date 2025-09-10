@@ -16,6 +16,7 @@ from starlette.staticfiles import StaticFiles
 from backend.routers import diagnose, export
 # Import the book router
 from backend.routers.book import router as book_router
+from backend.routers import score
 from backend.data.snapshots import latest_bench_path
 
 # --- App Setup ---
@@ -46,6 +47,7 @@ app.add_middleware(
 app.include_router(diagnose.router)
 app.include_router(export.router)
 app.include_router(book_router)  # This enables /api/book/ endpoints
+app.include_router(score.router)
 
 # --- Static File Mounting ---
 app.mount("/book", StaticFiles(directory=str(ROOT.parent / "frontend" / "book"), html=True), name="book")

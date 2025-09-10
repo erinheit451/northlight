@@ -9,6 +9,10 @@ from typing import Dict, Any, List, Tuple, Optional
 
 from backend.book.ingest import load_health_data, load_breakout_data
 
+# --- Global constants (single source of truth) ---
+AVG_CYCLE = 30.4          # single source of truth for "a month"
+GLOBAL_CR_PRIOR = 0.06    # 6% prior when CPC/CPL are missing/broken
+
 
 def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
@@ -76,8 +80,8 @@ def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     sum_pp = baseline + sum(d["pp"] for d in drivers_norm)
     residual = total - sum_pp
 
-    # Instead of adding a gray "other factors", push rounding into the last driver
-    if abs(residual) >= 1 and drivers_norm:
+    # Only push rounding into last driver if not SHAP-sourced
+    if abs(residual) >= 1 and drivers_norm and not any(d.get("shap") for d in drivers_norm):
         drivers_norm[-1]["pp"] += residual
 
     if total == 0 and baseline == 0 and not drivers_norm:
@@ -93,85 +97,90 @@ def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def _collect_odds_factors_for_row(row) -> list[dict]:
-    """Return the exact multiplicative odds factors this row used, with labels."""
+    """Return multiplicative odds factors with labels, using cycle-based gates."""
     factors = []
     def add(key, label, hr, typ, why, controllable=False):
-        if hr is None or hr == 1: 
+        if hr is None or hr == 1:
             return
         factors.append({
             "key": key, "label": label, "hr": float(hr),
             "type": typ, "why": why, "is_controllable": bool(controllable)
         })
 
-    # Tenure info (for SAFE logic, not as driver)
-    ten = str(row.get('tenure_bucket') or '')
+    d   = float(row.get('days_elapsed') or 0.0)     # cycle days
+    sp  = float(row.get('amount_spent') or 0.0)
+    leads = float(row.get('running_cid_leads') or 0.0)
+    cplr  = float(row.get('cpl_ratio') or 0.0)
+    sem_viable = bool(row.get('_sem_viable', False))
+    budget_ok = bool(row.get('_viab_budget_ok', False))
+    clicks_ok = bool(row.get('_viab_clicks_ok', False))
 
-    # Structure
+    # Structural: single product
     if bool(row.get('is_single_product')):
         add('single_product','Single Product', _CAL_HR['is_single_product'], 'structural',
             "Fewer anchors → higher volatility.")
 
-    # Conversion failures
-    if bool(row.get('zero_lead_last_mo')):
-        add('zero_30d','Zero Leads (30d)', _CAL_HR['zero_lead_last_mo'], 'controllable',
-            "Extended zero-lead period indicates conversion issues.", True)
-    if bool(row.get('zero_lead_emerging')):
-        add('zero_early','Zero Leads (early)', 1.80, 'controllable',
-            "Early zero-lead signal at adequate spend.", True)
+    # No-spend (don't callout zero-lead; steer to "check live state")
+    if (d >= MIN_DAYS_FOR_ALERTS) and (sp < MIN_SPEND_FOR_ZERO_LEAD):
+        add('no_spend','Not spending', 1.10, 'controllable',
+            "Zero/near-zero spend — confirm launch & billing.", True)
 
-    # Acute lead deficit (recompute with same logic as model)
+    # Zero-lead callouts only if SEM-viable, with mutual exclusivity
+    zl30 = bool(row.get('zero_lead_last_mo')) and sem_viable
+    zle  = bool(row.get('zero_lead_emerging')) and sem_viable
+    if d >= MIN_DAYS_FOR_ALERTS:
+        if zl30:
+            add('zero_30d','Zero Leads (30d)', _CAL_HR['zero_lead_last_mo'], 'controllable',
+                "No conversions over ~30 days at material spend.", True)
+        elif zle:
+            add('zero_early','Zero Leads (5–29d)', 1.80, 'controllable',
+                "Early zero-lead at adequate progress.", True)
+        elif (not sem_viable) and (leads == 0) and (sp >= 50) and (d >= MIN_DAYS_FOR_ALERTS) and (not budget_ok) and (not clicks_ok):
+            # Underfunded media: shift from "performance crisis" → structural underfunding
+            add('underfunded_media','Underfunded (SEM viability)', 1.20, 'structural',
+                "Budget/delivery below viability; increase budget before judging performance.")
+
+    # Acute deficit & sliding-to-zero (cycle-based + viable)
     try:
-        exp_td_plan  = float(row.get('expected_leads_to_date') or 0)
-        leads        = float(row.get('running_cid_leads') or 0)
-        spent        = float(row.get('amount_spent') or 0)
-        budget       = float(row.get('campaign_budget') or 0)
-        days         = float(row.get('days_elapsed') or 0)
-        avg_len      = float(row.get('avg_cycle_length') or 30.4) or 30.4
-        ideal_spend  = (budget / avg_len) * days
-        spend_prog   = (spent / (ideal_spend or float('inf'))) if ideal_spend else 0.0
-        lead_ratio   = (leads / exp_td_plan) if exp_td_plan > 0 else 1.0
-        cplr         = float(row.get('cpl_ratio') or 0.0)  # Added for sliding to zero
-        sev_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.25) and (spend_prog >= 0.5) and (days >= 7)
-        mod_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.50) and (spend_prog >= 0.4) and (days >= 7)
+        budget  = float(row.get('campaign_budget') or 0)
+        days    = d
+        avg_len = float(row.get('avg_cycle_length') or AVG_CYCLE) or AVG_CYCLE
+        ideal   = (budget / avg_len) * days
+        spend_prog = (sp / (ideal or float('inf'))) if ideal else 0.0
+        exp_td_plan = float(row.get('expected_leads_to_date') or 0)
+        lead_ratio  = (leads / exp_td_plan) if exp_td_plan > 0 else 1.0
+        sev_def = sem_viable and (exp_td_plan >= 1) and (lead_ratio <= 0.25) and (spend_prog >= 0.5) and (days >= 7)
+        mod_def = sem_viable and (exp_td_plan >= 1) and (lead_ratio <= 0.50) and (spend_prog >= 0.4) and (days >= 5)
     except Exception:
-        sev_deficit = mod_deficit = False
-        cplr = 0.0
+        sev_def = mod_def = False
+        spend_prog = 0.0
 
-    if sev_deficit:
+    if sev_def:
         add('lead_deficit_sev','Lead deficit / conv quality', 2.8, 'controllable',
             "Severe deficit vs plan at adequate spend.", True)
-    elif mod_deficit:
+    elif mod_def:
         add('lead_deficit_mod','Lead deficit / conv quality', 1.6, 'controllable',
             "Under-delivery vs plan at adequate spend.", True)
 
-    # Sliding to zero: ≥3x CPL, ≤1 lead, ≥14d, spend ≥50% pace
-    sliding_to_zero = (cplr >= 3.0) and (leads <= 1) and (days >= 14) and (spend_prog >= 0.5)
-    if sliding_to_zero:
+    if sem_viable and _is_sliding_to_zero(cplr, leads, d, spend_prog):
         add('sliding_zero','Sliding to Zero Leads', 2.0, 'controllable',
             "High CPL + low volume mid-cycle at adequate spend.", True)
 
     # CPL gradient
-    lab  = _driver_label_for_cpl(cplr)
+    lab = _driver_label_for_cpl(cplr)
     if lab:
         add('cpl', lab, _hr_from_cpl_ratio(cplr), 'controllable',
             "Efficiency gap vs goal drives churn risk.", True)
 
-    # Under-pacing
-    util = float(row.get('utilization') or 0)
-    days = float(row.get('days_elapsed') or 0)
-    if (util < 0.60) and (days >= 14):
-        add('under_pacing','Under-pacing', 1.15, 'controllable',
-            "Sustained under-delivery is risky.", True)
-
-    # Protective dampeners
+    # Protective dampeners (unchanged)
     exp_td_spend = float(row.get('expected_leads_to_date_spend') or 0)
-    good_volume  = ((exp_td_spend > 0) and (leads >= exp_td_spend)) or (lead_ratio >= 1.0)
-    good_cpl     = (cplr <= 0.90)
+    good_volume  = ((exp_td_spend > 0) and (leads >= exp_td_spend)) or ((exp_td_plan > 0) and ((leads / exp_td_plan) >= 1.0))
+    good_cpl     = (leads > 0) and (cplr <= 0.90)
     if good_volume or good_cpl:
         add('good_perf','Strong volume / CPL', 0.70, 'protective',
             "Protective signal: strong volume and/or efficient CPL.")
 
-    if (ten == 'LTE_90D') and (good_volume or good_cpl) and (spend_prog >= 0.5):
+    if (str(row.get('tenure_bucket') or '') == 'LTE_90D') and (good_volume or good_cpl) and (spend_prog >= 0.5):
         add('new_and_good','Early + good signal', 0.75, 'protective',
             "Protective dampener when early-stage and performing.")
 
@@ -206,15 +215,20 @@ def _shap_pp_from_factors(base_p: float, factors: list[dict]) -> list[dict]:
     for f, pp in zip(factors, rounded):
         drivers.append({
             "name": f["label"],
-            "impact": int(pp),                  # integer pp (can be negative)
-            "lift_x": float(f["hr"]),           # optional ×tag
+            "impact": int(pp),
+            "lift_x": float(f["hr"]),
             "is_controllable": f["is_controllable"],
             "explanation": f["why"],
             "type": f["type"],
+            "shap": True
         })
-    # Sort by absolute impact for readability
     drivers.sort(key=lambda d: abs(d["impact"]), reverse=True)
     return drivers
+
+
+def _is_sliding_to_zero(cplr, leads, days_elapsed, spend_prog):
+    """Acute risk: very high CPL + tiny volume after ~2 weeks with adequate spend."""
+    return (cplr >= 3.0) & (leads <= 1) & (days_elapsed >= 14) & (spend_prog >= 0.5)
 
 
 def _attach_runtime_fields(df: pd.DataFrame) -> pd.DataFrame:
@@ -273,6 +287,19 @@ SAFE_NEW_ACCOUNT_IGNORE_PACING = True        # pacing/spend progress never vetoe
 SAFE_DOWNWEIGHT_IN_UPI         = 0.05        # 5% weight for SAFE rows in UPI (strong suppression)
 SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never exceed this
 
+# ===== SEM viability gates for zero-lead logic =====
+SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
+SEM_VIABILITY_MIN_DAILY_CLICKS = 3.0           # need ~3 clicks/day
+SEM_VIABILITY_MIN_MONTHLY_LEADS = SAFE_MIN_LEADS  # need capacity for >=3 leads/mo
+ZERO_LEAD_HR_ATTENUATION_LOW_BUDGET = 0.60     # if we ever apply zero-lead on non-viable budget, downweight
+MIN_DAYS_FOR_ALERTS = 5                        # don't call out zero-leads before day 5
+
+# ===== Zero-lead gating (strong) =====
+ZERO_LEAD_MIN_DAYS_EMERGING     = 7     # never flag zero leads before day 7
+ZERO_LEAD_MIN_EXPECTED_TD       = 1.0   # to-date plan must be >= 1 lead
+ZERO_LEAD_MIN_SPEND_PROGRESS    = 0.50  # must be >=50% of ideal spend
+ZERO_LEAD_LAST_MO_MIN_SPENDPROG = 0.70  # 30d zero requires ~70% progress
+
 
 def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
     """
@@ -281,7 +308,7 @@ def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
     """
     def _norm(col: str) -> pd.Series:
         if col not in df.columns:
-            return pd.Series([""], index=df.index, dtype=str)
+            return pd.Series("", index=df.index, dtype=str)
         return df[col].astype(str).str.upper().str.strip()
 
     product        = _norm("product")
@@ -290,12 +317,9 @@ def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
     channel        = _norm("channel")
 
     def is_search_like(s: pd.Series) -> pd.Series:
-        # exacts or substring safety (covers "SEARCH", "SEM", "GOOGLE SEARCH", etc.)
-        return (
-            s.eq("SEARCH") | s.eq("SEM") |
-            s.str.contains("SEARCH", na=False) |
-            s.str.contains("SEM", na=False)
-        )
+        # Case-insensitive synonyms that routinely show up
+        patt = r"(SEARCH|SEM|GOOGLE\s*ADS|GOOGLE\W*SEARCH|PAID\s*SEARCH|PPC|PERF(ORMANCE)?\s*MAX|P-MAX)"
+        return s.str.contains(patt, na=False, regex=True, case=False)
 
     def is_xmo_like(s: pd.Series) -> pd.Series:
         return s.eq("XMO") | s.str.contains(r"\bXMO\b", na=False)
@@ -323,23 +347,34 @@ def _budget_inadequate_mask(df: pd.DataFrame, min_sem: float = 2500.0) -> pd.Ser
       - <3 clicks/day (unstable delivery), OR
       - <SAFE_MIN_LEADS leads/month (can't evaluate/achieve goal).
     Uses bsc_cpc_average and effective CPL goal to imply CR.
+    Fallback CPC path uses vertical (business_category) median, else global median, else 3.0.
     """
     sem = _is_relevant_campaign(df)
 
     monthly_budget = pd.to_numeric(df.get("campaign_budget"), errors="coerce").fillna(0.0)
-    daily_budget   = monthly_budget / 30.4
+    daily_budget   = monthly_budget / AVG_CYCLE
 
-    cpc = pd.to_numeric(df.get("bsc_cpc_average"), errors="coerce").replace(0, np.nan).fillna(3.0)
+    # Robust CPC fallback chain
+    cpc_raw = pd.to_numeric(df.get("bsc_cpc_average"), errors="coerce")
+    vcat = df.get("business_category")
+    if vcat is not None:
+        cpc_vert_med = cpc_raw.groupby(vcat).transform(lambda s: np.nanmedian(s))
+    else:
+        cpc_vert_med = pd.Series(np.nan, index=df.index)
+    global_cpc_med = float(np.nanmedian(cpc_raw.values)) if np.isfinite(np.nanmedian(cpc_raw.values)) else np.nan
+    cpc = cpc_raw.fillna(cpc_vert_med).fillna(global_cpc_med).fillna(3.0)
 
     goal_eff = pd.to_numeric(df.get("effective_cpl_goal"), errors="coerce")
     goal_adv = pd.to_numeric(df.get("cpl_goal"), errors="coerce")
     goal_bmk = pd.to_numeric(df.get("bsc_cpl_avg"), errors="coerce").replace(0, np.nan)
     cpl_target = goal_eff.where(goal_eff > 0).fillna(goal_adv.where(goal_adv > 0)).fillna(goal_bmk).fillna(150.0)
 
-    cr_implied = (cpc / cpl_target).clip(lower=0.005, upper=0.25)  # 0.5%..25%
+    # Implied benchmark CR with guardrails
+    benchmark_cr = (cpc / cpl_target)
+    benchmark_cr = benchmark_cr.where(np.isfinite(benchmark_cr) & (benchmark_cr > 0), GLOBAL_CR_PRIOR).clip(0.01, 0.25)
 
     daily_clicks  = (daily_budget / cpc).replace([np.inf, -np.inf], 0).fillna(0.0)
-    monthly_leads = (daily_clicks * cr_implied) * 30.4
+    monthly_leads = (daily_clicks * benchmark_cr) * AVG_CYCLE
 
     below_sem_min = monthly_budget < float(min_sem)
     low_clicks    = daily_clicks < 3.0
@@ -657,108 +692,141 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     Key feature: SAFE accounts get churn clamped to baseline to prevent false alarms.
     """
     df = df.copy()
-
+    
     # Ensure columns exist
     for col in ['io_cycle','advertiser_product_count','running_cid_leads','days_elapsed',
                 'running_cid_cpl','effective_cpl_goal','campaign_budget','amount_spent',
                 'expected_leads_monthly','expected_leads_to_date','expected_leads_to_date_spend',
-                'utilization','cpl_goal','bsc_cpl_avg']:
+                'utilization','cpl_goal','bsc_cpc_average']:
         if col not in df.columns:
             df[col] = np.nan
 
-    # Features/flags
-    df['is_single_product'] = (
-        pd.to_numeric(df['advertiser_product_count'], errors='coerce').fillna(0).astype(float) == 1
-    )
-
-    tm = pd.to_numeric(df.get('true_months_running'), errors='coerce')
-    if tm.isnull().all():
-        # fallback if model called earlier than _attach_runtime_fields
+    # Keep true runtime for display only
+    rt_days = pd.to_numeric(df.get('true_days_running'), errors='coerce')
+    if rt_days.isnull().all():
         io_f  = pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)
-        avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.0)
+        avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE)
         days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
-        tm = (((io_f - 1).clip(lower=0) * avg_f + days_f) / 30.0).round(1)
-    df['tenure_bucket'] = pd.cut(
-        tm.fillna(0.0),
-        bins=[-0.001, 3.0, 6.0, 9999],
-        labels=['LTE_90D','M3_6','GT_6']
-    )
+        rt_days = ((io_f - 1).clip(lower=0) * avg_f + days_f).clip(lower=0.0)
 
-    leads = pd.to_numeric(df['running_cid_leads'], errors='coerce').fillna(0)
-    days  = pd.to_numeric(df['days_elapsed'], errors='coerce').fillna(0)
-    spend = pd.to_numeric(df['amount_spent'], errors='coerce').fillna(0)
+    # Always work off cycle-to-date for short-horizon risk
+    days    = pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0).astype(float)
+    leads   = pd.to_numeric(df.get('running_cid_leads'), errors='coerce').fillna(0.0).astype(float)
+    spend   = pd.to_numeric(df.get('amount_spent'), errors='coerce').fillna(0.0).astype(float)
+    budget  = pd.to_numeric(df.get('campaign_budget'), errors='coerce').fillna(0.0)
+    avg_len = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE).replace(0, AVG_CYCLE)
 
-    df['zero_lead_last_mo'] = (leads == 0) & (days >= 30) & (spend >= MIN_SPEND_FOR_ZERO_LEAD)
+    # Expecteds
+    exp_month   = pd.to_numeric(df.get('expected_leads_monthly'), errors='coerce').fillna(0.0)
+    exp_td_plan = pd.to_numeric(df.get('expected_leads_to_date'), errors='coerce').fillna(0.0)
 
-    exp_month  = pd.to_numeric(df.get('expected_leads_monthly'), errors='coerce').fillna(0)
-    exp_td_plan  = pd.to_numeric(df.get('expected_leads_to_date'), errors='coerce').fillna(0)
-    exp_td_spend = pd.to_numeric(df.get('expected_leads_to_date_spend'), errors='coerce').fillna(0)
-
-    ZERO_LEAD_EMERGING_DAYS = 7
-    df['zero_lead_emerging'] = (
-        (leads == 0) & (days >= ZERO_LEAD_EMERGING_DAYS) &
-        (spend >= MIN_SPEND_FOR_ZERO_LEAD) & (exp_month >= 1)
-    )
-
-    eff_goal = pd.to_numeric(df['effective_cpl_goal'], errors='coerce').replace(0, np.nan)
-    cpl      = pd.to_numeric(df['running_cid_cpl'], errors='coerce')
+    # CPL ratio
+    eff_goal = pd.to_numeric(df.get('effective_cpl_goal'), errors='coerce').replace(0, np.nan)
+    cpl      = pd.to_numeric(df.get('running_cid_cpl'), errors='coerce')
     df['cpl_ratio'] = (cpl / eff_goal).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
-    # Tenure-specific baseline
-    ten_b = df['tenure_bucket'].astype('string').fillna('GT_6')
-    p0_vec = ten_b.map(lambda b: _tenure_baseline_p(b)).astype(float).clip(0.01, 0.95)
-    odds = (p0_vec / (1 - p0_vec)).values
-    odds = odds * np.where(df['is_single_product'], _CAL_HR['is_single_product'], 1.0)
-    odds = odds * np.where(df['zero_lead_last_mo'], _CAL_HR['zero_lead_last_mo'], 1.0)
-    odds = odds * np.where(df['zero_lead_emerging'], 1.80, 1.0)
+    # SEM viability
+    cpc_safe     = pd.to_numeric(df.get('bsc_cpc_average'), errors='coerce').fillna(3.0)
+    daily_budget = budget / avg_len
+    daily_clicks = (daily_budget / cpc_safe).replace([np.inf,-np.inf], 0).fillna(0.0)
+    
+    budget_ok = (budget >= SEM_VIABILITY_MIN_SEM)
+    clicks_ok = (daily_clicks >= SEM_VIABILITY_MIN_DAILY_CLICKS)
+    volume_ok = (exp_month >= SEM_VIABILITY_MIN_MONTHLY_LEADS)
 
-    # Acute conversion failure
-    budget       = pd.to_numeric(df['campaign_budget'], errors='coerce').fillna(0)
-    spent        = spend
-    avg_len      = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.4).replace(0, 30.4)
+    df['_viab_budget_ok'] = budget_ok
+    df['_viab_clicks_ok'] = clicks_ok
+    df['_viab_volume_ok'] = volume_ok
+
+    sem_viable = budget_ok | clicks_ok | volume_ok
+    df['_sem_viable'] = sem_viable
+
+    # Tenure baseline → odds (unchanged baseline logic)
+    ten_b = pd.cut(
+        (((pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)-1).clip(lower=0)*avg_len + days)/30.0).round(1).fillna(0.0),
+        bins=[-0.001,3.0,6.0,9999],
+        labels=['LTE_90D','M3_6','GT_6']
+    ).astype('string').fillna('GT_6')
+    p0_vec = ten_b.map(lambda b: _tenure_baseline_p(b)).astype(float).clip(0.01,0.95)
+    odds   = (p0_vec / (1 - p0_vec)).values
+
+    # Structural factors
+    odds = odds * np.where(pd.to_numeric(df.get('advertiser_product_count'), errors='coerce').fillna(0).astype(float) == 1, _CAL_HR['is_single_product'], 1.0)
+
+    # Acute conversion failure & pacing (cycle-based)
     ideal_spend  = (budget / avg_len) * days
-    spend_prog   = (spent / ideal_spend.replace(0, np.nan)).fillna(0)
+    spend_prog   = (spend / ideal_spend.replace(0, np.nan)).fillna(0.0)
     lead_ratio   = np.where(exp_td_plan > 0, leads / exp_td_plan, 1.0)
 
-    sev_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.25) & (spend_prog >= 0.5) & (days >= 7)
-    mod_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.50) & (spend_prog >= 0.4) & (days >= 7)
+    # --- STRONG zero-lead flags (cycle-based, viable only) ---
+    df['zero_lead_last_mo'] = (
+        (leads == 0) &
+        (days >= 30) &
+        (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
+        (spend_prog >= ZERO_LEAD_LAST_MO_MIN_SPENDPROG) &
+        sem_viable
+    )
+
+    df['zero_lead_emerging'] = (
+        (leads == 0) &
+        (days >= ZERO_LEAD_MIN_DAYS_EMERGING) & (days < 30) &
+        (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
+        (exp_td_plan >= ZERO_LEAD_MIN_EXPECTED_TD) &
+        (spend_prog >= ZERO_LEAD_MIN_SPEND_PROGRESS) &
+        sem_viable
+    )
+
+    # Idle (paused/under-spend) variant: show but don't treat as a performance crisis
+    df['zero_lead_idle'] = (
+        (leads == 0) &
+        (days >= ZERO_LEAD_MIN_DAYS_EMERGING) &
+        (spend < MIN_SPEND_FOR_ZERO_LEAD)
+    )
+
+    sev_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.25) & (spend_prog >= 0.5) & (days >= 7) & sem_viable
+    mod_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.50) & (spend_prog >= 0.4) & (days >= 5) & sem_viable
     odds = odds * np.where(sev_deficit, 2.8, 1.0)
     odds = odds * np.where(~sev_deficit & mod_deficit, 1.6, 1.0)
+
+    # Early zero-lead acute (5–29d) — only if viable
+    early_zero_acute = (leads == 0) & (days >= 5) & (days < 30) & (exp_td_plan >= 1) & (spend_prog >= 0.5) & sem_viable
+    odds = odds * np.where(early_zero_acute & ~df['zero_lead_emerging'], 2.4, 1.0)
+
+    # Zero-lead 30d: if not viable, **attenuate** rather than full blast
+    # (rare edge case if you want to keep some signal without top callout)
+    z30_nonviable = (leads == 0) & (days >= 30) & (spend >= MIN_SPEND_FOR_ZERO_LEAD) & (~sem_viable)
+    odds = odds * np.where(z30_nonviable, _CAL_HR['zero_lead_last_mo'] ** ZERO_LEAD_HR_ATTENUATION_LOW_BUDGET, 1.0)
 
     # CPL gradient
     df['_cpl_hr'] = df['cpl_ratio'].apply(_hr_from_cpl_ratio).astype(float)
     odds = odds * df['_cpl_hr'].values
 
-    # Mild under-pacing signal
+    # Mild under-pacing uses cycle days too
     util = pd.to_numeric(df.get('utilization'), errors='coerce')
     odds = odds * np.where((util < 0.60) & (days >= 14), 1.15, 1.0)
 
-    # Protective dampeners
+    # Protective dampeners (unchanged)
+    exp_td_spend = pd.to_numeric(df.get('expected_leads_to_date_spend'), errors='coerce').fillna(0.0)
     good_volume  = (np.where(exp_td_spend > 0, leads / exp_td_spend, 1.0) >= 1.0) | (lead_ratio >= 1.0)
-    good_cpl     = df['cpl_ratio'] <= 0.90
+    good_cpl     = (leads > 0) & (df['cpl_ratio'] <= 0.90)
     odds = odds * np.where(good_volume | good_cpl, 0.7, 1.0)
-    new_and_good = df['tenure_bucket'].eq('LTE_90D') & (good_volume | good_cpl) & (spend_prog >= 0.5)
+    new_and_good = (ten_b.eq('LTE_90D')) & (good_volume | good_cpl) & (spend_prog >= 0.5)
     odds = odds * np.where(new_and_good, 0.75, 1.0)
 
-    # Calculate probability
+    # Probability + SAFE clamp + RAR (your existing code)
     prob = odds / (1 + odds)
     df['churn_prob_90d'] = np.clip(prob, 0.0, 1.0)
     df['_lead_ratio'] = lead_ratio
 
-    # ===== APPLY THE GOLDEN RULE =====
     df['is_safe'] = _is_actually_performing(df)
-    
-    # Clamp churn hard for SAFE accounts
-    df.loc[df['is_safe'], 'churn_prob_90d'] = np.minimum(
-        df.loc[df['is_safe'], 'churn_prob_90d'], 
-        p0_vec
-    )
+    df.loc[df['is_safe'], 'churn_prob_90d'] = np.minimum(df.loc[df['is_safe'], 'churn_prob_90d'], p0_vec)
 
-    # Business fields
-    df['revenue_at_risk'] = (budget * df['churn_prob_90d']).fillna(0)
+    df['revenue_at_risk'] = (budget * df['churn_prob_90d']).fillna(0.0)
+
+    # Updated churn bands
     df['churn_risk_band'] = pd.cut(
         df['churn_prob_90d'],
-        bins=[0, 0.20, 0.40, 0.60, 1.01],
+        bins=[0, 0.15, 0.30, 0.45, 1.01],
         labels=['LOW','MEDIUM','HIGH','CRITICAL'],
         right=True
     ).astype(str).fillna('LOW')
@@ -826,14 +894,10 @@ def attach_priority_and_flare(df: pd.DataFrame) -> pd.DataFrame:
     churn= pd.to_numeric(out.get("churn_prob_90d"), errors="coerce").fillna(0.0).clip(0,1)
     safe = out.get("is_safe", pd.Series(False, index=out.index)).fillna(False)
 
-    cap      = float(_FLARE_CFG.get("eloss_cap_usd", 25000.0))
-    rar_cap  = np.minimum(rar, cap)
-    rar_norm = np.where(cap > 0, rar_cap / cap, 0.0)
-
-    # Unified Priority Index (UPI)
-    ALPHA, BETA = 0.7, 0.3
+    # Log-damped UPI (no hard cap per 14B)
+    ALPHA, BETA = 0.6, 0.4
     eps = 1e-12
-    upi = np.exp(ALPHA * np.log(rar_norm + eps) + BETA * np.log(churn + eps))
+    upi = np.exp(ALPHA * np.log(rar + eps) + BETA * np.log(churn + eps))
 
     # ===== SAFE: heavy down-weight in UPI =====
     upi = np.where(safe, upi * float(SAFE_DOWNWEIGHT_IN_UPI), upi)
@@ -861,11 +925,11 @@ def attach_priority_and_flare(df: pd.DataFrame) -> pd.DataFrame:
     breakdown = []
     for idx in out.index:
         try:
-            rn = float(rar_norm[idx] if hasattr(rar_norm, '__getitem__') else rar_norm)
+            r = float(rar.iloc[idx] if hasattr(rar, 'iloc') else rar)
             c = float(churn.iloc[idx] if hasattr(churn, 'iloc') else churn)
         except:
-            rn, c = 0.0, 0.0
-        breakdown.append({"components": {"rar_norm": float(rn), "churn": float(c)}, "cap_usd": cap})
+            r, c = 0.0, 0.0
+        breakdown.append({"components": {"rar": float(r), "churn": float(c)}})
     out["flare_breakdown_json"] = breakdown
 
     return out
@@ -887,18 +951,26 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
     zero30       = df.get('zero_lead_last_mo', False).fillna(False)
     zero_early = df.get('zero_lead_emerging', False).fillna(False)
 
+    # Runtime & pacing
+    rt_days = pd.to_numeric(df.get('true_days_running'), errors='coerce')
+    if rt_days.isnull().all():
+        io_f  = pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)
+        avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE)
+        days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
+        rt_days = ((io_f - 1).clip(lower=0) * avg_f + days_f).clip(lower=0.0)
+
     exp_td_plan = pd.to_numeric(df.get('expected_leads_to_date'), errors='coerce').fillna(0.0)
     leads       = pd.to_numeric(df.get('running_cid_leads'), errors='coerce').fillna(0.0)
     days        = pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
     budget      = pd.to_numeric(df.get('campaign_budget'), errors='coerce').fillna(0.0)
     spent       = amount_spent
-    avg_len     = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(30.4).replace(0, 30.4)
+    avg_len     = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE).replace(0, AVG_CYCLE)
     ideal_spend = (budget / avg_len) * days
     spend_prog  = (spent / ideal_spend.replace(0, np.nan)).fillna(0.0)
     lead_ratio  = np.where(exp_td_plan > 0, leads / exp_td_plan, 1.0)
 
     sev_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.25) & (spend_prog >= 0.5) & (days >= 7)
-    mod_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.50) & (spend_prog >= 0.4) & (days >= 7)
+    mod_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.50) & (spend_prog >= 0.4) & (days >= 5)
 
     # P0 SAFE - Always first priority
     s[is_safe] = 'P0 - SAFE'
@@ -906,13 +978,14 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
     # Extreme CPL (≥4x) is always P1; ≥3x is P1 if not safe (kept)
     extreme_cpl = (cpl_ratio >= 4.0)
 
-    # Sliding-to-zero (same logic as drivers; reused pieces available here)
-    sliding_zero = (cpl_ratio >= 3.0) & (leads <= 1) & (days >= 14) & (spend_prog >= 0.5)
+    sliding_zero = _is_sliding_to_zero(cpl_ratio, leads, days, spend_prog)
+
+    sem_viable = df.get('_sem_viable', False).fillna(False)
 
     # P1 URGENT: acute conditions (not safe)
     p1 = (~is_safe) & (
         zero30 |
-        (zero_early & (amount_spent >= 100)) |
+        zero_early |                     # ← the gated flag is enough; the extra spend/viability checks are now redundant
         extreme_cpl |
         (cpl_ratio >= 3.0) |
         sev_deficit |
@@ -1062,13 +1135,16 @@ def calculate_campaign_risk(campaign_df: pd.DataFrame) -> pd.DataFrame:
     df['goal_quality'] = assess_goal_quality(df)
 
     # System goal for absurdly low targets
-    median_cpl = pd.to_numeric(df['bsc_cpl_avg'], errors='coerce').fillna(np.nan)
+    median_cpl = pd.to_numeric(df['bsc_cpl_avg'], errors='coerce')
     raw_goal   = pd.to_numeric(df['cpl_goal'], errors='coerce')
-    too_low_absurd = (df['goal_quality'].astype(str) == 'too_low') & (raw_goal < 0.5 * median_cpl)
+    gq         = df['goal_quality'].astype(str)
+
+    # Normalize absurd/low/high goals to something actionable (median).
+    bad_goal = gq.isin(['missing','too_low','too_high'])
     system_cpl_goal = np.where(
-        too_low_absurd,
-        0.8 * median_cpl,
-        np.where(pd.notna(raw_goal), raw_goal, median_cpl)
+        bad_goal,
+        median_cpl,                                # use p50 as operating target
+        np.clip(raw_goal, 0.8 * median_cpl, 1.2 * median_cpl)
     )
     df['effective_cpl_goal'] = pd.to_numeric(system_cpl_goal, errors='coerce')
 
@@ -1228,33 +1304,51 @@ def assess_goal_quality(df):
 
 
 def calculate_expected_leads(df):
-    """Calculate robust expected leads"""
+    """Calculate robust expected leads with sane fallbacks."""
     budget = pd.to_numeric(df['campaign_budget'], errors='coerce').fillna(0.0)
     days   = pd.to_numeric(df['days_elapsed'], errors='coerce').fillna(0.0)
     spent  = pd.to_numeric(df['amount_spent'], errors='coerce').fillna(0.0)
 
+    # Raw fields
     goal_raw = pd.to_numeric(df['cpl_goal'], errors='coerce')
     bench    = pd.to_numeric(df['bsc_cpl_avg'], errors='coerce')
 
-    bench_f    = bench.fillna(150.0)
-    goal_f     = goal_raw.fillna(bench_f)
+    # Goal quality & target CPL decision
+    gq_raw = df.get('goal_quality')
+    if gq_raw is None or gq_raw.isnull().all():
+        gq = pd.Series(['reasonable']*len(df), index=df.index, dtype=str)
+    else:
+        gq = gq_raw.astype(str)
+    is_bad_goal = gq.isin(['missing','too_low','too_high'])
+    bench_f = bench.fillna(150.0)
+    goal_f  = goal_raw
 
-    gq = df.get('goal_quality')
-    gq = gq if gq is not None else pd.Series(['reasonable']*len(df), index=df.index)
-
+    # Use vertical median (p50) when goal is bad; else clamp to [0.8, 1.2]×p50
     target_cpl = np.where(
-        (gq.astype(str) == 'too_low') | (goal_f <= 0) | ~np.isfinite(goal_f),
+        is_bad_goal,
         bench_f,
-        np.maximum(goal_f, 0.8 * bench_f)
+        np.clip(goal_f, 0.8 * bench_f, 1.2 * bench_f)
     )
 
-    exp_monthly = np.where(target_cpl > 0, budget / target_cpl, 0.0)
+    # Benchmark CR with guardrails; if CPC missing, we'll still have CPL-only fallback
+    bsc_cpc_safe = pd.to_numeric(df['bsc_cpc_average'], errors='coerce')
+    benchmark_cr = (bsc_cpc_safe / bench_f)
+    benchmark_cr = benchmark_cr.where(np.isfinite(benchmark_cr) & (benchmark_cr > 0), GLOBAL_CR_PRIOR).clip(0.01, 0.25)
 
-    pacing = np.clip(days / 30.4, 0.0, 2.0)
-    df['expected_leads_to_date'] = (exp_monthly * pacing)
+    # Primary path: clicks via CPC, else fallback via CPL
+    expected_clicks = budget / bsc_cpc_safe
+    expected_clicks = expected_clicks.where(np.isfinite(expected_clicks), np.nan)
+
+    # Leads per month: clicks * CR, fallback to budget/target_cpl if CPC is junk
+    target_cpl_safe = pd.Series(target_cpl, index=df.index).replace(0, np.nan)
+    expected_leads_monthly = (expected_clicks * benchmark_cr).where(expected_clicks.notna(),
+                               budget / target_cpl_safe)
+    pacing = np.clip(days / AVG_CYCLE, 0.0, 2.0)
+
+    df['expected_leads_to_date'] = (expected_leads_monthly * pacing).fillna(0.0)
     df['expected_leads_to_date_spend'] = np.where(target_cpl > 0, spent / target_cpl, 0.0)
 
-    return pd.Series(np.clip(exp_monthly, 0.0, 1e6), index=df.index)
+    return pd.Series(np.clip(expected_leads_monthly.fillna(0.0), 0.0, 1e6), index=df.index)
 
 
 def generate_headline_diagnosis(df):
@@ -1271,18 +1365,45 @@ def generate_headline_diagnosis(df):
             severities.append('healthy')
             continue
 
+        d  = float(row.get('days_elapsed') or 0)
+        sp = float(row.get('amount_spent') or 0)
+        sem_viable = bool(row.get('_sem_viable', False))
+        zero30 = bool(row.get('zero_lead_last_mo', False))
+        zeroe  = bool(row.get('zero_lead_emerging', False))
+
         cpl_pct = (row.get('cpl_variance_pct') or 0)
-        leads   = int(row.get('running_cid_leads') or 0)
+        leads_val = pd.to_numeric(row.get('running_cid_leads'), errors='coerce')
+        leads = int(leads_val if pd.notna(leads_val) else 0)
         io      = float(row.get('io_cycle') or 0)
         exp_td_spend = float(row.get('expected_leads_to_date_spend') or 0)
+
+        # No-spend takes precedence for early days
+        if (d >= MIN_DAYS_FOR_ALERTS) and (sp < MIN_SPEND_FOR_ZERO_LEAD):
+            headlines.append('NOT SPENDING — CHECK LIVE STATE')
+            severities.append('warning')
+            continue
+
+        # Idle zero-lead (paused/near-zero spend): call it out explicitly, not as a crisis
+        if bool(row.get('zero_lead_idle', False)):
+            headlines.append('NOT SPENDING — ZERO LEADS')
+            severities.append('warning')
+            continue
+
+        # Legit zero-lead callouts only if the flags/gates are true
+        if zero30 or zeroe:
+            headlines.append('ZERO LEADS — NO CONVERSIONS')
+            severities.append('critical')
+            continue
+
+        # Underfunded but no leads (don't scold performance)
+        if (not sem_viable) and (d >= MIN_DAYS_FOR_ALERTS) and (int(row.get('running_cid_leads') or 0) == 0):
+            headlines.append('UNDERFUNDED — Increase budget to reach viability')
+            severities.append('neutral')
+            continue
 
         # Critical conditions
         if (cpl_pct > 300) and (io <= 3) and (leads <= 5):
             headlines.append('CPL CRISIS — NEW ACCOUNT — LOW LEADS')
-            severities.append('critical')
-            continue
-        if (leads == 0) and (float(row.get('amount_spent') or 0) >= 100):
-            headlines.append('ZERO LEADS — NO CONVERSIONS')
             severities.append('critical')
             continue
         if cpl_pct > 100:
@@ -1325,69 +1446,67 @@ def generate_headline_diagnosis(df):
 
 def generate_diagnosis_pills(row):
     """Generate refined diagnosis pills for each account"""
-    if bool(row.get('is_safe', False)):
-        pills = [{'text': 'Performing', 'type': 'success'}]
-        return pills
-
     pills = []
+    sem_viable = bool(row.get('_sem_viable', False))
+    budget_ok  = bool(row.get('_viab_budget_ok', False))
+    clicks_ok  = bool(row.get('_viab_clicks_ok', False))
+    d   = float(row.get('days_elapsed') or 0)
+    sp  = float(row.get('amount_spent') or 0)
+    leads = int(pd.to_numeric(pd.Series([row.get('running_cid_leads')])).fillna(0).iloc[0])
 
-    try:
-        # Lead volume pills
-        leads = row.get('running_cid_leads', 0)
-        if leads == 0:
-            pills.append({'text': 'Zero Leads', 'type': 'critical'})
-        elif leads <= 5:
-            pills.append({'text': 'Low Leads', 'type': 'warning'})
+    # Healthy shortcut
+    if bool(row.get('is_safe', False)):
+        return [{'text': 'Performing', 'type': 'success'}]
 
-        # CPL performance
-        if pd.notna(row.get('cpl_variance_pct')) and abs(row['cpl_variance_pct']) > 20:
-            pct = int(row['cpl_variance_pct'])
-            if pct > 0:
-                pills.append({
-                    'text': f'CPL +{pct}%',
-                    'type': 'critical' if pct > 200 else 'warning'
-                })
-            else:
-                pills.append({'text': f'CPL {pct}%', 'type': 'success'})
+    # Zero-lead callouts (only when gated true)
+    if bool(row.get('zero_lead_last_mo', False)) or bool(row.get('zero_lead_emerging', False)):
+        pills.append({'text': 'Zero Leads', 'type': 'critical'})
+    elif bool(row.get('zero_lead_idle', False)):
+        pills.append({'text': 'Zero Leads (Idle)', 'type': 'warning'})
+    else:
+        if (d >= ZERO_LEAD_MIN_DAYS_EMERGING) and (leads == 0) and sem_viable:
+            pills.append({'text': 'No Leads Yet', 'type': 'warning'})
 
-        # Tenure status from true months
-        tm = float(row.get('true_months_running') or 0)
-        if tm <= 3.0:
-            pills.append({'text': 'Early Account', 'type': 'warning'})
-        elif tm <= 3.0:
-            pills.append({'text': 'Early Tenure', 'type': 'neutral'})
+    # CPL variance
+    if pd.notna(row.get('cpl_variance_pct')) and abs(row['cpl_variance_pct']) > 20:
+        pct = int(row['cpl_variance_pct'])
+        pills.append({'text': f'CPL {("+" if pct>0 else "")}{pct}%', 'type': 'critical' if pct > 200 else 'warning'})
 
-        # Single product risk
-        if row.get('single_product_flag') or row.get('true_product_count') == 1:
-            pills.append({'text': 'Single Product', 'type': 'neutral'})
+    # Early tenure
+    tm = float(row.get('true_months_running') or 0)
+    if tm <= 3.0:
+        pills.append({'text': 'Early Account', 'type': 'warning'})
 
-        # Pacing issues
-        if pd.notna(row.get('utilization')):
-            util = row['utilization']
-            if util < 0.5:
-                pct = int((1 - util) * 100)
-                pills.append({'text': f'Pacing -{pct}%', 'type': 'warning'})
-            elif util > 1.25:
-                pct = int((util - 1) * 100)
-                pills.append({'text': f'Pacing +{pct}%', 'type': 'warning'})
+    # Single product
+    if row.get('single_product_flag') or row.get('true_product_count') == 1:
+        pills.append({'text': 'Single Product', 'type': 'neutral'})
 
-        # Goal quality
-        if pd.notna(row.get('goal_quality')):
-            quality = row['goal_quality']
-            if quality == 'missing':
-                pills.append({'text': 'No Goal', 'type': 'warning'})
-            elif quality == 'too_low':
-                pills.append({'text': 'Goal Too Low', 'type': 'warning'})
+    # Pacing
+    util = row.get('utilization')
+    if pd.notna(util):
+        if util < 0.5:
+            pills.append({'text': f'Pacing -{int((1-util)*100)}%', 'type': 'warning'})
+        elif util > 1.25:
+            pills.append({'text': f'Pacing +{int((util-1)*100)}%', 'type': 'warning'})
 
-        # High $ risk
-        rar = float(row.get('revenue_at_risk') or 0)
-        if rar >= 5000:
-            pills.append({'text': 'High $ Risk', 'type': 'critical'})
-        elif rar >= 2000:
-            pills.append({'text': '$ Risk', 'type': 'warning'})
+    # Goal quality
+    q = row.get('goal_quality')
+    if pd.notna(q):
+        if q == 'missing':
+            pills.append({'text': 'No Goal', 'type': 'warning'})
+        elif q == 'too_low':
+            pills.append({'text': 'Goal Too Low', 'type': 'warning'})
 
-    except Exception:
-        pills.append({'text': 'Needs Review', 'type': 'neutral'})
+    # Underfunded pill ONLY when both hard capacity gates fail
+    if (not budget_ok) and (not clicks_ok):
+        pills.append({'text': 'Underfunded', 'type': 'neutral'})
+
+    # $ risk
+    rar = float(row.get('revenue_at_risk') or 0)
+    if rar >= 5000:
+        pills.append({'text': 'High $ Risk', 'type': 'critical'})
+    elif rar >= 2000:
+        pills.append({'text': '$ Risk', 'type': 'warning'})
 
     return pills
 
@@ -1442,53 +1561,166 @@ def get_summary_stats(df):
     }
 
 
+def _get_advertiser_product_counts(health_df: pd.DataFrame, breakout_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Get product counts at advertiser level using multiple fallback strategies.
+    Returns a DataFrame with maid, advertiser_name, and true_product_count.
+    """
+    import logging
+    log = logging.getLogger("book")
+    
+    if breakout_df.empty:
+        # If no breakout data, return default counts
+        result = health_df[['maid', 'advertiser_name']].drop_duplicates().copy()
+        result['true_product_count'] = 1
+        log.warning("No breakout data available, defaulting all product counts to 1")
+        return result
+    
+    # Strategy 1: Product counts by MAID (most reliable)
+    maid_counts = breakout_df.groupby('maid')['product_type'].nunique()
+    
+    # Strategy 2: Product counts by advertiser name (for missing MAIDs)
+    name_counts = breakout_df.groupby('advertiser_name')['product_type'].nunique()
+    
+    # Strategy 3: Infer from health data patterns (basic heuristics)
+    def infer_product_count_from_campaigns(group):
+        """Basic inference from campaign patterns"""
+        products = set()
+        for _, row in group.iterrows():
+            product = str(row.get('product', '')).upper()
+            finance_product = str(row.get('finance_product', '')).upper()
+            channel = str(row.get('channel', '')).upper()
+            
+            if any(x in product or x in finance_product or x in channel for x in ['SEARCH', 'SEM']):
+                products.add('SEARCH')
+            if any(x in product or x in finance_product or x in channel for x in ['SEO']):
+                products.add('SEO')
+            if any(x in product or x in finance_product or x in channel for x in ['DISPLAY', 'BANNER']):
+                products.add('DISPLAY')
+            if any(x in product or x in finance_product or x in channel for x in ['SOCIAL', 'FACEBOOK', 'INSTAGRAM']):
+                products.add('SOCIAL')
+        return max(1, len(products))  # At least 1 product
+    
+    health_patterns = health_df.groupby('advertiser_name').apply(infer_product_count_from_campaigns)
+    
+    # Create result DataFrame with all unique maid/advertiser combinations from health data
+    result = health_df[['maid', 'advertiser_name']].drop_duplicates().copy()
+    
+    # Progressive fallback assignment
+    result['true_product_count'] = (
+        result['maid'].map(maid_counts)
+        .fillna(result['advertiser_name'].map(name_counts))
+        .fillna(result['advertiser_name'].map(health_patterns))
+        .fillna(1)  # Ultimate fallback
+    ).astype(int)
+    
+    # Log merge statistics
+    maid_matches = result['maid'].map(maid_counts).notna().sum()
+    name_matches = result['advertiser_name'].map(name_counts).notna().sum()
+    inferred = result['advertiser_name'].map(health_patterns).notna().sum()
+    defaulted = (result['true_product_count'] == 1).sum()
+    
+    log.info(f"Product count assignment: {maid_matches} by MAID, {name_matches} by name, {inferred} inferred, {defaulted} defaulted")
+    
+    return result
+
+
+def _multi_key_merge_with_breakout(health_df: pd.DataFrame, breakout_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge health data with breakout data using multiple strategies to maximize matches.
+    Preserves ALL health campaigns while enriching with available breakout data.
+    """
+    import logging
+    log = logging.getLogger("book")
+    
+    original_count = len(health_df)
+    log.info(f"Starting merge with {original_count} health campaigns")
+    
+    if breakout_df.empty:
+        log.warning("No breakout data available for merge")
+        # Add empty columns that would come from breakout
+        health_df['gm'] = pd.NA
+        health_df['bid'] = pd.NA
+        return health_df.copy()
+    
+    # Ensure campaign_id is string type for both
+    health_df = health_df.copy()
+    breakout_df = breakout_df.copy()
+    
+    if 'campaign_id' not in health_df.columns:
+        health_df['campaign_id'] = pd.NA
+    if 'campaign_id' not in breakout_df.columns:
+        breakout_df['campaign_id'] = pd.NA
+        
+    health_df['campaign_id'] = health_df['campaign_id'].astype(str)
+    breakout_df['campaign_id'] = breakout_df['campaign_id'].astype(str)
+    
+    # Select breakout columns we want to merge
+    breakout_cols = ['campaign_id', 'maid', 'advertiser_name', 'gm', 'bid', 'campaign_name']
+    breakout_subset = breakout_df[[col for col in breakout_cols if col in breakout_df.columns]].copy()
+    
+    # Strategy 1: Merge by campaign_id
+    merged_by_cid = pd.merge(health_df, breakout_subset, on='campaign_id', how='left', suffixes=('', '_breakout'))
+    cid_matches = merged_by_cid['gm'].notna().sum() if 'gm' in merged_by_cid.columns else 0
+    
+    # Strategy 2: For unmatched rows, try MAID merge
+    if 'maid' in health_df.columns and 'maid' in breakout_subset.columns:
+        unmatched_mask = merged_by_cid['gm'].isna() if 'gm' in merged_by_cid.columns else pd.Series([True] * len(merged_by_cid))
+        unmatched_health = health_df[unmatched_mask].copy()
+        
+        if not unmatched_health.empty:
+            # Drop campaign_id for MAID merge to avoid conflicts
+            breakout_for_maid = breakout_subset.drop(columns=['campaign_id']).drop_duplicates(subset=['maid'])
+            maid_merged = pd.merge(unmatched_health, breakout_for_maid, on='maid', how='left', suffixes=('', '_breakout'))
+            
+            # Update the main merged dataframe with MAID matches
+            for idx in unmatched_health.index:
+                if idx in maid_merged.index:
+                    for col in breakout_for_maid.columns:
+                        if col != 'maid' and col in merged_by_cid.columns:
+                            merged_by_cid.loc[idx, col] = maid_merged.loc[idx, col]
+    
+    maid_matches = (merged_by_cid['gm'].notna().sum() if 'gm' in merged_by_cid.columns else 0) - cid_matches
+    
+    # Log merge results
+    total_matches = merged_by_cid['gm'].notna().sum() if 'gm' in merged_by_cid.columns else 0
+    log.info(f"Merge results: {cid_matches} by campaign_id, {maid_matches} by MAID, {total_matches} total matches, {original_count - total_matches} unmatched")
+    
+    # Validate we preserved all campaigns
+    final_count = len(merged_by_cid)
+    if final_count != original_count:
+        log.error(f"CRITICAL: Lost campaigns in merge! Started with {original_count}, ended with {final_count}")
+    else:
+        log.info(f"✓ Successfully preserved all {original_count} campaigns")
+    
+    return merged_by_cid
+
+
 def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
     """
     Main processing function that loads data and calculates risk scores.
-    Integrates the GOLDEN RULE for SAFE accounts throughout.
+    MODIFIED: Now preserves ALL health campaigns while enriching with breakout data.
     """
-    # Step 1: Load the Master Roster (source of truth)
-    master_roster = load_breakout_data()
-
-    # Step 2: Load the Performance Data
+    import logging
+    log = logging.getLogger("book")
+    
+    # Step 1: Load the Performance Data (PRIMARY source - preserve ALL campaigns)
     health_data = load_health_data()
+    original_campaign_count = len(health_data)
+    log.info(f"Loaded {original_campaign_count} campaigns from health data")
 
-    # Step 3: Calculate True Product Count from the Master Roster
-    product_counts = master_roster.groupby('maid')['product_type'].nunique().reset_index()
-    product_counts = product_counts.rename(columns={'product_type': 'true_product_count'})
+    # Step 2: Load the Master Roster (for product counts and enrichment)
+    master_roster = load_breakout_data()
+    log.info(f"Loaded {len(master_roster)} records from breakout data")
 
-    # Add the true product count to our master roster
-    master_roster = pd.merge(master_roster, product_counts, on='maid', how='left')
+    # Step 3: Get advertiser-level product counts using multiple strategies
+    product_counts_df = _get_advertiser_product_counts(health_data, master_roster)
+    
+    # Step 4: Merge product counts into health data
+    health_data = pd.merge(health_data, product_counts_df, on=['maid', 'advertiser_name'], how='left')
 
-    # Step 4: Enrich the Master Roster with Performance Data
-    if 'campaign_id' not in master_roster.columns:
-        master_roster['campaign_id'] = pd.NA
-    if 'campaign_id' not in health_data.columns:
-        health_data['campaign_id'] = pd.NA
-    master_roster['campaign_id'] = master_roster['campaign_id'].astype(str)
-    health_data['campaign_id']   = health_data['campaign_id'].astype(str)
-
-    # Select only the necessary columns from health_data to avoid conflicts
-    health_cols = [
-        'campaign_id', 'am', 'optimizer', 'io_cycle', 'avg_cycle_length',  # ← add this
-        'campaign_budget',
-        'running_cid_leads', 'utilization', 'cpl_goal', 'bsc_cpl_avg',
-        'running_cid_cpl', 'amount_spent', 'days_elapsed', 'bsc_cpc_average',
-        'business_category', 'bid_name', 'cpl_mcid', 'gm', 'advertiser_name', 
-        'partner_name', 'campaign_name',
-        # add product signals so we can filter
-        'product', 'finance_product', 'channel'
-    ]
-
-    # Only select columns that exist in health_data
-    health_cols_filtered = [col for col in health_cols if col in health_data.columns]
-
-    enriched_df = pd.merge(
-        master_roster,
-        health_data[health_cols_filtered],
-        on='campaign_id',
-        how='left'
-    )
+    # Step 5: Multi-key merge with breakout data for additional enrichment
+    enriched_df = _multi_key_merge_with_breakout(health_data, master_roster)
 
     # Attach true runtime fields BEFORE any splits or modeling
     enriched_df = _attach_runtime_fields(enriched_df)
@@ -1526,11 +1758,34 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
     if "campaign_name" in enriched_df.columns:
         enriched_df.loc[same & enriched_df["campaign_name"].notna(), "advertiser_name"] = enriched_df["campaign_name"]
 
-    # Channel filter (view-aware)
+    # Add campaign count validation before filtering
+    pre_filter_count = len(enriched_df)
+    log.info(f"Pre-filter campaign count: {pre_filter_count}")
+    
+    # Channel filter (view-aware) - but validate we don't lose campaigns unexpectedly
     view_key = str(view or "").strip().lower()
     if view_key in ("optimizer", "index", "sem", "search"):
         keep_mask = _is_relevant_campaign(enriched_df)
+        filtered_count = keep_mask.sum()
+        log.info(f"Channel filter results: {filtered_count} campaigns pass filter, {pre_filter_count - filtered_count} filtered out")
+        
+        # Log some examples of filtered campaigns for debugging
+        if (pre_filter_count - filtered_count) > 0:
+            filtered_out = enriched_df[~keep_mask]
+            log.info(f"Examples of filtered campaigns: {filtered_out[['campaign_name', 'product', 'finance_product', 'channel']].head(3).to_dict('records')}")
+        
         enriched_df = enriched_df[keep_mask].copy()
+        
+        # Validate specific SERVOLiFT campaigns survive filtering
+        servolift_campaigns = enriched_df[enriched_df['advertiser_name'].str.contains('SERVOLiFT', na=False)]
+        if not servolift_campaigns.empty:
+            log.info(f"✓ SERVOLiFT campaigns found after filtering: {len(servolift_campaigns)}")
+        else:
+            log.warning("⚠ No SERVOLiFT campaigns found after filtering - investigating...")
+            # Check if they were filtered out
+            all_servolift = enriched_df[enriched_df['advertiser_name'].str.contains('SERVOLiFT', na=False)]
+            if len(all_servolift) == 0:
+                log.warning("SERVOLiFT campaigns not found in pre-filter data either")
 
     # Ensure we have days_elapsed before splitting pre-flight vs active
     if 'days_elapsed' not in enriched_df.columns:
@@ -1611,17 +1866,40 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
     # 2. Priority index (desc)
     # 3. FLARE score (desc)
     # 4. Revenue at risk (desc)
-    # 5. Churn probability (desc)
-    # 6. CPL ratio (desc)
-    # 7. Days active (desc)
+    # Crisis key: zero leads + >=7 cycle days + spend >= $250 + SEM viable
+    sv = actionable_campaigns.get('_sem_viable', False).fillna(False)
+    actionable_campaigns['_crisis'] = (
+        (pd.to_numeric(actionable_campaigns.get('running_cid_leads'), errors='coerce').fillna(0) <= 1) &
+        (pd.to_numeric(actionable_campaigns.get('days_elapsed'), errors='coerce').fillna(0) >= 7) &
+        (pd.to_numeric(actionable_campaigns.get('amount_spent'), errors='coerce').fillna(0) >= 250) &
+        sv
+    ).astype(int)
+
+    # Sort with crisis ahead of FLARE/RAR
     actionable_campaigns.sort_values(
-        by=['_bucket','_pri','_flare','_rar','_churn','_cplr','days_active'],
-        ascending=[True, False, False, False, False, False, False],
+        by=['_bucket','_crisis','_pri','_flare','_rar','_churn','_cplr','days_active'],
+        ascending=[True, False, False, False, False, False, False, False],
         inplace=True
     )
 
     # Clean helper columns
-    actionable_campaigns.drop(columns=['_bucket','_pri','_flare','_rar','_churn','_cplr'], errors='ignore', inplace=True)
+    actionable_campaigns.drop(columns=['_bucket','_crisis','_pri','_flare','_rar','_churn','_cplr'], errors='ignore', inplace=True)
+
+    # Final validation and logging
+    final_campaign_count = len(actionable_campaigns)
+    log.info(f"Final campaign count: {final_campaign_count} (started with {original_campaign_count})")
+    
+    # Check for SERVOLiFT campaigns in final output
+    final_servolift = actionable_campaigns[actionable_campaigns['advertiser_name'].str.contains('SERVOLiFT', na=False)]
+    if not final_servolift.empty:
+        log.info(f"✓ SUCCESS: {len(final_servolift)} SERVOLiFT campaigns in final output")
+        log.info(f"SERVOLiFT campaigns: {final_servolift[['campaign_id', 'campaign_name', 'advertiser_name']].to_dict('records')}")
+    else:
+        log.error("❌ ISSUE: No SERVOLiFT campaigns in final output")
+    
+    # Report campaign preservation rate
+    preservation_rate = (final_campaign_count / original_campaign_count * 100) if original_campaign_count > 0 else 0
+    log.info(f"Campaign preservation rate: {preservation_rate:.1f}% ({final_campaign_count}/{original_campaign_count})")
 
     return actionable_campaigns.reset_index(drop=True)
 
