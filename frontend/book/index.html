@@ -206,6 +206,26 @@ header.header{
   padding:8px 12px; background:var(--primary-500); color:#fff; border:0; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;
 }
 .action-button:hover{background:var(--primary-600)}
+
+/* ===== Churn Risk Waterfall (refined) ===== */
+.nl-waterfall { --h: 28px; --gap: 10px; position: relative; }
+.nl-waterfall .wf-row { display:flex; align-items:center; gap:16px; margin:10px 0; }
+.nl-waterfall .wf-label { flex:0 0 220px; color:#334155; font-weight:600; }
+.nl-waterfall .wf-track-wrap { position:relative; flex:1; height:var(--h); }
+.nl-waterfall .wf-track { position:absolute; inset:0; background:#eef2f7; border-radius:8px; overflow:hidden; }
+.nl-waterfall .wf-step { position:absolute; top:0; bottom:0; border-radius:8px; display:flex; align-items:center; justify-content:space-between; padding:0 8px; font-weight:700; color:#fff; font-size:12px; }
+.nl-waterfall .wf-step.baseline { background:#64748b; justify-content:center; }
+.nl-waterfall .wf-step.controllable { background:#d93f0b; }  /* red */
+.nl-waterfall .wf-step.structural  { background:#f59e0b; }  /* amber */
+.nl-waterfall .wf-step.protective  { background:#10b981; } /* green */
+.nl-waterfall .wf-step.residual    { background:#9CA3AF; } /* neutral gray */
+.nl-waterfall .pp { z-index:1; }
+.nl-waterfall .lift { font-weight:600; font-size:11px; opacity:.95; background:rgba(255,255,255,.18); padding:2px 6px; border-radius:999px; }
+.nl-waterfall .wf-badge { flex:0 0 80px; text-align:right; font-weight:700; color:#0f172a; }
+.nl-waterfall .wf-total { display:flex; justify-content:space-between; align-items:center; margin-top:14px; border-top:1px solid #e5e7eb; padding-top:12px; }
+.nl-waterfall .wf-total .val { font-weight:800; font-size:20px; color:#d93f0b; }
+.nl-waterfall .legend { color:#64748b; font-size:12px; }
+.nl-tooltip { position:absolute; z-index:10; max-width:340px; background:#fff; color:#0f172a; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); font-size:12px; display:none; }
   </style>
 </head>
 
@@ -449,9 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const k = Object.keys(impacts).find(k => k.includes('CPL'));
       add('Budget/keyword optimization for lead volume', impacts[k], 'Open Planner →');
     }
-    if ('New Account (≤1m)' in impacts || 'Early Tenure (≤3m)' in impacts) {
-      const m = Math.max(impacts['New Account (≤1m)']||0, impacts['Early Tenure (≤3m)']||0);
-      add('Set expectations / launch plan call', m, 'Schedule Call →');
+    if ('Early Account (≤90d)' in impacts) {
+      add('Set expectations / launch plan call', impacts['Early Account (≤90d)'], 'Schedule Call →');
     }
     return items.sort((a,b)=>b.impact-a.impact).slice(0,3);
   }
@@ -460,36 +479,67 @@ document.addEventListener('DOMContentLoaded', () => {
   let NL_RISK_VIEW = 'attribution';
   
   function renderRiskAttribution(acc){
-    const p = toNum(acc.churn_prob_90d);
-    const driversObj = parseDrivers(acc.risk_drivers_json);
-    const baselinePP = Number.isFinite(driversObj?.baseline) ? Math.max(0, Math.min(100, Math.round(driversObj.baseline))) : null;
-
-    if (p == null || baselinePP == null) {
-      return `<div class="section-title">Churn Risk Breakdown</div><div class="risk-breakdown"><div style="color:var(--gray-500);font-size:13px;">No churn data yet.</div></div>`;
-    }
-
-    const finalPP = Math.max(0, Math.min(100, pctInt(p)));
-    const upliftPP = Math.max(0, finalPP - baselinePP);
-    const rows = Array.isArray(driversObj?.drivers) ? driversObj.drivers : [];
-    const factorRows = rows.map(a => {
-        const impact = Math.round(a.impact || 0);
-        return `<div class="risk-factor"><span class="factor-label">${a.name}</span><div class="factor-bar"><div class="factor-fill risk" style="width:${impact}%">+${impact}pp</div></div><span class="factor-context">Risk driver</span></div>`
-    }).join('');
-
+    // Simplified - only show waterfall mount point, no legacy breakdown
     return `
       <div class="section-title">Churn Risk Breakdown</div>
-      <div class="risk-breakdown">
-        <div class="risk-factor">
-          <span class="factor-label">Baseline</span>
-          <div class="factor-bar"><div class="factor-fill baseline" style="width:${baselinePP}%">${baselinePP>8?`${baselinePP}%`:''}</div></div>
-          <span class="factor-context">Cohort baseline</span>
+      <section class="card-section" id="risk-breakdown">
+        <div id="churn-waterfall"></div>
+      </section>`;
+  }
+
+  function goalRealismSection(acc){
+    const adv = acc.goal_advice_json || null;
+    if (!adv || adv.show !== true) return '';
+
+    const s = String(adv.status || '');
+    const badgeMap = {
+      missing: 'Missing goal',
+      too_low: 'Unrealistic (too low)',
+      too_high: 'Unrealistic (too high)',
+      wildly_high: 'Wildly high'
+    };
+    const badge = badgeMap[s] || 'Goal check';
+
+    const rec = adv.recommended || {};
+    const rPt = rec.point != null ? Math.round(rec.point) : null;
+    const rLo = rec.range && rec.range[0] != null ? Math.round(rec.range[0]) : null;
+    const rHi = rec.range && rec.range[1] != null ? Math.round(rec.range[1]) : null;
+
+    const perf = adv.performance_band || {};
+    const vsRec = perf.vs_recommended || '—';
+    const vsGoal = perf.vs_goal || '—';
+
+    const bn = adv.benchmark || {};
+    const p50 = bn.p50 != null ? Math.round(bn.p50) : null;
+
+    return `
+      <div class="section-title">Goal realism</div>
+      <div class="metrics-bar">
+        <div class="metric-item">
+          <span class="status-badge warning">${badge}</span>
         </div>
-        ${factorRows}
-        <div class="total-risk">
-          <span>Total Churn Risk</span>
-          <span style="font-size:20px;color:var(--red-600);">${finalPP}%</span>
+        <div class="metric-item">
+          <span class="metric-label">Recommended goal:</span>
+          <span class="metric-value">${rPt != null ? '$' + rPt.toLocaleString('en-US') : '—'}</span>
+          <span class="metric-context">${(rLo!=null && rHi!=null) ? `(Range: $${rLo.toLocaleString('en-US')}–$${rHi.toLocaleString('en-US')})` : ''}</span>
         </div>
-      </div>`;
+        <div class="metric-item">
+          <span class="metric-label">Benchmark p50:</span>
+          <span class="metric-value">${p50 != null ? '$' + p50.toLocaleString('en-US') : '—'}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Performance vs recommended:</span>
+          <span class="metric-value">${vsRec}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Vs current goal:</span>
+          <span class="metric-value">${vsGoal}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-context">${adv.rationale || ''}</span>
+        </div>
+      </div>
+    `;
   }
   
   function expandedMetrics(acc){
@@ -647,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="expanded-content">
             ${status === 'safe'
                 ? expandedSafeContent(acc)
-                : `${renderRiskAttribution(acc)}${expandedMetrics(acc)}${expandedActions(acc)}`
+                : `${renderRiskAttribution(acc)}${expandedMetrics(acc)}${goalRealismSection(acc)}${expandedActions(acc)}`
             }
           </div>
         </div>
@@ -713,6 +763,11 @@ document.addEventListener('DOMContentLoaded', () => {
     state.rendered += slice.length;
     loadBtn.style.display = (state.rendered < sorted.length) ? 'inline-flex' : 'none';
     loadBtn.onclick = ()=> renderCards(sorted, /*reset*/false);
+    
+    // Notify external scripts about data update
+    window.dispatchEvent(new CustomEvent('accountsDataUpdated', { 
+      detail: { accounts: allAccounts, slice: slice } 
+    }));
   }
 
   // ===== Filtering =====
@@ -762,5 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
   init();
 });
   </script>
+  <script type="module" src="./script.js"></script>
 </body>
 </html>

@@ -10,7 +10,8 @@ const round2 = x => Number(x ?? 0).toFixed(2);
 
 // ---- API calls --------------------------------------------------
 const API_BASES = [
-  'http://localhost:8001',    // Local development server
+  'http://localhost:8000',    // Local development server
+  'http://localhost:8001',    // Fallback port
   window.location.origin,     // Current page origin (for production)
   'https://northlight-wsgw.onrender.com',
   'https://northlight-api-dev.onrender.com',
@@ -28,8 +29,17 @@ async function fetchFromAny(path) {
 }
 
 async function fetchPartners(playbook="seo_dash") {
-  const r = await fetchFromAny(`/api/book/partners?playbook=${encodeURIComponent(playbook)}`);
-  return r.json();
+  const cacheBust = Date.now();
+  const r = await fetchFromAny(`/api/book/partners?playbook=${encodeURIComponent(playbook)}&cb=${cacheBust}`);
+  const data = await r.json();
+  
+  // Debug logging
+  console.log('Partners API Response:', {
+    totalPartners: data.length,
+    topPartners: data.slice(0, 3).map(p => ({ name: p.partner, budget: p.metrics.budget }))
+  });
+  
+  return data;
 }
 async function fetchPartnerDetail(name, playbook="seo_dash") {
   const r = await fetchFromAny(`/api/book/partners/${encodeURIComponent(name)}/opportunities?playbook=${encodeURIComponent(playbook)}`);
@@ -107,6 +117,18 @@ function renderPartnerCardShell(p) {
         <div class="advertiser-table" data-table="two"></div>
       </section>
 
+      <!-- Three+ Product -->
+      <section class="action-group" data-group="threeplus">
+        <div class="group-header">
+          <div class="group-title">Three+ Product Advertisers — Premium Portfolio</div>
+          <div class="group-count" data-count="threeplus">0</div>
+        </div>
+        <div class="table-header advertiser">
+          <div>Advertiser</div><div>Active Products</div><div>Performance</div><div>Action</div>
+        </div>
+        <div class="advertiser-table" data-table="threeplus"></div>
+      </section>
+
       <!-- Upsell -->
       <section class="action-group" data-group="upsell">
         <div class="group-header">
@@ -139,18 +161,55 @@ function renderPartnerCardShell(p) {
 // ---- detail row builders ----------------------------------------
 function productBadges(products) {
   return `<div class="active-products">${
-    (products||[]).map(p => `<span class="product-badge">${escapeHtml(p)}</span>`).join('')
+    (products||[]).map(p => {
+      const cssClass = getProductCssClass(p);
+      return `<span class="product-badge ${cssClass}">${escapeHtml(p)}</span>`;
+    }).join('')
   }</div>`;
 }
-function perfBadge(ratio) {
-  const cls = perfClass(ratio ?? 2);
-  const text = `${round2(ratio ?? 2)}× goal`;
-  return `
-    <div class="performance-metric">
-      <div class="perf-value ${cls}">${text}</div>
-      <div class="perf-label">CPL vs Goal</div>
-    </div>
-  `;
+
+function getProductCssClass(productName) {
+  const name = String(productName || '').toLowerCase();
+  if (name.includes('search') || name.includes('sem')) return 'search';
+  if (name.includes('seo')) return 'seo';
+  if (name.includes('display')) return 'display';
+  if (name.includes('social')) return 'social';
+  if (name.includes('chat')) return 'chat';
+  return 'other';
+}
+function perfBadge(ratio, searchPerformance) {
+  // Show Search performance if available, otherwise use the old ratio display
+  if (searchPerformance) {
+    const percentage = searchPerformance.percentage;
+    const status = searchPerformance.status;
+    const cls = status === 'good' ? 'perf-good' : 'perf-bad';
+    const text = `${percentage}% of goal`;
+    
+    return `
+      <div class="performance-metric">
+        <div class="perf-value ${cls}">${text}</div>
+        <div class="perf-label">Search CPL</div>
+      </div>
+    `;
+  } else if (ratio && ratio > 0) {
+    // Fallback to old display for non-Search campaigns
+    const cls = perfClass(ratio);
+    const text = `${round2(ratio)}× goal`;
+    return `
+      <div class="performance-metric">
+        <div class="perf-value ${cls}">${text}</div>
+        <div class="perf-label">CPL vs Goal</div>
+      </div>
+    `;
+  } else {
+    // No performance data available (non-Search campaigns)
+    return `
+      <div class="performance-metric">
+        <div class="perf-value" style="color: #6c757d;">—</div>
+        <div class="perf-label">N/A</div>
+      </div>
+    `;
+  }
 }
 
 function advertiserRow(a, actionLabel, actionSub) {
@@ -162,7 +221,7 @@ function advertiserRow(a, actionLabel, actionSub) {
         <div class="advertiser-meta">${fmtMoney(a.budget)}/mo • AM: ${escapeHtml(a.am ?? '—')} • ${a.months ?? 0} months</div>
       </div>
       ${productBadges(a.products)}
-      ${perfBadge(a.cplRatio)}
+      ${perfBadge(a.cplRatio, a.searchPerformance)}
       <div class="action-wrapper">
         <button class="action-btn">${escapeHtml(actionLabel)}</button>
         <span class="impact-text">${escapeHtml(actionSub)}</span>
@@ -183,7 +242,7 @@ function campaignRow(a, recommended, changeLabel, good) {
       </div>
       <div class="budget-current">${fmtMoney(a.budget)}</div>
       <div class="budget-recommended">${fmtMoney(recommended)}<div class="budget-change">${escapeHtml(changeLabel)}</div></div>
-      ${perfBadge(a.cplRatio)}
+      ${perfBadge(a.cplRatio, a.searchPerformance)}
       <div class="action-wrapper">
         <button class="action-btn ${good ? 'success':''}">${good ? 'Increase Budget' : 'Fix Budget'}</button>
         <span class="impact-text">${good ? 'Room to scale' : 'Too low to work'}</span>
@@ -214,16 +273,23 @@ function fillCardDetail(cardEl, detail) {
 
   // Single product → Cross-sell
   const single = detail.groups?.singleReady || [];
-  $('[data-count="single"]', cardEl).textContent = `${single.length} of ${detail.counts?.single ?? 0} ready`;
+  $('[data-count="single"]', cardEl).textContent = `${single.length} advertisers`;
   $('[data-table="single"]', cardEl).innerHTML = single.map(a =>
     advertiserRow(a, `Add ${missingOf(a, detail.playbook?.elements) || 'SEO'}`, '-25% churn risk')
   ).join('');
 
   // Two product → complete bundle
   const two = detail.groups?.twoReady || [];
-  $('[data-count="two"]', cardEl).textContent = `${two.length} of ${detail.counts?.two ?? 0} ready`;
+  $('[data-count="two"]', cardEl).textContent = `${two.length} advertisers`;
   $('[data-table="two"]', cardEl).innerHTML = two.map(a =>
     advertiserRow(a, `Add ${missingOf(a, detail.playbook?.elements) || 'DASH'}`, 'Reach 3+ products')
+  ).join('');
+
+  // Three+ product → Premium portfolio
+  const threeplus = detail.groups?.threePlusReady || [];
+  $('[data-count="threeplus"]', cardEl).textContent = `${threeplus.length} advertisers`;
+  $('[data-table="threeplus"]', cardEl).innerHTML = threeplus.map(a =>
+    advertiserRow(a, `Maintain & Expand`, 'Premium retention')
   ).join('');
 
   // Upsell (budget increase; SEM or any that qualify server-side)

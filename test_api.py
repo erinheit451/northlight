@@ -1,39 +1,33 @@
+#!/usr/bin/env python3
 import requests
 import json
 
-# Test the API with the same data
-payload = {
-    "category": "Attorneys & Legal Services",
-    "subcategory": "Accidents & Personal Injury Law", 
-    "website": "example.com",
-    "goal_cpl": 25.0,
-    "budget": 5000,
-    "clicks": 1000,
-    "leads": 200,
-    "impressions": None,
-    "dash_enabled": False
-}
-
 try:
-    response = requests.post("http://127.0.0.1:8000/diagnose", json=payload)
-    response.raise_for_status()
+    response = requests.get("http://localhost:8001/api/book/all?view=optimizer")
     data = response.json()
+    print(f"Total campaigns: {len(data)}")
     
-    # Print key parts of the response
-    print("=== GOAL ANALYSIS ===")
-    goal_analysis = data.get("goal_analysis", {})
-    print(f"Goal scenario: {goal_analysis.get('goal_scenario')}")
-    print(f"Market band: {goal_analysis.get('market_band')}")
-    print(f"Realistic range: {goal_analysis.get('realistic_range')}")
-    print(f"Recommended CPL: {goal_analysis.get('recommended_cpl')}")
+    # Check our target campaigns
+    target_campaigns = []
+    for row in data:
+        if row.get('campaign_id') in ['4987460', '4977653']:
+            target_campaigns.append(row)
     
-    print("\n=== INPUT ===")
-    input_data = data.get("input", {})
-    print(f"Goal CPL: {input_data.get('goal_cpl')}")
+    print(f"\nFound {len(target_campaigns)} target campaigns:")
     
-    print("\n=== DERIVED ===")
-    derived = data.get("derived", {})
-    print(f"Actual CPL: {derived.get('cpl')}")
-    
+    for row in target_campaigns:
+        cpl = row.get('running_cid_cpl', 0)
+        goal = row.get('cpl_goal', 0)
+        goal_perf = ((goal - cpl) / goal * 100) if goal > 0 else 0
+        print(f"\nCID: {row.get('campaign_id')} - {row.get('advertiser_name')}")
+        print(f"  CPL: ${cpl:.0f}, Goal: ${goal:.0f}")
+        print(f"  Goal Performance: {goal_perf:.0f}% better than goal")
+        print(f"  FLARE: {row.get('flare_score')}, is_safe: {row.get('is_safe')}")
+        print(f"  Priority: {row.get('priority_tier')}")
+        
+        # Show if it should meet goal performance condition
+        meets_goal_condition = (goal > 0 and cpl <= goal * 0.8)
+        print(f"  Should be SAFE (goal condition): {meets_goal_condition}")
+        
 except Exception as e:
     print(f"Error: {e}")

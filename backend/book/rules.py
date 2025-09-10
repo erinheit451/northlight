@@ -37,8 +37,8 @@ def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         for k, label, typ, why in [
             ("risk_cpl_pp",            "High CPL (≥3× goal)",         "controllable",
              "3× goal historically elevates churn vs cohort."),
-            ("risk_new_account_pp",    "New Account (≤1m)",           "structural",
-             "First 30 days show elevated hazard vs matured accounts."),
+            ("risk_new_account_pp",    "Early Account (≤90d)",        "structural",
+             "First 90 days show elevated hazard vs matured accounts."),
             ("risk_single_product_pp", "Single Product",               "structural",
              "Fewer anchors → higher volatility."),
             ("risk_pacing_pp",         "Off-pacing",                   "controllable",
@@ -103,14 +103,8 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
             "type": typ, "why": why, "is_controllable": bool(controllable)
         })
 
-    # Tenure
+    # Tenure info (for SAFE logic, not as driver)
     ten = str(row.get('tenure_bucket') or '')
-    if ten == 'LTE_1M':
-        add('tenure_lte_1m','New Account (≤1m)', _CAL_HR['is_tenure_lte_1m'], 'structural',
-            "Early hazard is elevated vs matured.")
-    elif ten == 'M1_3':
-        add('tenure_1_3','Early Tenure (≤3m)', _CAL_HR['is_tenure_lte_3m'], 'structural',
-            "First three months show higher churn risk.")
 
     # Structure
     if bool(row.get('is_single_product')):
@@ -136,10 +130,12 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
         ideal_spend  = (budget / avg_len) * days
         spend_prog   = (spent / (ideal_spend or float('inf'))) if ideal_spend else 0.0
         lead_ratio   = (leads / exp_td_plan) if exp_td_plan > 0 else 1.0
+        cplr         = float(row.get('cpl_ratio') or 0.0)  # Added for sliding to zero
         sev_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.25) and (spend_prog >= 0.5) and (days >= 7)
         mod_deficit  = (exp_td_plan >= 1) and (lead_ratio <= 0.50) and (spend_prog >= 0.4) and (days >= 7)
     except Exception:
         sev_deficit = mod_deficit = False
+        cplr = 0.0
 
     if sev_deficit:
         add('lead_deficit_sev','Lead deficit / conv quality', 2.8, 'controllable',
@@ -148,8 +144,13 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
         add('lead_deficit_mod','Lead deficit / conv quality', 1.6, 'controllable',
             "Under-delivery vs plan at adequate spend.", True)
 
+    # Sliding to zero: ≥3x CPL, ≤1 lead, ≥14d, spend ≥50% pace
+    sliding_to_zero = (cplr >= 3.0) and (leads <= 1) and (days >= 14) and (spend_prog >= 0.5)
+    if sliding_to_zero:
+        add('sliding_zero','Sliding to Zero Leads', 2.0, 'controllable',
+            "High CPL + low volume mid-cycle at adequate spend.", True)
+
     # CPL gradient
-    cplr = float(row.get('cpl_ratio') or 0.0)
     lab  = _driver_label_for_cpl(cplr)
     if lab:
         add('cpl', lab, _hr_from_cpl_ratio(cplr), 'controllable',
@@ -170,9 +171,9 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
         add('good_perf','Strong volume / CPL', 0.70, 'protective',
             "Protective signal: strong volume and/or efficient CPL.")
 
-    if (ten == 'LTE_1M') and (good_volume or good_cpl) and (spend_prog >= 0.5):
-        add('new_and_good','New + good early signal', 0.75, 'protective',
-            "Protective dampener when new and performing.")
+    if (ten == 'LTE_90D') and (good_volume or good_cpl) and (spend_prog >= 0.5):
+        add('new_and_good','Early + good signal', 0.75, 'protective',
+            "Protective dampener when early-stage and performing.")
 
     return factors
 
@@ -360,18 +361,19 @@ def _priority_from_score(score: pd.Series) -> pd.Series:
 P0_BASELINE = 0.11  # Baseline churn probability
 
 FALLBACK_HR = {
-    "is_tenure_lte_1m": 4.13,   # stacks with <=3m
-    "is_tenure_lte_3m": 1.50,
-    "is_single_product": 1.30,
+    # Tenure HRs are neutralized; baseline now handles tenure
+    "is_tenure_lte_1m": 1.00,
+    "is_tenure_lte_3m": 1.00,
+    "is_single_product": 1.60,  # stronger, matches ~3–4% retention gap
     "zero_lead_last_mo": 3.20,
 }
 
 # CPL gradient tiers (upper bound inclusive -> HR).
 FALLBACK_CPL_TIERS = [
-    (1.2, 1.00),    # <1.2x => baseline
-    (1.5, 1.25),    # 1.2–1.5x
-    (3.0, 1.75),    # 1.5–3x
-    (999, 3.20),    # ≥3x
+    (1.2, 1.00),  # on/near goal
+    (1.5, 1.20),
+    (3.0, 1.60),
+    (999, 2.40),  # ≥3x
 ]
 
 # Optional: enable ONLY if your Budget Gradient Audit shows stable uplift
@@ -545,6 +547,13 @@ def _driver_label_for_cpl(r: float) -> str | None:
     if r >= 1.2: return "CPL above goal (1.2–1.5×)"
     return None
 
+def _tenure_baseline_p(tenure_bucket: str) -> float:
+    if tenure_bucket == 'LTE_90D':
+        return 0.09  # 91% retention (first 90 days)
+    if tenure_bucket == 'M3_6':
+        return 0.06  # 94% retention (3-6 months)
+    return 0.05      # >6m → 95% retention
+
 
 def _is_actually_performing(df: pd.DataFrame) -> pd.Series:
     """
@@ -670,8 +679,9 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
         days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
         tm = (((io_f - 1).clip(lower=0) * avg_f + days_f) / 30.0).round(1)
     df['tenure_bucket'] = pd.cut(
-        tm.fillna(0.0), bins=[-0.001, 1.0, 3.0, 9999],
-        labels=['LTE_1M','M1_3','GT_3']
+        tm.fillna(0.0),
+        bins=[-0.001, 3.0, 6.0, 9999],
+        labels=['LTE_90D','M3_6','GT_6']
     )
 
     leads = pd.to_numeric(df['running_cid_leads'], errors='coerce').fillna(0)
@@ -694,12 +704,10 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     cpl      = pd.to_numeric(df['running_cid_cpl'], errors='coerce')
     df['cpl_ratio'] = (cpl / eff_goal).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
-    # Odds stacking (calibrated)
-    p0 = float(np.clip(P0_BASELINE, 0.01, 0.95))
-    odds = p0 / (1 - p0)
-
-    odds = odds * np.where(df['tenure_bucket'].eq('LTE_1M'), _CAL_HR['is_tenure_lte_1m'],
-                           np.where(df['tenure_bucket'].eq('M1_3'),   _CAL_HR['is_tenure_lte_3m'], 1.0))
+    # Tenure-specific baseline
+    ten_b = df['tenure_bucket'].astype('string').fillna('GT_6')
+    p0_vec = ten_b.map(lambda b: _tenure_baseline_p(b)).astype(float).clip(0.01, 0.95)
+    odds = (p0_vec / (1 - p0_vec)).values
     odds = odds * np.where(df['is_single_product'], _CAL_HR['is_single_product'], 1.0)
     odds = odds * np.where(df['zero_lead_last_mo'], _CAL_HR['zero_lead_last_mo'], 1.0)
     odds = odds * np.where(df['zero_lead_emerging'], 1.80, 1.0)
@@ -729,7 +737,7 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     good_volume  = (np.where(exp_td_spend > 0, leads / exp_td_spend, 1.0) >= 1.0) | (lead_ratio >= 1.0)
     good_cpl     = df['cpl_ratio'] <= 0.90
     odds = odds * np.where(good_volume | good_cpl, 0.7, 1.0)
-    new_and_good = df['tenure_bucket'].eq('LTE_1M') & (good_volume | good_cpl) & (spend_prog >= 0.5)
+    new_and_good = df['tenure_bucket'].eq('LTE_90D') & (good_volume | good_cpl) & (spend_prog >= 0.5)
     odds = odds * np.where(new_and_good, 0.75, 1.0)
 
     # Calculate probability
@@ -743,7 +751,7 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     # Clamp churn hard for SAFE accounts
     df.loc[df['is_safe'], 'churn_prob_90d'] = np.minimum(
         df.loc[df['is_safe'], 'churn_prob_90d'], 
-        p0
+        p0_vec
     )
 
     # Business fields
@@ -757,7 +765,8 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drivers JSON
     def compute_drivers_row(row):
-        base = float(np.clip(P0_BASELINE, 0.01, 0.95))
+        tb = str(row.get('tenure_bucket') or 'GT_6')
+        base = float(np.clip(_tenure_baseline_p(tb), 0.01, 0.95))
         factors = _collect_odds_factors_for_row(row)
         drivers = _shap_pp_from_factors(base, factors)
         return {"baseline": int(round(base * 100)), "drivers": drivers}
@@ -894,12 +903,20 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
     # P0 SAFE - Always first priority
     s[is_safe] = 'P0 - SAFE'
 
+    # Extreme CPL (≥4x) is always P1; ≥3x is P1 if not safe (kept)
+    extreme_cpl = (cpl_ratio >= 4.0)
+
+    # Sliding-to-zero (same logic as drivers; reused pieces available here)
+    sliding_zero = (cpl_ratio >= 3.0) & (leads <= 1) & (days >= 14) & (spend_prog >= 0.5)
+
     # P1 URGENT: acute conditions (not safe)
     p1 = (~is_safe) & (
         zero30 |
         (zero_early & (amount_spent >= 100)) |
+        extreme_cpl |
         (cpl_ratio >= 3.0) |
         sev_deficit |
+        sliding_zero |
         ((flare_band == 'critical') & (churn >= 0.40))
     )
     s[p1] = 'P1 - URGENT'
@@ -915,6 +932,86 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
 
     return s
 
+
+def _goal_advice_for_row(row: pd.Series) -> dict:
+    """
+    Return a compact, UI-ready advisory about CPL goal realism.
+    Uses benchmark percentiles if present; else falls back to median.
+    """
+    import math
+
+    # Inputs
+    med  = pd.to_numeric(pd.Series([row.get('bsc_cpl_avg')])).fillna(np.nan).iloc[0]
+    goal = pd.to_numeric(pd.Series([row.get('cpl_goal')])).fillna(np.nan).iloc[0]
+    act  = pd.to_numeric(pd.Series([row.get('running_cid_cpl')])).fillna(np.nan).iloc[0]
+    io_m = pd.to_numeric(pd.Series([row.get('io_cycle')])).fillna(0).iloc[0]
+    days = pd.to_numeric(pd.Series([row.get('days_elapsed')])).fillna(0).iloc[0]
+
+    # Enhanced percentiles using actual data fields
+    p25 = pd.to_numeric(pd.Series([row.get('bsc_cpl_top_25pct')])).fillna(np.nan).iloc[0]
+    p50 = med if pd.isna(row.get('bsc_cpl_avg')) else pd.to_numeric(pd.Series([row.get('bsc_cpl_avg')])).fillna(med).iloc[0]
+    p75 = pd.to_numeric(pd.Series([row.get('bsc_cpl_bottom_25pct')])).fillna(np.nan).iloc[0]
+
+    # Fallback window if percentiles not present
+    if not np.isfinite(p50) or p50 <= 0:
+        p50 = med if (np.isfinite(med) and med > 0) else 150.0
+    if not np.isfinite(p25) or p25 <= 0:
+        p25 = 0.8 * p50
+    if not np.isfinite(p75) or p75 <= 0:
+        p75 = 1.2 * p50
+
+    # Gate for very early data (avoid scolding day-1 launches)
+    show_gate = (days >= 7) or (io_m >= 1)
+
+    # Classify goal realism vs benchmark median
+    status = 'reasonable'
+    ratio  = None
+    if not np.isfinite(goal) or goal <= 0:
+        status = 'missing'
+    else:
+        ratio = goal / p50
+        if ratio < 0.5:           status = 'too_low'
+        elif ratio < 0.7:         status = 'ambitious'   # aggressive but maybe attainable
+        elif ratio <= 1.5:        status = 'reasonable'
+        elif ratio <= 2.5:        status = 'too_high'
+        else:                     status = 'wildly_high'
+
+    # Recommended range and point target (tight, defensible)
+    # If you have real percentiles, use ~P40–P60; else clamp to 0.8–1.2× median
+    rec_min = max(0.8 * p50, p25)
+    rec_max = min(1.2 * p50, p75)
+    rec_pt  = float(np.clip(p50, rec_min, rec_max))
+
+    # Performance bands (we'll show "vs rec goal" primarily)
+    def band(r):
+        if not np.isfinite(r) or r <= 0: return '—'
+        if r >= 3.0:   return 'CRISIS (≥3×)'
+        if r >= 2.0:   return 'Major gap (2–3×)'
+        if r >= 1.5:   return 'Gap (1.5–2×)'
+        if r >  1.1:   return 'Slightly high (1.1–1.5×)'
+        if r >= 0.9:   return 'On target (±10%)'
+        return 'Under target (<0.9×)'
+
+    perf_vs_goal = band(act / goal) if (np.isfinite(goal) and goal > 0) else '—'
+    perf_vs_rec  = band(act / rec_pt)
+
+    rationale = f"Vertical median (p50) ≈ ${int(round(p50))}. Recommended window ${int(round(rec_min))}–${int(round(rec_max))}."
+
+    return {
+        "show": bool(show_gate and status in {"missing","too_low","too_high","wildly_high"}),
+        "status": status,
+        "goal_advertiser": float(goal) if np.isfinite(goal) and goal > 0 else None,
+        "benchmark": {"p25": float(p25), "p50": float(p50), "p75": float(p75)},
+        "recommended": {
+            "point": float(rec_pt),
+            "range": [float(rec_min), float(rec_max)]
+        },
+        "performance_band": {
+            "vs_goal": perf_vs_goal,
+            "vs_recommended": perf_vs_rec
+        },
+        "rationale": rationale
+    }
 
 def calculate_campaign_risk(campaign_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -953,14 +1050,9 @@ def calculate_campaign_risk(campaign_df: pd.DataFrame) -> pd.DataFrame:
         index=df.index
     ).fillna(0)
 
-    # Risk Component Calculation
-    df['age_risk'] = np.select([df['io_cycle'] <= 3, df['io_cycle'] <= 12], [4, 2], default=0)
-    df['maturity_amplifier'] = np.select([
-        df['io_cycle'] <= 1,
-        df['io_cycle'] <= 3,
-        df['io_cycle'] <= 6,
-        df['io_cycle'] <= 12
-    ], [2.0, 1.8, 1.5, 1.2], default=1.0)
+    # IO-based risk removed; maturity amplifier neutralized
+    df['age_risk'] = 0
+    df['maturity_amplifier'] = 1.0
 
     df['util_risk'] = np.select([df['utilization'] < 0.50, df['utilization'] < 0.75, df['utilization'] > 1.25], 
                                 [3, 1, 2], default=0)
@@ -1093,6 +1185,10 @@ def calculate_campaign_risk(campaign_df: pd.DataFrame) -> pd.DataFrame:
 
     # Apply churn probability and FLARE scoring
     df = calculate_churn_probability(df)
+    
+    # --- Goal advice JSON (for UI) ---
+    df['goal_advice_json'] = df.apply(_goal_advice_for_row, axis=1)
+    
     df = attach_priority_and_flare(df)
     df['priority_tier_v2'] = compute_priority_v2(df)
 
@@ -1256,8 +1352,8 @@ def generate_diagnosis_pills(row):
 
         # Tenure status from true months
         tm = float(row.get('true_months_running') or 0)
-        if tm <= 1.0:
-            pills.append({'text': 'New Account', 'type': 'warning'})
+        if tm <= 3.0:
+            pills.append({'text': 'Early Account', 'type': 'warning'})
         elif tm <= 3.0:
             pills.append({'text': 'Early Tenure', 'type': 'neutral'})
 

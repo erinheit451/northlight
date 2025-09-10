@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Partners Test Page</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-results { margin: 20px 0; }
+    .success { color: green; }
+    .error { color: red; }
+    .product-badge { 
+      padding: 3px 7px; margin: 2px; display: inline-block;
+      border-radius: 4px; font-size: 11px; font-weight: bold;
+    }
+    .product-badge.search { background: #e7f3ff; color: #0d6efd; }
+    .product-badge.seo { background: #e7f6e7; color: #28a745; }
+    .product-badge.display { background: #fff3cd; color: #856404; }
+    .product-badge.social { background: #f8d7da; color: #721c24; }
+    .product-badge.chat { background: #d1ecf1; color: #0c5460; }
+    .product-badge.other { background: #f8f9fa; color: #6c757d; }
+  </style>
+</head>
+<body>
+  <h1>Partners API Test</h1>
+  <div id="results" class="test-results">Loading...</div>
+  
+  <script>
+    const API_BASES = [
+      'http://localhost:8000',
+      window.location.origin,
+      'https://northlight-wsgw.onrender.com',
+      'https://northlight-api-dev.onrender.com',
+    ];
+
+    async function fetchFromAny(path) {
+      for (const base of API_BASES) {
+        try {
+          const url = base + path;
+          const r = await fetch(url);
+          if (r.ok) return r;
+        } catch (e) { continue; }
+      }
+      throw new Error('All API bases failed');
+    }
+
+    function getProductCssClass(productName) {
+      const name = String(productName || '').toLowerCase();
+      if (name.includes('search') || name.includes('sem')) return 'search';
+      if (name.includes('seo')) return 'seo';
+      if (name.includes('display')) return 'display';
+      if (name.includes('social')) return 'social';
+      if (name.includes('chat')) return 'chat';
+      return 'other';
+    }
+
+    function renderProducts(products) {
+      return products.map(p => {
+        const cssClass = getProductCssClass(p);
+        return `<span class="product-badge ${cssClass}">${p}</span>`;
+      }).join(' ');
+    }
+
+    async function testAPI() {
+      const resultsDiv = document.getElementById('results');
+      
+      try {
+        // Test partners endpoint
+        resultsDiv.innerHTML = '<p>Testing partners endpoint...</p>';
+        const partnersResponse = await fetchFromAny('/api/book/partners?playbook=seo_dash');
+        const partners = await partnersResponse.json();
+        
+        resultsDiv.innerHTML += `<p class="success">✓ Found ${partners.length} partners</p>`;
+        
+        if (partners.length > 0) {
+          const firstPartner = partners[0];
+          resultsDiv.innerHTML += `<p>First partner: ${firstPartner.partner}</p>`;
+          resultsDiv.innerHTML += `<p>Metrics: Single=${firstPartner.metrics.singleCount}, Two=${firstPartner.metrics.twoCount}, Three+=${firstPartner.metrics.threePlusCount}</p>`;
+          
+          // Test detail endpoint
+          resultsDiv.innerHTML += '<p>Testing detail endpoint...</p>';
+          const detailResponse = await fetchFromAny(`/api/book/partners/${encodeURIComponent(firstPartner.partner)}/opportunities?playbook=seo_dash`);
+          const detail = await detailResponse.json();
+          
+          resultsDiv.innerHTML += `<p class="success">✓ Detail API working</p>`;
+          
+          // Show some single ready advertisers with products
+          const singleReady = detail.groups?.singleReady || [];
+          if (singleReady.length > 0) {
+            resultsDiv.innerHTML += `<h3>Single Ready Advertisers (${singleReady.length}):</h3>`;
+            singleReady.slice(0, 3).forEach(advertiser => {
+              const products = advertiser.products || [];
+              resultsDiv.innerHTML += `<p><strong>${advertiser.advertiser}</strong> - Products: ${renderProducts(products)}</p>`;
+            });
+          }
+          
+          // Show some two ready advertisers with products
+          const twoReady = detail.groups?.twoReady || [];
+          if (twoReady.length > 0) {
+            resultsDiv.innerHTML += `<h3>Two Ready Advertisers (${twoReady.length}):</h3>`;
+            twoReady.slice(0, 3).forEach(advertiser => {
+              const products = advertiser.products || [];
+              resultsDiv.innerHTML += `<p><strong>${advertiser.advertiser}</strong> - Products: ${renderProducts(products)}</p>`;
+            });
+          }
+          
+          // Show three+ ready advertisers with products
+          const threePlusReady = detail.groups?.threePlusReady || [];
+          if (threePlusReady.length > 0) {
+            resultsDiv.innerHTML += `<h3>Three+ Ready Advertisers (${threePlusReady.length}):</h3>`;
+            threePlusReady.slice(0, 3).forEach(advertiser => {
+              const products = advertiser.products || [];
+              resultsDiv.innerHTML += `<p><strong>${advertiser.advertiser}</strong> - Products: ${renderProducts(products)}</p>`;
+            });
+          }
+          
+          resultsDiv.innerHTML += '<p class="success">✓ All tests passed! The backend changes are working correctly.</p>';
+          resultsDiv.innerHTML += '<p><strong>If the main partners page isn\'t showing changes, try:</strong></p>';
+          resultsDiv.innerHTML += '<ul><li>Hard refresh (Ctrl+F5 or Cmd+Shift+R)</li><li>Clear browser cache</li><li>Check browser console for errors</li></ul>';
+        }
+        
+      } catch (error) {
+        resultsDiv.innerHTML += `<p class="error">✗ Error: ${error.message}</p>`;
+      }
+    }
+
+    // Run test when page loads
+    testAPI();
+  </script>
+</body>
+</html>

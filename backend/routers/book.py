@@ -18,7 +18,7 @@ def _get_driver_explanation(driver_name: str) -> str:
     """Get explanation text for risk drivers."""
     explanations = {
         'High CPL (≥3× goal)': '3× goal historically elevates churn vs cohort.',
-        'New Account (≤1m)': 'First 30 days show elevated hazard vs matured accounts.',
+        'Early Account (≤90d)': 'First 90 days show elevated hazard vs matured accounts.',
         'Single Product': 'Fewer anchors → higher volatility.',
         'Off-pacing': 'Under/over-spend drives instability and lead gaps.',
         'Below expected leads': 'Lead scarcity increases cancel probability.',
@@ -34,7 +34,7 @@ def _estimate_lift_ratio(driver_name: str, impact_pp: int) -> Optional[float]:
     # Rough estimates based on typical hazard ratios
     base_lifts = {
         'High CPL (≥3× goal)': 3.2,
-        'New Account (≤1m)': 4.1,
+        'Early Account (≤90d)': 2.5,
         'Single Product': 1.3,
         'Early Tenure (≤3m)': 1.5,
         'Zero Leads (30d)': 3.2,
@@ -123,6 +123,7 @@ def get_cached_data(view: str, ts_bucket: int) -> pd.DataFrame:
         "flare_score","flare_band","flare_breakdown_json","flare_score_raw",
         "headline_diagnosis","headline_severity","diagnosis_pills",
         "campaign_count","true_product_count","is_safe",
+        "goal_advice_json",
         "status",
     ]
     for c in want_cols:
@@ -305,7 +306,7 @@ def get_actions(campaign_id: str) -> Dict[str, Any]:
                     break
 
             # Tenure driver
-            m = max(impacts.get("New Account (≤1m)", 0), impacts.get("Early Tenure (≤3m)", 0))
+            m = max(impacts.get("Early Account (≤90d)", 0), impacts.get("Early Tenure (≤3m)", 0))
             if m > 0:
                 actions.append({"title":"Set expectations / launch plan call","impact": m, "cta":"Schedule Call →"})
 
