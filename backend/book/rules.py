@@ -342,12 +342,9 @@ def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
 
 def _budget_inadequate_mask(df: pd.DataFrame, min_sem: float = 2500.0) -> pd.Series:
     """
-    SEM/Search/XMO only. Flags campaigns where budget is non-viable:
-      - Below platform min (min_sem), OR
-      - <3 clicks/day (unstable delivery), OR
-      - <SAFE_MIN_LEADS leads/month (can't evaluate/achieve goal).
-    Uses bsc_cpc_average and effective CPL goal to imply CR.
-    Fallback CPC path uses vertical (business_category) median, else global median, else 3.0.
+    SEM/Search/XMO only. Flags campaigns where budget has REAL capacity problems.
+    Now requires BOTH core capacity gates to fail (aligned with headlines/pills logic).
+    Platform minimum is treated as advisory, not a sole trigger.
     """
     sem = _is_relevant_campaign(df)
 
@@ -380,7 +377,17 @@ def _budget_inadequate_mask(df: pd.DataFrame, min_sem: float = 2500.0) -> pd.Ser
     low_clicks    = daily_clicks < 3.0
     too_few_leads = monthly_leads < SAFE_MIN_LEADS
 
-    return sem & (below_sem_min | low_clicks | too_few_leads)
+    # NEW: require BOTH core capacity gates to fail; treat SEM min as advisory (not sole trigger)
+    capacity_fail = low_clicks & too_few_leads
+
+    # Optional debounce: don't flag before we've had at least a few days to observe pacing
+    days = pd.to_numeric(df.get("days_elapsed"), errors="coerce").fillna(0.0)
+    matured = days >= MIN_DAYS_FOR_ALERTS
+
+    # Don't call "inadequate" if the campaign is objectively performing
+    is_perf_ok = df.apply(_is_perf_ok, axis=1) if "_is_perf_ok" in globals() else pd.Series(False, index=df.index)
+
+    return sem & matured & capacity_fail & (~is_perf_ok)
 
 
 def _priority_from_score(score: pd.Series) -> pd.Series:
@@ -1399,21 +1406,33 @@ def generate_headline_diagnosis(df):
             severities.append('critical')
             continue
 
+        # Calculate SEM viability inline since fields don't exist yet - used by multiple checks below
+        budget = float(row.get('campaign_budget') or 0)
+        cpc_safe = float(row.get('bsc_cpc_average') or 3.0)
+        avg_len = float(row.get('avg_cycle_length') or 30.4) or 30.4
+        exp_month = float(row.get('expected_leads_monthly') or 0)
+        
+        daily_budget = budget / avg_len
+        daily_clicks = daily_budget / cpc_safe if cpc_safe > 0 else 0
+        
+        budget_ok = budget >= SEM_VIABILITY_MIN_SEM
+        clicks_ok = daily_clicks >= SEM_VIABILITY_MIN_DAILY_CLICKS  
+        volume_ok = exp_month >= SEM_VIABILITY_MIN_MONTHLY_LEADS
+        sem_viable = budget_ok or clicks_ok or volume_ok
+
+        # PRIORITY: Zero-lead checks come BEFORE "new account" to avoid masking performance issues
         # Acute cycle-based zero-lead (5–29d) when plan+spend indicate we should have ≥1 lead
-        # This ensures day 5–6 can still trigger the urgent headline even if a flag didn't set earlier.
         exp_td_plan_val = float(row.get('expected_leads_to_date') or 0)
         exp_td_spend_val = float(row.get('expected_leads_to_date_spend') or 0)
         if (leads == 0) and (d >= MIN_DAYS_FOR_ALERTS) and (d < 30) and sem_viable \
            and (exp_td_plan_val >= ZERO_LEAD_MIN_EXPECTED_TD) \
-           and (sp >= MIN_SPEND_FOR_ZERO_LEAD) and (exp_td_spend_val >= 1):
+           and (sp >= MIN_SPEND_FOR_ZERO_LEAD):
             headlines.append('ZERO LEADS — NO CONVERSIONS')
             severities.append('critical')
             continue
 
-        # Underfunded: capacity, not performance. Require BOTH gates to fail (no single flaky input).
-        budget_ok = bool(row.get('_viab_budget_ok', False))
-        clicks_ok = bool(row.get('_viab_clicks_ok', False))
-        if (d >= MIN_DAYS_FOR_ALERTS) and (leads <= 0) and (not budget_ok) and (not clicks_ok):
+        # Underfunded: capacity, not performance. Require BOTH capacity gates to fail AND not viable overall
+        if (d >= MIN_DAYS_FOR_ALERTS) and (leads <= 0) and (not budget_ok) and (not clicks_ok) and (not sem_viable):
             headlines.append('UNDERFUNDED — Increase budget to reach viability')
             severities.append('neutral')
             continue
