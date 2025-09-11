@@ -758,18 +758,22 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     spend_prog   = (spend / ideal_spend.replace(0, np.nan)).fillna(0.0)
     lead_ratio   = np.where(exp_td_plan > 0, leads / exp_td_plan, 1.0)
 
-    # --- STRONG zero-lead flags (cycle-based, viable only) ---
+    # --- STRONG zero-lead flags (cycle-based for gating) ---
+    # Tenure backup for 30d optional: use true runtime to avoid cycle reset blind spots
+    rt = pd.to_numeric(rt_days, errors='coerce').fillna(days)
+
     df['zero_lead_last_mo'] = (
         (leads == 0) &
-        (days >= 30) &
+        ((days >= 30) | (rt >= 30)) &  # keep cycle gate, add tenure backup
         (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
         (spend_prog >= ZERO_LEAD_LAST_MO_MIN_SPENDPROG) &
         sem_viable
     )
 
+    # Emerging: use global alert floor (5) so day 5–6 can raise urgency when plan+spend say it should
     df['zero_lead_emerging'] = (
         (leads == 0) &
-        (days >= ZERO_LEAD_MIN_DAYS_EMERGING) & (days < 30) &
+        (days >= MIN_DAYS_FOR_ALERTS) & (days < 30) &  # was 7; now 5
         (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
         (exp_td_plan >= ZERO_LEAD_MIN_EXPECTED_TD) &
         (spend_prog >= ZERO_LEAD_MIN_SPEND_PROGRESS) &
@@ -1395,8 +1399,21 @@ def generate_headline_diagnosis(df):
             severities.append('critical')
             continue
 
-        # Underfunded but no leads (don't scold performance)
-        if (not sem_viable) and (d >= MIN_DAYS_FOR_ALERTS) and (int(row.get('running_cid_leads') or 0) == 0):
+        # Acute cycle-based zero-lead (5–29d) when plan+spend indicate we should have ≥1 lead
+        # This ensures day 5–6 can still trigger the urgent headline even if a flag didn't set earlier.
+        exp_td_plan_val = float(row.get('expected_leads_to_date') or 0)
+        exp_td_spend_val = float(row.get('expected_leads_to_date_spend') or 0)
+        if (leads == 0) and (d >= MIN_DAYS_FOR_ALERTS) and (d < 30) and sem_viable \
+           and (exp_td_plan_val >= ZERO_LEAD_MIN_EXPECTED_TD) \
+           and (sp >= MIN_SPEND_FOR_ZERO_LEAD) and (exp_td_spend_val >= 1):
+            headlines.append('ZERO LEADS — NO CONVERSIONS')
+            severities.append('critical')
+            continue
+
+        # Underfunded: capacity, not performance. Require BOTH gates to fail (no single flaky input).
+        budget_ok = bool(row.get('_viab_budget_ok', False))
+        clicks_ok = bool(row.get('_viab_clicks_ok', False))
+        if (d >= MIN_DAYS_FOR_ALERTS) and (leads <= 0) and (not budget_ok) and (not clicks_ok):
             headlines.append('UNDERFUNDED — Increase budget to reach viability')
             severities.append('neutral')
             continue
@@ -1464,7 +1481,8 @@ def generate_diagnosis_pills(row):
     elif bool(row.get('zero_lead_idle', False)):
         pills.append({'text': 'Zero Leads (Idle)', 'type': 'warning'})
     else:
-        if (d >= ZERO_LEAD_MIN_DAYS_EMERGING) and (leads == 0) and sem_viable:
+        # Loosen to global alert floor (5d)
+        if (d >= MIN_DAYS_FOR_ALERTS) and (leads == 0) and sem_viable:
             pills.append({'text': 'No Leads Yet', 'type': 'warning'})
 
     # CPL variance
