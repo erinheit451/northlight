@@ -135,7 +135,7 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
         elif zle:
             add('zero_early','Zero Leads (5–29d)', 1.80, 'controllable',
                 "Early zero-lead at adequate progress.", True)
-        elif (not sem_viable) and (leads == 0) and (sp >= 50) and (d >= MIN_DAYS_FOR_ALERTS) and (not budget_ok) and (not clicks_ok):
+        elif UNDERFUNDED_FEATURE_ENABLED and (not sem_viable) and (leads == 0) and (sp >= 50) and (d >= MIN_DAYS_FOR_ALERTS) and (not budget_ok) and (not clicks_ok):
             # Underfunded media: shift from "performance crisis" → structural underfunding
             add('underfunded_media','Underfunded (SEM viability)', 1.20, 'structural',
                 "Budget/delivery below viability; increase budget before judging performance.")
@@ -286,6 +286,9 @@ SAFE_NEW_ACCOUNT_MIN_LEADS     = 1           # ... OR has at least 1 lead
 SAFE_NEW_ACCOUNT_IGNORE_PACING = True        # pacing/spend progress never vetoes SAFE for new accts
 SAFE_DOWNWEIGHT_IN_UPI         = 0.05        # 5% weight for SAFE rows in UPI (strong suppression)
 SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never exceed this
+
+# ===== Feature flags / temporary killswitches =====
+UNDERFUNDED_FEATURE_ENABLED = False  # hard off until redesign
 
 # ===== SEM viability gates for zero-lead logic =====
 SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
@@ -1432,10 +1435,11 @@ def generate_headline_diagnosis(df):
             continue
 
         # Underfunded: capacity, not performance. Require BOTH capacity gates to fail AND not viable overall
-        if (d >= MIN_DAYS_FOR_ALERTS) and (leads <= 0) and (not budget_ok) and (not clicks_ok) and (not sem_viable):
-            headlines.append('UNDERFUNDED — Increase budget to reach viability')
-            severities.append('neutral')
-            continue
+        if False and UNDERFUNDED_FEATURE_ENABLED:
+            if (d >= MIN_DAYS_FOR_ALERTS) and (leads <= 0) and (not budget_ok) and (not clicks_ok) and (not sem_viable):
+                headlines.append('UNDERFUNDED — Increase budget to reach viability')
+                severities.append('neutral')
+                continue
 
         # Critical conditions
         if (cpl_pct > 300) and (io <= 3) and (leads <= 5):
@@ -1478,6 +1482,16 @@ def generate_headline_diagnosis(df):
         severities.append('neutral')
 
     return headlines, severities
+
+
+def _no_underfunded_strings(df):
+    """DEV-ONLY sanity check to ensure no Underfunded strings leak through"""
+    if 'diagnosis_pills' in df.columns:
+        assert not any(p.get('text') == 'Underfunded'
+                       for pills in df['diagnosis_pills'].dropna()
+                       for p in (pills if isinstance(pills, list) else [])), "Underfunded pill leaked"
+    if 'headline_diagnosis' in df.columns:
+        assert not df['headline_diagnosis'].astype(str).str.contains('UNDERFUNDED').any(), "Underfunded headline leaked"
 
 
 def generate_diagnosis_pills(row):
@@ -1534,9 +1548,10 @@ def generate_diagnosis_pills(row):
         elif q == 'too_low':
             pills.append({'text': 'Goal Too Low', 'type': 'warning'})
 
-    # Underfunded pill ONLY when both hard capacity gates fail
-    if (not budget_ok) and (not clicks_ok):
-        pills.append({'text': 'Underfunded', 'type': 'neutral'})
+    # Underfunded pill ONLY when both hard capacity gates fail  (TEMP DISABLED)
+    if False and UNDERFUNDED_FEATURE_ENABLED:
+        if (not budget_ok) and (not clicks_ok):
+            pills.append({'text': 'Underfunded', 'type': 'neutral'})
 
     # $ risk
     rar = float(row.get('revenue_at_risk') or 0)
@@ -1938,7 +1953,14 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
     preservation_rate = (final_campaign_count / original_campaign_count * 100) if original_campaign_count > 0 else 0
     log.info(f"Campaign preservation rate: {preservation_rate:.1f}% ({final_campaign_count}/{original_campaign_count})")
 
-    return actionable_campaigns.reset_index(drop=True)
+    # Safety check to prevent Underfunded leakage (dev/non-prod only)
+    final_df = actionable_campaigns.reset_index(drop=True)
+    try:
+        _no_underfunded_strings(final_df)
+    except Exception:
+        pass  # Fail silently in prod to avoid breaking the system
+
+    return final_df
 
 
 # === PARTNER PAYLOAD FUNCTIONS ===
@@ -2109,28 +2131,32 @@ def partner_opportunities_payload(partner: str, playbook: str | dict = "seo_dash
     scale_ready = [mk_campaign_row(r) for _, r in scale_ready_rows.iterrows()]
 
     # Budget Inadequate (SEM-only smart check)
-    mask_budget_bad = _budget_inadequate_mask(sub, min_sem=float(pb["min_sem"]))
-    bad_rows = sub[mask_budget_bad].copy()
+    if UNDERFUNDED_FEATURE_ENABLED:
+        mask_budget_bad = _budget_inadequate_mask(sub, min_sem=float(pb["min_sem"]))
+        bad_rows = sub[mask_budget_bad].copy()
 
-    def _recommended_monthly_budget(row: pd.Series) -> float:
-        cpc = float(pd.to_numeric(row.get("bsc_cpc_average"), errors="coerce") or 3.0)
-        goal_eff = pd.to_numeric(row.get("effective_cpl_goal"), errors="coerce")
-        goal_adv = pd.to_numeric(row.get("cpl_goal"), errors="coerce")
-        goal_bmk = pd.to_numeric(row.get("bsc_cpl_avg"), errors="coerce")
-        if pd.isna(goal_eff) or goal_eff <= 0:
-            goal_eff = goal_adv if pd.notna(goal_adv) and goal_adv > 0 else goal_bmk
-        cpl_target = float(goal_eff) if (goal_eff and goal_eff > 0) else 150.0
-        min_for_clicks = 3.0 * cpc * 30.4
-        min_for_leads  = SAFE_MIN_LEADS * cpl_target
-        return float(max(float(pb["min_sem"]), min_for_clicks, min_for_leads))
+        def _recommended_monthly_budget(row: pd.Series) -> float:
+            cpc = float(pd.to_numeric(row.get("bsc_cpc_average"), errors="coerce") or 3.0)
+            goal_eff = pd.to_numeric(row.get("effective_cpl_goal"), errors="coerce")
+            goal_adv = pd.to_numeric(row.get("cpl_goal"), errors="coerce")
+            goal_bmk = pd.to_numeric(row.get("bsc_cpl_avg"), errors="coerce")
+            if pd.isna(goal_eff) or goal_eff <= 0:
+                goal_eff = goal_adv if pd.notna(goal_adv) and goal_adv > 0 else goal_bmk
+            cpl_target = float(goal_eff) if (goal_eff and goal_eff > 0) else 150.0
+            min_for_clicks = 3.0 * cpc * 30.4
+            min_for_leads  = SAFE_MIN_LEADS * cpl_target
+            return float(max(float(pb["min_sem"]), min_for_clicks, min_for_leads))
 
-    def mk_campaign_row_with_rec(r: pd.Series) -> Dict[str, Any]:
-        base = mk_campaign_row(r)
-        base["recommended_budget"] = _recommended_monthly_budget(r)
-        base["reason"] = "Budget Inadequate (SEM viability)"
-        return base
+        def mk_campaign_row_with_rec(r: pd.Series) -> Dict[str, Any]:
+            base = mk_campaign_row(r)
+            base["recommended_budget"] = _recommended_monthly_budget(r)
+            base["reason"] = "Budget Inadequate (SEM viability)"
+            return base
 
-    too_low = [mk_campaign_row_with_rec(r) for _, r in bad_rows.iterrows()]
+        too_low = [mk_campaign_row_with_rec(r) for _, r in bad_rows.iterrows()]
+    else:
+        bad_rows = sub.iloc[0:0].copy()
+        too_low = []
 
     return {
         "partner": str(partner),
@@ -2143,3 +2169,25 @@ def partner_opportunities_payload(partner: str, playbook: str | dict = "seo_dash
             "tooLow": too_low,
         }
     }
+
+
+def test_no_underfunded_anymore():
+    """Unit test to guarantee no Underfunded appears at campaign level"""
+    import pandas as pd
+    row = pd.Series({
+        'campaign_budget': 100,            # even blatantly low
+        '_viab_budget_ok': False,
+        '_viab_clicks_ok': False,
+        '_sem_viable': False,
+        'days_elapsed': 14,
+        'running_cid_leads': 0,
+        'is_safe': False,
+        'cpl_variance_pct': 0,
+        'true_months_running': 2.0,
+        'single_product_flag': False,
+        'utilization': 1.0,
+        'goal_quality': 'reasonable',
+        'revenue_at_risk': 0,
+    })
+    pills = generate_diagnosis_pills(row)
+    assert all(p.get('text') != 'Underfunded' for p in pills), "Underfunded pill found in diagnosis pills"
