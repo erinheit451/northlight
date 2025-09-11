@@ -9,41 +9,64 @@ const perfClass = r => (r<=1.0 ? 'perf-good' : r<=1.2 ? 'perf-ok' : 'perf-bad');
 const round2 = x => Number(x ?? 0).toFixed(2);
 
 // ---- API calls --------------------------------------------------
-const API_BASES = [
-  'http://localhost:8000',    // Local development server
-  'http://localhost:8001',    // Fallback port
-  window.location.origin,     // Current page origin (for production)
-  'https://northlight-wsgw.onrender.com',
-  'https://northlight-api-dev.onrender.com',
-];
+// Select a single API origin, no HTML-producing origins allowed.
+const API_PRIMARY =
+  // Optional override via Pages env var
+  (typeof window !== 'undefined' && window.NL_API_BASE) ? window.NL_API_BASE
+  // Local dev
+  : (location.hostname === 'localhost' || location.hostname.startsWith('127.'))
+    ? 'http://localhost:8000'
+  // Prod default
+  : 'https://northlight-wsgw.onrender.com';
 
-async function fetchFromAny(path) {
-  for (const base of API_BASES) {
-    try {
-      const url = base + path;
-      const r = await fetch(url);
-      if (r.ok) return r;
-    } catch (e) { continue; }
-  }
-  throw new Error('All API bases failed');
-}
+// Optional secondary (used only if the primary is unreachable)
+const API_SECONDARY = 'https://northlight-api-dev.onrender.com';
 
-async function fetchPartners(playbook="seo_dash") {
-  const cacheBust = Date.now();
-  const r = await fetchFromAny(`/api/book/partners?playbook=${encodeURIComponent(playbook)}&cb=${cacheBust}`);
-  const data = await r.json();
-  
-  // Debug logging
-  console.log('Partners API Response:', {
-    totalPartners: data.length,
-    topPartners: data.slice(0, 3).map(p => ({ name: p.partner, budget: p.metrics.budget }))
+// Defensive JSON fetch (fails loudly on HTML / non-JSON)
+async function fetchJSON(url, opts = {}) {
+  const r = await fetch(url, {
+    ...opts,
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { 'Accept': 'application/json', ...(opts.headers || {}) }
   });
-  
-  return data;
-}
-async function fetchPartnerDetail(name, playbook="seo_dash") {
-  const r = await fetchFromAny(`/api/book/partners/${encodeURIComponent(name)}/opportunities?playbook=${encodeURIComponent(playbook)}`);
+
+  const ct = r.headers.get('content-type') || '';
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status} ${r.statusText} – ${body.slice(0,200)}`);
+  }
+  if (!ct.includes('application/json')) {
+    const body = await r.text().catch(() => '');
+    throw new Error(`Non-JSON response (Content-Type: ${ct}): ${body.slice(0,200)}`);
+  }
   return r.json();
+}
+
+// Try primary then secondary once (no looping through window.location.origin, ever)
+async function fetchFromApi(path, opts) {
+  const url1 = `${API_PRIMARY}${path}`;
+  try {
+    return await fetchJSON(url1, opts);
+  } catch (e1) {
+    // Only fall back if we're not on localhost and a secondary is defined
+    if (!(location.hostname === 'localhost' || location.hostname.startsWith('127.'))) {
+      const url2 = `${API_SECONDARY}${path}`;
+      try { return await fetchJSON(url2, opts); } catch (e2) { /* fall through */ }
+    }
+    throw e1; // surface the primary error (more relevant in prod)
+  }
+}
+
+async function fetchPartners(playbook = "seo_dash") {
+  const cb = Date.now();
+  return fetchFromApi(`/api/book/partners?playbook=${encodeURIComponent(playbook)}&cb=${cb}`);
+}
+
+async function fetchPartnerDetail(name, playbook = "seo_dash") {
+  return fetchFromApi(
+    `/api/book/partners/${encodeURIComponent(name)}/opportunities?playbook=${encodeURIComponent(playbook)}`
+  );
 }
 
 // ---- renderers: card skeleton ----------------------------------
