@@ -292,18 +292,22 @@ SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never 
 UNDERFUNDED_FEATURE_ENABLED = False  # hard off until redesign
 REQUIRE_ROLLING_30D_LEADS = True  # feature flag while we lack rolling-30d conversion history
 
+# ===== Guardrail for zero-leads & "meaningful spend" =====
+# Use ONE constant everywhere we mean "we've actually spent enough to judge".
+MIN_SPEND_FOR_ZERO_LEAD = 250.0   # was 100.0 → unify at $250
+
+# ===== Zero-lead gating (strong) =====
+MIN_DAYS_FOR_ALERTS = 5           # keep this as the single floor for all zero-lead callouts
+ZERO_LEAD_MIN_DAYS_EMERGING = MIN_DAYS_FOR_ALERTS  # align to global floor
+ZERO_LEAD_MIN_EXPECTED_TD       = 1.0   # to-date plan must be >= 1 lead
+ZERO_LEAD_MIN_SPEND_PROGRESS    = 0.50  # must be >=50% of ideal spend
+ZERO_LEAD_LAST_MO_MIN_SPENDPROG = 0.70  # 30d zero requires ~70% progress
+
 # ===== SEM viability gates for zero-lead logic =====
 SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
 SEM_VIABILITY_MIN_DAILY_CLICKS = 3.0           # need ~3 clicks/day
 SEM_VIABILITY_MIN_MONTHLY_LEADS = SAFE_MIN_LEADS  # need capacity for >=3 leads/mo
 ZERO_LEAD_HR_ATTENUATION_LOW_BUDGET = 0.60     # if we ever apply zero-lead on non-viable budget, downweight
-MIN_DAYS_FOR_ALERTS = 5                        # don't call out zero-leads before day 5
-
-# ===== Zero-lead gating (strong) =====
-ZERO_LEAD_MIN_DAYS_EMERGING     = 7     # never flag zero leads before day 7
-ZERO_LEAD_MIN_EXPECTED_TD       = 1.0   # to-date plan must be >= 1 lead
-ZERO_LEAD_MIN_SPEND_PROGRESS    = 0.50  # must be >=50% of ideal spend
-ZERO_LEAD_LAST_MO_MIN_SPENDPROG = 0.70  # 30d zero requires ~70% progress
 
 
 def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
@@ -408,10 +412,10 @@ def _priority_from_score(score: pd.Series) -> pd.Series:
 P0_BASELINE = 0.11  # Baseline churn probability
 
 FALLBACK_HR = {
-    # Tenure HRs are neutralized; baseline now handles tenure
+    # Tenure HRs intentionally neutral; baseline now handled by _tenure_baseline_p(...)
     "is_tenure_lte_1m": 1.00,
     "is_tenure_lte_3m": 1.00,
-    "is_single_product": 1.60,  # stronger, matches ~3–4% retention gap
+    "is_single_product": 1.60,
     "zero_lead_last_mo": 3.20,
 }
 
@@ -426,9 +430,6 @@ FALLBACK_CPL_TIERS = [
 # Optional: enable ONLY if your Budget Gradient Audit shows stable uplift
 ENABLE_BUDGET_HR = False
 BUDGET_LT_2K_HR  = 1.15
-
-# Guardrail for zero-leads (don't penalize accounts with trivial/no spend)
-MIN_SPEND_FOR_ZERO_LEAD = 100.0
 
 def _load_churn_calibration_from_xlsx(path="/mnt/data/EOY 2024 Retention Study 2.xlsx"):
     """
@@ -594,6 +595,9 @@ def _driver_label_for_cpl(r: float) -> str | None:
     if r >= 1.2: return "CPL above goal (1.2–1.5×)"
     return None
 
+# NOTE: Although P0_BASELINE can be loaded from calibration for audits,
+# the LIVE baseline used by the model is tenure-based via _tenure_baseline_p(...).
+# This prevents drift and keeps probability + waterfall consistent.
 def _tenure_baseline_p(tenure_bucket: str) -> float:
     if tenure_bucket == 'LTE_90D':
         return 0.09  # 91% retention (first 90 days)
@@ -732,10 +736,14 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     exp_month   = pd.to_numeric(df.get('expected_leads_monthly'), errors='coerce').fillna(0.0)
     exp_td_plan = pd.to_numeric(df.get('expected_leads_to_date'), errors='coerce').fillna(0.0)
 
-    # CPL ratio
+    # CPL ratio (neutral fallback = 1.0, not 0.0)
     eff_goal = pd.to_numeric(df.get('effective_cpl_goal'), errors='coerce').replace(0, np.nan)
     cpl      = pd.to_numeric(df.get('running_cid_cpl'), errors='coerce')
-    df['cpl_ratio'] = (cpl / eff_goal).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    df['cpl_ratio'] = (
+        (cpl / eff_goal)
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(1.0)  # neutral, avoids accidental "good CPL" when goal is missing
+    )
 
     # SEM viability
     cpc_safe     = pd.to_numeric(df.get('bsc_cpc_average'), errors='coerce').fillna(3.0)
@@ -796,20 +804,20 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
 
-    # Emerging: use global alert floor (5) so day 5–6 can raise urgency when plan+spend say it should
+    # Emerging zero-lead (cycle 5–29d), gated by plan+spend+viability
     df['zero_lead_emerging'] = (
         (leads == 0) &
-        (days >= MIN_DAYS_FOR_ALERTS) & (days < 30) &  # was 7; now 5
+        (days >= MIN_DAYS_FOR_ALERTS) & (days < 30) &
         (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
         (exp_td_plan >= ZERO_LEAD_MIN_EXPECTED_TD) &
         (spend_prog >= ZERO_LEAD_MIN_SPEND_PROGRESS) &
         sem_viable
     )
 
-    # Idle (paused/under-spend) variant: show but don't treat as a performance crisis
+    # Idle (paused/near-zero spend) variant: same day floor, not a performance crisis
     df['zero_lead_idle'] = (
         (leads == 0) &
-        (days >= ZERO_LEAD_MIN_DAYS_EMERGING) &
+        (days >= MIN_DAYS_FOR_ALERTS) &                 # aligned (was 7)
         (spend < MIN_SPEND_FOR_ZERO_LEAD)
     )
 
@@ -1015,6 +1023,9 @@ def compute_priority_v2(df: pd.DataFrame) -> pd.Series:
 
     sem_viable = df.get('_sem_viable', False).fillna(False)
 
+    # IMPORTANT: zero_early / zero30 are pre-gated upstream (spend/progress/viability/day floor).
+    # Do NOT add redundant gates here; treat these flags as authoritative.
+    
     # P1 URGENT: acute conditions (not safe)
     p1 = (~is_safe) & (
         zero30 |
@@ -1336,6 +1347,8 @@ def assess_goal_quality(df):
     return np.select(conditions, ['missing', 'too_low', 'too_high'], default='reasonable')
 
 
+# Note: 'expected_leads_to_date_spend' is an *expected lead count implied by spend/target CPL*,
+# used only for protective checks. It is NOT currency.
 def calculate_expected_leads(df):
     """Calculate robust expected leads with sane fallbacks."""
     budget = pd.to_numeric(df['campaign_budget'], errors='coerce').fillna(0.0)
@@ -1949,12 +1962,12 @@ def process_for_view(df: pd.DataFrame, view: str = "optimizer") -> pd.DataFrame:
     # 2. Priority index (desc)
     # 3. FLARE score (desc)
     # 4. Revenue at risk (desc)
-    # Crisis key: zero leads + >=7 cycle days + spend >= $250 + SEM viable
+    # Crisis key: zero leads + >=5 cycle days + material spend + SEM viable
     sv = actionable_campaigns.get('_sem_viable', False).fillna(False)
     actionable_campaigns['_crisis'] = (
         (pd.to_numeric(actionable_campaigns.get('running_cid_leads'), errors='coerce').fillna(0) <= 1) &
-        (pd.to_numeric(actionable_campaigns.get('days_elapsed'), errors='coerce').fillna(0) >= 7) &
-        (pd.to_numeric(actionable_campaigns.get('amount_spent'), errors='coerce').fillna(0) >= 250) &
+        (pd.to_numeric(actionable_campaigns.get('days_elapsed'), errors='coerce').fillna(0) >= MIN_DAYS_FOR_ALERTS) &
+        (pd.to_numeric(actionable_campaigns.get('amount_spent'), errors='coerce').fillna(0) >= MIN_SPEND_FOR_ZERO_LEAD) &
         sv
     ).astype(int)
 
@@ -2340,3 +2353,38 @@ def test_baseline_parity():
         print(f"Tenure bucket: {tenure_bucket}, Baseline: {model_baseline:.1%}")
     
     print("All baseline parity checks passed")
+
+
+def test_cpl_ratio_neutral_when_goal_missing():
+    import pandas as pd, numpy as np
+    df = pd.DataFrame([{
+        'running_cid_cpl': 200,
+        'effective_cpl_goal': np.nan,   # missing
+        'bsc_cpl_avg': 150, 'bsc_cpc_average': 3.0,
+        'campaign_budget': 3000, 'amount_spent': 800,
+        'days_elapsed': 10, 'io_cycle': 1,
+        'expected_leads_monthly': 10.0, 'avg_cycle_length': 30.4,
+        'running_cid_leads': 2
+    }])
+    out = calculate_churn_probability(df)
+    assert np.isclose(out['cpl_ratio'].iloc[0], 1.0), f"Expected neutral cpl_ratio=1.0, got {out['cpl_ratio'].iloc[0]}"
+
+
+def test_no_zero_before_alert_floor():
+    import pandas as pd, numpy as np
+    df = pd.DataFrame([{
+        'running_cid_leads': 0,
+        'days_elapsed': MIN_DAYS_FOR_ALERTS - 1,   # just before floor
+        'amount_spent': 1000,
+        'campaign_budget': 5000,
+        'expected_leads_to_date': 2.0,
+        'expected_leads_monthly': 15.0,
+        'avg_cycle_length': 30.4,
+        'io_cycle': 1,
+        'bsc_cpc_average': 3.0,
+        'effective_cpl_goal': 150,
+        'bsc_cpl_avg': 150,
+    }])
+    out = calculate_churn_probability(df)
+    assert not bool(out['zero_lead_emerging'].iloc[0]), "Should NOT flag emerging zero-lead before alert floor"
+    assert not bool(out['zero_lead_idle'].iloc[0]),     "Should NOT flag idle zero-lead before alert floor"
