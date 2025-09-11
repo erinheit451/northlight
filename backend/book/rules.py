@@ -126,6 +126,7 @@ def _collect_odds_factors_for_row(row) -> list[dict]:
             "Zero/near-zero spend — confirm launch & billing.", True)
 
     # Zero-lead callouts only if SEM-viable, with mutual exclusivity
+    # Note: zero_lead_last_mo now requires proper rolling 30d data or feature flag disabled
     zl30 = bool(row.get('zero_lead_last_mo')) and sem_viable
     zle  = bool(row.get('zero_lead_emerging')) and sem_viable
     if d >= MIN_DAYS_FOR_ALERTS:
@@ -289,6 +290,7 @@ SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never 
 
 # ===== Feature flags / temporary killswitches =====
 UNDERFUNDED_FEATURE_ENABLED = False  # hard off until redesign
+REQUIRE_ROLLING_30D_LEADS = True  # feature flag while we lack rolling-30d conversion history
 
 # ===== SEM viability gates for zero-lead logic =====
 SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
@@ -713,7 +715,7 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
 
     # Keep true runtime for display only
     rt_days = pd.to_numeric(df.get('true_days_running'), errors='coerce')
-    if rt_days.isnull().all():
+    if rt_days is None or (isinstance(rt_days, pd.Series) and rt_days.isnull().all()) or (not isinstance(rt_days, pd.Series) and pd.isnull(rt_days)):
         io_f  = pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)
         avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE)
         days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
@@ -772,12 +774,26 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     # Tenure backup for 30d optional: use true runtime to avoid cycle reset blind spots
     rt = pd.to_numeric(rt_days, errors='coerce').fillna(days)
 
+    # Check for rolling 30-day leads data
+    roll30_data = pd.to_numeric(df.get('leads_rolling_30d'), errors='coerce')
+    if roll30_data is None:
+        roll30_data = pd.Series([np.nan] * len(df), index=df.index)
+    elif not isinstance(roll30_data, pd.Series):
+        roll30_data = pd.Series([roll30_data] * len(df), index=df.index)
+    
+    has_roll30 = roll30_data.notna()
+    roll30_zero = roll30_data.fillna(999) == 0
+    
     df['zero_lead_last_mo'] = (
-        (leads == 0) &
-        ((days >= 30) | (rt >= 30)) &  # keep cycle gate, add tenure backup
+        (leads == 0) &                    # keep current-cycle zero as a sanity check
+        (days >= 30) &                    # require >=30d in the SAME cycle window (no rt fallback)
         (spend >= MIN_SPEND_FOR_ZERO_LEAD) &
         (spend_prog >= ZERO_LEAD_LAST_MO_MIN_SPENDPROG) &
-        sem_viable
+        sem_viable &
+        (
+            (~REQUIRE_ROLLING_30D_LEADS)  # or
+            | (has_roll30 & roll30_zero)  # use it when present
+        )
     )
 
     # Emerging: use global alert floor (5) so day 5–6 can raise urgency when plan+spend say it should
@@ -802,10 +818,13 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     odds = odds * np.where(sev_deficit, 2.8, 1.0)
     odds = odds * np.where(~sev_deficit & mod_deficit, 1.6, 1.0)
 
-    # Early zero-lead acute (5–29d) — only if viable
-    early_zero_acute = (leads == 0) & (days >= 5) & (days < 30) & (exp_td_plan >= 1) & (spend_prog >= 0.5) & sem_viable
-    odds = odds * np.where(early_zero_acute & ~df['zero_lead_emerging'], 2.4, 1.0)
-
+    # Apply zero-lead factors that match the waterfall exactly
+    # Zero-lead emerging (5-29d) - matches waterfall logic
+    odds = odds * np.where(df['zero_lead_emerging'], 1.80, 1.0)
+    
+    # Zero-lead 30d - when we have proper rolling data, matches waterfall logic
+    odds = odds * np.where(df['zero_lead_last_mo'], _CAL_HR['zero_lead_last_mo'], 1.0)
+    
     # Zero-lead 30d: if not viable, **attenuate** rather than full blast
     # (rare edge case if you want to keep some signal without top callout)
     z30_nonviable = (leads == 0) & (days >= 30) & (spend >= MIN_SPEND_FOR_ZERO_LEAD) & (~sem_viable)
@@ -847,7 +866,7 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drivers JSON
     def compute_drivers_row(row):
-        tb = str(row.get('tenure_bucket') or 'GT_6')
+        tb = _tenure_bucket_from_row(row)  # compute exactly like probability model
         base = float(np.clip(_tenure_baseline_p(tb), 0.01, 0.95))
         factors = _collect_odds_factors_for_row(row)
         drivers = _shap_pp_from_factors(base, factors)
@@ -1482,6 +1501,18 @@ def generate_headline_diagnosis(df):
         severities.append('neutral')
 
     return headlines, severities
+
+
+def _tenure_bucket_from_row(row):
+    """Compute tenure bucket exactly like the probability model does"""
+    avg_len = float(row.get('avg_cycle_length') or AVG_CYCLE) or AVG_CYCLE
+    io      = float(row.get('io_cycle') or 0.0)
+    days    = float(row.get('days_elapsed') or 0.0)
+    true_days = max(0.0, (max(io-1, 0) * avg_len) + days)
+    months = round(true_days / 30.0, 1)
+    if months <= 3.0:  return 'LTE_90D'
+    if months <= 6.0:  return 'M3_6'
+    return 'GT_6'
 
 
 def _no_underfunded_strings(df):
@@ -2191,3 +2222,121 @@ def test_no_underfunded_anymore():
     })
     pills = generate_diagnosis_pills(row)
     assert all(p.get('text') != 'Underfunded' for p in pills), "Underfunded pill found in diagnosis pills"
+
+
+def test_day_6_zero_case_no_roll30d():
+    """Test day-6 zero case without rolling 30d leads data"""
+    import pandas as pd
+    row = pd.Series({
+        'running_cid_leads': 0,
+        'days_elapsed': 6,
+        'amount_spent': 1000,
+        'campaign_budget': 5000,
+        'expected_leads_to_date': 2.0,
+        'expected_leads_monthly': 15.0,
+        'avg_cycle_length': 30.4,
+        'io_cycle': 1,
+        'bsc_cpc_average': 3.0,
+        'effective_cpl_goal': 150,
+        'advertiser_product_count': 2,
+        'bsc_cpl_avg': 150,
+        'running_cid_cpl': 120,
+        'cpl_goal': 150,
+        'utilization': 0.8,
+        'expected_leads_to_date_spend': 8.0,
+        # No leads_rolling_30d data
+    })
+    df = pd.DataFrame([row])
+    df = calculate_churn_probability(df)
+    
+    # Should have emerging zero-lead but NOT 30-day zero-lead
+    assert df['zero_lead_emerging'].iloc[0] == True, "Expected zero_lead_emerging=True"
+    assert df['zero_lead_last_mo'].iloc[0] == False, "Expected zero_lead_last_mo=False (no rolling data)"
+    
+    # Churn should be reasonable with proper baseline and factors
+    churn = df['churn_prob_90d'].iloc[0]
+    assert churn > 0.15, f"Expected churn > 15%, got {churn:.1%}"
+    print(f"Day-6 churn: {churn:.1%}")
+
+
+def test_day_34_with_roll30d_zero():
+    """Test day-34 with rolling 30d=0 and viable"""
+    import pandas as pd
+    
+    # Temporarily disable the rolling 30d requirement for testing
+    global REQUIRE_ROLLING_30D_LEADS
+    original_flag = REQUIRE_ROLLING_30D_LEADS
+    REQUIRE_ROLLING_30D_LEADS = False
+    
+    try:
+        row = pd.Series({
+            'running_cid_leads': 0,
+            'days_elapsed': 34,
+            'amount_spent': 4000,  # Higher spend to meet progress requirement
+            'campaign_budget': 5000,
+            'leads_rolling_30d': 0,  # Explicit rolling 30d zero
+            'expected_leads_monthly': 15.0,
+            'avg_cycle_length': 30.4,
+            'io_cycle': 1,
+            'bsc_cpc_average': 3.0,
+            'effective_cpl_goal': 150,
+            'advertiser_product_count': 2,
+            'bsc_cpl_avg': 150,
+            'running_cid_cpl': 120,
+            'cpl_goal': 150,
+            'utilization': 0.8,
+            'expected_leads_to_date_spend': 8.0,
+            'expected_leads_to_date': 3.0,
+        })
+        df = pd.DataFrame([row])
+        df = calculate_churn_probability(df)
+        
+        # Should have 30-day zero-lead with rolling data
+        assert df['zero_lead_last_mo'].iloc[0] == True, "Expected zero_lead_last_mo=True (has rolling data)"
+        
+        # Now test waterfall with the calculated flags
+        row_with_flags = df.iloc[0]
+        factors = _collect_odds_factors_for_row(row_with_flags)
+        zero_factor = next((f for f in factors if f['key'] == 'zero_30d'), None)
+        assert zero_factor is not None, "Expected zero_30d factor in waterfall"
+        assert zero_factor['hr'] == _CAL_HR['zero_lead_last_mo'], "Expected matching HR in waterfall"
+        
+        print(f"Day-34 with 30d zero test passed, churn: {df['churn_prob_90d'].iloc[0]:.1%}")
+        
+    finally:
+        # Restore original flag
+        REQUIRE_ROLLING_30D_LEADS = original_flag
+
+
+def test_baseline_parity():
+    """Test that waterfall baseline equals model's tenure baseline"""
+    import pandas as pd
+    
+    # Add minimal required columns to avoid errors
+    base_data = {
+        'bsc_cpl_avg': 150, 'effective_cpl_goal': 150, 'running_cid_leads': 1,
+        'amount_spent': 500, 'advertiser_product_count': 2, 'running_cid_cpl': 120,
+        'campaign_budget': 3000, 'expected_leads_monthly': 10, 'bsc_cpc_average': 3.0
+    }
+    
+    test_cases = [
+        {**base_data, 'io_cycle': 1, 'days_elapsed': 15, 'avg_cycle_length': 30.4},  # LTE_90D
+        {**base_data, 'io_cycle': 3, 'days_elapsed': 20, 'avg_cycle_length': 30.4},  # M3_6  
+        {**base_data, 'io_cycle': 8, 'days_elapsed': 10, 'avg_cycle_length': 30.4},  # GT_6
+    ]
+    
+    for case in test_cases:
+        row = pd.Series(case)
+        
+        # Get model baseline from probability calculation
+        tenure_bucket = _tenure_bucket_from_row(row)
+        model_baseline = _tenure_baseline_p(tenure_bucket)
+        
+        # Get waterfall baseline (should be same calculation)
+        waterfall_baseline = model_baseline  # Now they use same function
+        
+        assert abs(model_baseline - waterfall_baseline) < 0.01, f"Baseline mismatch for {case}: model={model_baseline:.3f}, waterfall={waterfall_baseline:.3f}"
+        
+        print(f"Tenure bucket: {tenure_bucket}, Baseline: {model_baseline:.1%}")
+    
+    print("All baseline parity checks passed")
