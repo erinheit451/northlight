@@ -9,9 +9,112 @@ from typing import Dict, Any, List, Tuple, Optional
 
 from backend.book.ingest import load_health_data, load_breakout_data
 
-# --- Global constants (single source of truth) ---
+# ===== CONSTANTS & CONFIGURATION =====
+# Global constants (single source of truth)
 AVG_CYCLE = 30.4          # single source of truth for "a month"
 GLOBAL_CR_PRIOR = 0.06    # 6% prior when CPC/CPL are missing/broken
+
+# LTV mapping (moved from line ~283)
+CATEGORY_LTV_MAP = {
+    'Attorneys & Legal Services': 149000, 'Physicians & Surgeons': 99000,
+    'Automotive -- For Sale': 98000, 'Industrial & Commercial': 92000,
+    'Home & Home Improvement': 88000, 'Health & Fitness': 84000,
+    'Career & Employment': 81000, 'Finance & Insurance': 79000,
+    'Business Services': 65000, 'Real Estate': 62000,
+    'Education & Instruction': 55000, 'Sports & Recreation': 49000,
+    'Automotive -- Repair, Service & Parts': 45000, 'Travel': 39000,
+    'Personal Services (Weddings, Cleaners, etc.)': 31000,
+    'Computers, Telephony & Internet': 29000, 'Farming & Agriculture': 25000,
+    'Restaurants & Food': 12000, 'Beauty & Personal Care': 11000,
+    'Community/Garage Sales': 11000, 'Animals & Pets': 10000,
+    'Apparel / Fashion & Jewelry': 10000, 'Arts & Entertainment': 9000,
+    'Religion & Spirituality': 8000, 'Government & Politics': 8000,
+    'Toys & Hobbies': 8000, 'z - Other (Specify Keywords Below)': 40000
+}
+AVERAGE_LTV = float(np.mean(list(CATEGORY_LTV_MAP.values())))
+
+# SAFE tolerances (explicit)
+SAFE_CPL_TOLERANCE = 0.20      # within +20% of goal (<= 1.20x)
+SAFE_PACING_MIN = 0.75          # utilization lower bound
+SAFE_PACING_MAX = 1.25          # utilization upper bound
+SAFE_LEAD_RATIO_MIN = 0.80      # >= 80% of expected leads-to-date
+SAFE_MIN_LEADS = 3              # absolute floor when expected >= 1
+SAFE_MIN_LEADS_TINY_EXP = 1     # absolute floor when expected < 1
+
+# Dummy-proof SAFE policy toggles
+SAFE_NEW_ACCOUNT_MONTHS        = 1           # <=1 IO month counts as "new"
+SAFE_NEW_ACCOUNT_CPL_TOL       = 0.10        # new acct safe if CPL ≤ 1.10× goal ...
+SAFE_NEW_ACCOUNT_MIN_LEADS     = 1           # ... OR has at least 1 lead
+SAFE_NEW_ACCOUNT_IGNORE_PACING = True        # pacing/spend progress never vetoes SAFE for new accts
+SAFE_DOWNWEIGHT_IN_UPI         = 0.05        # 5% weight for SAFE rows in UPI (strong suppression)
+SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never exceed this
+
+# Feature flags / temporary killswitches
+UNDERFUNDED_FEATURE_ENABLED = False  # hard off until redesign
+REQUIRE_ROLLING_30D_LEADS = True     # feature flag while we lack rolling-30d conversion history
+
+# Guardrail for zero-leads & "meaningful spend"
+MIN_SPEND_FOR_ZERO_LEAD = 250.0     # Use ONE constant everywhere we mean "we've actually spent enough to judge"
+
+# Zero-lead gating (strong)
+MIN_DAYS_FOR_ALERTS = 5             # keep this as the single floor for all zero-lead callouts
+ZERO_LEAD_MIN_DAYS_EMERGING = MIN_DAYS_FOR_ALERTS  # align to global floor
+ZERO_LEAD_MIN_EXPECTED_TD       = 1.0   # to-date plan must be >= 1 lead
+ZERO_LEAD_MIN_SPEND_PROGRESS    = 0.50  # must be >=50% of ideal spend
+ZERO_LEAD_LAST_MO_MIN_SPENDPROG = 0.70  # 30d zero requires ~70% progress
+
+# SEM viability gates for zero-lead logic
+SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
+SEM_VIABILITY_MIN_DAILY_CLICKS = 3.0           # need ~3 clicks/day
+SEM_VIABILITY_MIN_MONTHLY_LEADS = SAFE_MIN_LEADS  # need capacity for >=3 leads/mo
+ZERO_LEAD_HR_ATTENUATION_LOW_BUDGET = 0.60     # if we ever apply zero-lead on non-viable budget, downweight
+
+# CPL gradient tiers (from line ~430)
+_CAL_HR = [0.042, 0.063, 0.092, 0.125, 0.164, 0.212, 0.273, 0.351, 0.453, 0.592, 0.789]
+_CAL_CPL_TIERS = [0.5, 0.8, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 6.0, 10.0, np.inf]
+
+# ===== PANDAS HELPERS =====
+# Vectorized helpers to reduce repetition and improve performance
+def nz_num(s, fill=0.0):
+    """Convert to numeric with fillna, handling both Series and scalar inputs"""
+    if s is None:
+        return fill
+    result = pd.to_numeric(s, errors="coerce")
+    if hasattr(result, 'fillna'):
+        return result.fillna(fill)
+    else:
+        # Handle scalar case
+        return fill if pd.isna(result) else result
+
+def safe_div(a, b, fill=0.0):
+    """Elementwise division with inf/NaN handling"""
+    a_num = pd.to_numeric(a, errors='coerce')
+    b_num = pd.to_numeric(b, errors='coerce')
+    result = a_num / b_num
+    
+    if hasattr(result, 'replace'):
+        return result.replace([np.inf, -np.inf], fill).fillna(fill)
+    else:
+        # Handle scalar case
+        if np.isinf(result) or pd.isna(result):
+            return fill
+        return result
+
+def coalesce(*series):
+    """Return first non-null value across series"""
+    result = series[0].copy() if len(series) > 0 else pd.Series(dtype=object)
+    for s in series[1:]:
+        mask = result.isnull()
+        if mask.any():
+            result[mask] = s[mask]
+    return result
+
+def _ensure_columns(df: pd.DataFrame, required_cols: list) -> pd.DataFrame:
+    """Ensure required columns exist, adding NaN defaults if missing"""
+    for col in required_cols:
+        if col not in df.columns:
+            df[col] = np.nan
+    return df
 
 
 def build_churn_waterfall(risk: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -252,69 +355,58 @@ def _attach_runtime_fields(df: pd.DataFrame) -> pd.DataFrame:
     )
     return out
 
-# --- Configuration for Risk Scoring ---
+# ===== HELPERS_PANDAS SECTION =====
 
-CATEGORY_LTV_MAP = {
-    'Attorneys & Legal Services': 149000, 'Physicians & Surgeons': 99000,
-    'Automotive -- For Sale': 98000, 'Industrial & Commercial': 92000,
-    'Home & Home Improvement': 88000, 'Health & Fitness': 84000,
-    'Career & Employment': 81000, 'Finance & Insurance': 79000,
-    'Business Services': 65000, 'Real Estate': 62000,
-    'Education & Instruction': 55000, 'Sports & Recreation': 49000,
-    'Automotive -- Repair, Service & Parts': 45000, 'Travel': 39000,
-    'Personal Services (Weddings, Cleaners, etc.)': 31000,
-    'Computers, Telephony & Internet': 29000, 'Farming & Agriculture': 25000,
-    'Restaurants & Food': 12000, 'Beauty & Personal Care': 11000,
-    'Community/Garage Sales': 11000, 'Animals & Pets': 10000,
-    'Apparel / Fashion & Jewelry': 10000, 'Arts & Entertainment': 9000,
-    'Religion & Spirituality': 8000, 'Government & Politics': 8000,
-    'Toys & Hobbies': 8000, 'z - Other (Specify Keywords Below)': 40000
-}
-AVERAGE_LTV = float(np.mean(list(CATEGORY_LTV_MAP.values())))
+def _compute_sem_viability(df: pd.DataFrame) -> pd.Series:
+    """Compute SEM viability mask (extracted from repeated logic)"""
+    budget = nz_num(df.get('campaign_budget', 0))
+    cpc = nz_num(df.get('bsc_cpc_average', 0))
+    
+    # Budget-based viability
+    budget_viable = budget >= SEM_VIABILITY_MIN_SEM
+    
+    # Click-based viability (if CPC data available)
+    daily_clicks = safe_div(budget, (cpc * AVG_CYCLE), fill=0)
+    clicks_viable = (cpc <= 0) | (daily_clicks >= SEM_VIABILITY_MIN_DAILY_CLICKS)
+    
+    # Lead capacity (if expected monthly leads available)
+    exp_monthly = nz_num(df.get('expected_leads_monthly', 0))
+    leads_viable = exp_monthly >= SEM_VIABILITY_MIN_MONTHLY_LEADS
+    
+    return budget_viable & clicks_viable & leads_viable
 
-# ===== SAFE tolerances (explicit) =====
-SAFE_CPL_TOLERANCE = 0.20      # within +20% of goal (<= 1.20x)
-SAFE_PACING_MIN = 0.75          # utilization lower bound
-SAFE_PACING_MAX = 1.25          # utilization upper bound
-SAFE_LEAD_RATIO_MIN = 0.80      # >= 80% of expected leads-to-date
-SAFE_MIN_LEADS = 3              # absolute floor when expected >= 1
-SAFE_MIN_LEADS_TINY_EXP = 1     # absolute floor when expected < 1
+def _compute_progress_and_deficits(df: pd.DataFrame) -> dict:
+    """Compute spend progress and lead deficits (extracted from repeated logic)"""
+    # Core metrics
+    days = nz_num(df.get('days_elapsed', 0))
+    leads = nz_num(df.get('running_cid_leads', 0))
+    spent = nz_num(df.get('amount_spent', 0))
+    budget = nz_num(df.get('campaign_budget', 0))
+    exp_td_plan = nz_num(df.get('expected_leads_to_date', 0))
+    
+    # Compute ideal spend and progress
+    avg_len = nz_num(df.get('avg_cycle_length', AVG_CYCLE), AVG_CYCLE).replace(0, AVG_CYCLE)
+    ideal_spend = (budget / avg_len) * days
+    spend_prog = safe_div(spent, ideal_spend, fill=0.0)
+    
+    # Lead ratios and deficits
+    lead_ratio = safe_div(leads, exp_td_plan, fill=1.0)
+    
+    # Deficit flags
+    sev_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.25) & (spend_prog >= 0.5) & (days >= 7)
+    mod_deficit = (exp_td_plan >= 1) & (lead_ratio <= 0.50) & (spend_prog >= 0.4) & (days >= 5)
+    
+    return {
+        'spend_prog': spend_prog,
+        'lead_ratio': lead_ratio,
+        'ideal_spend': ideal_spend,
+        'avg_len': avg_len,
+        'sev_deficit': sev_deficit,
+        'mod_deficit': mod_deficit
+    }
 
-# ===== NEW: Dummy-proof SAFE policy toggles =====
-SAFE_NEW_ACCOUNT_MONTHS        = 1           # <=1 IO month counts as "new"
-SAFE_NEW_ACCOUNT_CPL_TOL       = 0.10        # new acct safe if CPL ≤ 1.10× goal ...
-SAFE_NEW_ACCOUNT_MIN_LEADS     = 1           # ... OR has at least 1 lead
-SAFE_NEW_ACCOUNT_IGNORE_PACING = True        # pacing/spend progress never vetoes SAFE for new accts
-SAFE_DOWNWEIGHT_IN_UPI         = 0.05        # 5% weight for SAFE rows in UPI (strong suppression)
-SAFE_MAX_FLARE_SCORE           = 15          # visual/raw clamp; SAFE can never exceed this
-
-# ===== Feature flags / temporary killswitches =====
-UNDERFUNDED_FEATURE_ENABLED = False  # hard off until redesign
-REQUIRE_ROLLING_30D_LEADS = True  # feature flag while we lack rolling-30d conversion history
-
-# ===== Guardrail for zero-leads & "meaningful spend" =====
-# Use ONE constant everywhere we mean "we've actually spent enough to judge".
-MIN_SPEND_FOR_ZERO_LEAD = 250.0   # was 100.0 → unify at $250
-
-# ===== Zero-lead gating (strong) =====
-MIN_DAYS_FOR_ALERTS = 5           # keep this as the single floor for all zero-lead callouts
-ZERO_LEAD_MIN_DAYS_EMERGING = MIN_DAYS_FOR_ALERTS  # align to global floor
-ZERO_LEAD_MIN_EXPECTED_TD       = 1.0   # to-date plan must be >= 1 lead
-ZERO_LEAD_MIN_SPEND_PROGRESS    = 0.50  # must be >=50% of ideal spend
-ZERO_LEAD_LAST_MO_MIN_SPENDPROG = 0.70  # 30d zero requires ~70% progress
-
-# ===== SEM viability gates for zero-lead logic =====
-SEM_VIABILITY_MIN_SEM = 2500.0                 # default min monthly for SEM viability
-SEM_VIABILITY_MIN_DAILY_CLICKS = 3.0           # need ~3 clicks/day
-SEM_VIABILITY_MIN_MONTHLY_LEADS = SAFE_MIN_LEADS  # need capacity for >=3 leads/mo
-ZERO_LEAD_HR_ATTENUATION_LOW_BUDGET = 0.60     # if we ever apply zero-lead on non-viable budget, downweight
-
-
-def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
-    """
-    Keep ONLY Search/SEM/XMO. Everything else (Display, Social, Presence, unknown) is filtered out.
-    Looks across multiple columns because sources differ.
-    """
+def _search_like_mask(df: pd.DataFrame) -> pd.Series:
+    """Extract SEM/XMO mask used by _is_relevant_campaign and other SEM checks"""
     def _norm(col: str) -> pd.Series:
         if col not in df.columns:
             return pd.Series("", index=df.index, dtype=str)
@@ -345,8 +437,47 @@ def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
     )
 
     # If no signal columns are present or all empty, EXCLUDE (False).
-    mask = mask.fillna(False)
-    return mask
+    return mask.fillna(False)
+
+def _zero_lead_flags(df: pd.DataFrame, sem_viable: pd.Series, spend_prog: pd.Series) -> dict:
+    """Compute zero-lead flags (emerging, last_mo, idle) - extracted from repeated logic"""
+    days = nz_num(df.get('days_elapsed', 0))
+    leads = nz_num(df.get('running_cid_leads', 0))
+    exp_td_plan = nz_num(df.get('expected_leads_to_date', 0))
+    
+    # Base conditions for zero-lead alerts
+    zero_leads = (leads == 0)
+    mature_enough = (days >= MIN_DAYS_FOR_ALERTS)
+    viable_and_spending = sem_viable & (spend_prog >= ZERO_LEAD_MIN_SPEND_PROGRESS)
+    expected_leads = (exp_td_plan >= ZERO_LEAD_MIN_EXPECTED_TD)
+    
+    # Emerging: 5-29 days with zero leads, viable spend, expected results
+    zero_lead_emerging = (
+        zero_leads & mature_enough &
+        viable_and_spending & expected_leads &
+        (~df.get('zero_lead_last_mo', pd.Series(False, index=df.index)).fillna(False))
+    )
+    
+    # Last month: 30-day zero if rolling data available or feature flag allows
+    zero_lead_last_mo = df.get('zero_lead_last_mo', pd.Series(False, index=df.index)).fillna(False)
+    if REQUIRE_ROLLING_30D_LEADS:
+        # Only show if we have actual rolling data
+        zero_lead_last_mo = zero_lead_last_mo & sem_viable
+    
+    # Idle: low-spend zero leads that don't meet viability thresholds
+    insufficient_spend = (spend_prog < ZERO_LEAD_MIN_SPEND_PROGRESS)
+    zero_lead_idle = zero_leads & mature_enough & insufficient_spend & ~viable_and_spending
+    
+    return {
+        'zero_lead_emerging': zero_lead_emerging,
+        'zero_lead_last_mo': zero_lead_last_mo,
+        'zero_lead_idle': zero_lead_idle
+    }
+
+
+def _is_relevant_campaign(df: pd.DataFrame) -> pd.Series:
+    """Keep ONLY Search/SEM/XMO. Everything else (Display, Social, Presence, unknown) is filtered out."""
+    return _search_like_mask(df)
 
 
 def _budget_inadequate_mask(df: pd.DataFrame, min_sem: float = 2500.0) -> pd.Series:
@@ -617,15 +748,15 @@ def _is_actually_performing(df: pd.DataFrame) -> pd.Series:
     if 'running_cid_leads' not in df.columns:
         return result
     
-    # Get core metrics
-    leads = pd.to_numeric(df.get('running_cid_leads', 0), errors='coerce').fillna(0)
-    actual_cpl = pd.to_numeric(df.get('running_cid_cpl', 999), errors='coerce').fillna(999)
-    spent = pd.to_numeric(df.get('amount_spent', 0), errors='coerce').fillna(0)
-    days_active = pd.to_numeric(df.get('days_elapsed', 0), errors='coerce').fillna(0)
+    # Get core metrics (vectorized)
+    leads = nz_num(df.get('running_cid_leads'))
+    actual_cpl = nz_num(df.get('running_cid_cpl'), 999)
+    spent = nz_num(df.get('amount_spent'))
+    days_active = nz_num(df.get('days_elapsed'))
     
-    # Get benchmark and goals
-    benchmark = pd.to_numeric(df.get('bsc_cpl_avg', 150), errors='coerce').fillna(150)
-    advertiser_goal = pd.to_numeric(df.get('cpl_goal', np.nan), errors='coerce')
+    # Get benchmark and goals (vectorized)
+    benchmark = nz_num(df.get('bsc_cpl_avg'), 150)
+    advertiser_goal = nz_num(df.get('cpl_goal'))
     
     # Check for zero lead issues
     zero_issues = (
@@ -709,46 +840,43 @@ def calculate_churn_probability(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
     
-    # Ensure columns exist
-    for col in ['io_cycle','advertiser_product_count','running_cid_leads','days_elapsed',
-                'running_cid_cpl','effective_cpl_goal','campaign_budget','amount_spent',
-                'expected_leads_monthly','expected_leads_to_date','expected_leads_to_date_spend',
-                'utilization','cpl_goal','bsc_cpc_average']:
-        if col not in df.columns:
-            df[col] = np.nan
+    # Ensure columns exist (vectorized)
+    required_cols = ['io_cycle','advertiser_product_count','running_cid_leads','days_elapsed',
+                     'running_cid_cpl','effective_cpl_goal','campaign_budget','amount_spent',
+                     'expected_leads_monthly','expected_leads_to_date','expected_leads_to_date_spend',
+                     'utilization','cpl_goal','bsc_cpc_average']
+    df = _ensure_columns(df, required_cols)
 
-    # Keep true runtime for display only
-    rt_days = pd.to_numeric(df.get('true_days_running'), errors='coerce')
-    if rt_days is None or (isinstance(rt_days, pd.Series) and rt_days.isnull().all()) or (not isinstance(rt_days, pd.Series) and pd.isnull(rt_days)):
-        io_f  = pd.to_numeric(df.get('io_cycle'), errors='coerce').fillna(0.0)
-        avg_f = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE)
-        days_f= pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0)
+    # Keep true runtime for display only (safer approach)
+    rt_days_col = df.get('true_days_running')
+    if rt_days_col is None or (hasattr(rt_days_col, 'isnull') and rt_days_col.isnull().all()):
+        io_f  = nz_num(df.get('io_cycle'))
+        avg_f = nz_num(df.get('avg_cycle_length'), AVG_CYCLE)
+        days_f= nz_num(df.get('days_elapsed'))
         rt_days = ((io_f - 1).clip(lower=0) * avg_f + days_f).clip(lower=0.0)
+    else:
+        rt_days = nz_num(rt_days_col)
 
-    # Always work off cycle-to-date for short-horizon risk
-    days    = pd.to_numeric(df.get('days_elapsed'), errors='coerce').fillna(0.0).astype(float)
-    leads   = pd.to_numeric(df.get('running_cid_leads'), errors='coerce').fillna(0.0).astype(float)
-    spend   = pd.to_numeric(df.get('amount_spent'), errors='coerce').fillna(0.0).astype(float)
-    budget  = pd.to_numeric(df.get('campaign_budget'), errors='coerce').fillna(0.0)
-    avg_len = pd.to_numeric(df.get('avg_cycle_length'), errors='coerce').fillna(AVG_CYCLE).replace(0, AVG_CYCLE)
+    # Always work off cycle-to-date for short-horizon risk (vectorized)
+    days    = nz_num(df.get('days_elapsed')).astype(float)
+    leads   = nz_num(df.get('running_cid_leads')).astype(float)
+    spend   = nz_num(df.get('amount_spent')).astype(float)
+    budget  = nz_num(df.get('campaign_budget'))
+    avg_len = nz_num(df.get('avg_cycle_length'), AVG_CYCLE).replace(0, AVG_CYCLE)
 
-    # Expecteds
-    exp_month   = pd.to_numeric(df.get('expected_leads_monthly'), errors='coerce').fillna(0.0)
-    exp_td_plan = pd.to_numeric(df.get('expected_leads_to_date'), errors='coerce').fillna(0.0)
+    # Expecteds (vectorized)
+    exp_month   = nz_num(df.get('expected_leads_monthly'))
+    exp_td_plan = nz_num(df.get('expected_leads_to_date'))
 
-    # CPL ratio (neutral fallback = 1.0, not 0.0)
-    eff_goal = pd.to_numeric(df.get('effective_cpl_goal'), errors='coerce').replace(0, np.nan)
-    cpl      = pd.to_numeric(df.get('running_cid_cpl'), errors='coerce')
-    df['cpl_ratio'] = (
-        (cpl / eff_goal)
-        .replace([np.inf, -np.inf], np.nan)
-        .fillna(1.0)  # neutral, avoids accidental "good CPL" when goal is missing
-    )
+    # CPL ratio (neutral fallback = 1.0, not 0.0) - vectorized
+    eff_goal = nz_num(df.get('effective_cpl_goal')).replace(0, np.nan)
+    cpl      = nz_num(df.get('running_cid_cpl'))
+    df['cpl_ratio'] = safe_div(cpl, eff_goal, fill=1.0)  # neutral, avoids accidental "good CPL" when goal is missing
 
-    # SEM viability
-    cpc_safe     = pd.to_numeric(df.get('bsc_cpc_average'), errors='coerce').fillna(3.0)
+    # SEM viability (vectorized)
+    cpc_safe     = nz_num(df.get('bsc_cpc_average'), 3.0)
     daily_budget = budget / avg_len
-    daily_clicks = (daily_budget / cpc_safe).replace([np.inf,-np.inf], 0).fillna(0.0)
+    daily_clicks = safe_div(daily_budget, cpc_safe, fill=0.0)
     
     budget_ok = (budget >= SEM_VIABILITY_MIN_SEM)
     clicks_ok = (daily_clicks >= SEM_VIABILITY_MIN_DAILY_CLICKS)
