@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+import os
+from datetime import datetime
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
@@ -435,12 +437,67 @@ def drivers_matrix(view: str = Query("optimizer"), top_k: int = Query(6)) -> Dic
             drv = raw if isinstance(raw, dict) else json.loads(raw)
         except Exception:
             drv = None
-        if not drv: 
+        if not drv:
             continue
         row = {"cid": str(r.get("campaign_id")), "total": int(round((r.get("churn_prob_90d") or 0)*100))}
         for d in sorted(drv.get("drivers", []), key=lambda x: abs(x.get("impact",0)), reverse=True)[:top_k]:
             row[d.get("name")] = int(d.get("impact",0))
         out_rows.append(row)
     return {"rows": out_rows}
+
+
+@router.get("/metadata")
+def get_metadata() -> Dict[str, Any]:
+    """
+    Returns metadata about the current dataset including data freshness information.
+    """
+    from backend.book.ingest import latest_snapshot_path, list_snapshots
+    import re
+
+    try:
+        # Get the latest snapshot file
+        latest_path = latest_snapshot_path()
+
+        # Extract date from filename
+        fname_re = re.compile(r"^(\d{4}-\d{2}-\d{2})-campaign-health\.csv$", re.I)
+        match = fname_re.match(latest_path.name)
+        snapshot_date = match.group(1) if match else None
+
+        # Get file stats
+        stat = latest_path.stat()
+        file_size = stat.st_size
+        last_modified = datetime.fromtimestamp(stat.st_mtime)
+
+        # Get record count from a quick sample of the current data
+        df = _get_full_processed_data(view="optimizer")
+        record_count = len(df)
+
+        # Get available snapshots
+        snapshots = list_snapshots()
+        available_dates = [date for date, _ in snapshots]
+
+        return {
+            "data_snapshot_date": snapshot_date,
+            "last_modified": last_modified.isoformat(),
+            "last_modified_display": last_modified.strftime("%Y-%m-%d %H:%M:%S"),
+            "file_name": latest_path.name,
+            "file_size_bytes": file_size,
+            "record_count": record_count,
+            "available_snapshots": available_dates,
+            "is_current": True  # Assuming latest is always current for now
+        }
+    except Exception as e:
+        # Return error info but don't crash the API
+        return {
+            "error": str(e),
+            "data_snapshot_date": None,
+            "last_modified": None,
+            "last_modified_display": "Unknown",
+            "file_name": "Unknown",
+            "file_size_bytes": 0,
+            "record_count": 0,
+            "available_snapshots": [],
+            "is_current": False
+        }
 
 

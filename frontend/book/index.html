@@ -44,6 +44,9 @@ header.header{
 .company-name{font-family:'Montserrat',sans-serif; font-weight:800; font-size:28px; color:#2d3748; letter-spacing:1px}
 .beta-label{font-weight:500; font-size:12px; color:#f6ad55; margin-left:6px; vertical-align:super}
 .tagline{font-weight:400; font-size:14px; color:#718096; margin-top:0}
+.data-freshness{font-size:12px; color:var(--gray-500); margin-top:4px; cursor:help}
+.freshness-label{font-weight:500}
+.freshness-date{font-weight:600; color:var(--gray-700)}
 .nav-tabs{display:flex; gap:var(--space-2)}
 .nav-tab{
   padding:var(--space-2) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:600;
@@ -238,6 +241,10 @@ header.header{
           <span class="beta-label">beta</span>
         </div>
         <p class="tagline">Turn data into daylight</p>
+        <div id="dataFreshness" class="data-freshness" style="display: none;">
+          <span class="freshness-label">Data as of:</span>
+          <span class="freshness-date">—</span>
+        </div>
       </div>
       <nav class="nav-tabs">
         <a href="/" class="nav-tab">Benchmark MVP</a>
@@ -329,6 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cardsContainer:  document.getElementById('cardsContainer'),
     loadMoreBtn:     document.getElementById('loadMoreBtn'),
+
+    dataFreshness:   document.getElementById('dataFreshness'),
+    freshnessDate:   document.querySelector('.freshness-date'),
   };
 
   // ===== State =====
@@ -358,6 +368,44 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (e) { /* try next base */ }
     }
     throw new Error('All API bases failed');
+  }
+
+  // ===== Data Freshness =====
+  async function fetchDataFreshness() {
+    try {
+      const metadata = await fetchFromAny('/api/book/metadata');
+      displayDataFreshness(metadata);
+    } catch (e) {
+      console.warn('Could not fetch data freshness:', e);
+      // Silently fail - don't show indicator if we can't get the data
+    }
+  }
+
+  function displayDataFreshness(metadata) {
+    if (!metadata || metadata.error) {
+      return; // Don't show anything if there's an error
+    }
+
+    const { data_snapshot_date, last_modified_display, record_count, file_name } = metadata;
+
+    if (data_snapshot_date) {
+      // Format date nicely (e.g., "Sept 16, 2025")
+      const date = new Date(data_snapshot_date + 'T00:00:00');
+      const formatted = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      el.freshnessDate.textContent = formatted;
+
+      // Add tooltip with more details
+      const tooltip = `File: ${file_name}\nLast Modified: ${last_modified_display}\nRecords: ${record_count?.toLocaleString() || 'Unknown'}`;
+      el.dataFreshness.title = tooltip;
+
+      // Show the indicator
+      el.dataFreshness.style.display = 'block';
+    }
   }
   async function fetchData(params = {}) {
     const [summary, accounts] = await Promise.all([
@@ -800,6 +848,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Init =====
   async function init(){
     try{
+      // Fetch data freshness info first (non-blocking)
+      fetchDataFreshness();
+
       const { summary, accounts } = await fetchData({ view: el.viewFilter.value });
       renderSummary(summary);
       populateFilters(summary.facets || {});
